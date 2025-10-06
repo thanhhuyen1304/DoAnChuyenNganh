@@ -1,0 +1,108 @@
+1 Giới thiệu chung
+Tên dự án: BugHunter
+
+ Mục tiêu tổng quát:
+●	Xây dựng một nền tảng web hỗ trợ người học lập trình tìm hiểu và sửa lỗi code một cách thực tế, đa ngôn ngữ (Python, C++, Java, C#, C,…).
+
+●	Giúp người học rèn kỹ năng debugging, tư duy logic, coding clean và có môi trường thi đấu, luyện tập, nâng cao trình độ thông qua gamification.
+
+●	Ứng dụng AI/ML/DL để phân tích lỗi, gợi ý hướng sửa, cá nhân hóa nội dung học và nâng cao trải nghiệm người dùng.
+2 Các chức năng chính
+A. Người dùng (User)
+1.	Quản lý tài khoản
+
+○	Đăng ký / Đăng nhập (email + OAuth Google/GitHub/Facebook).
+
+○	Hồ sơ cá nhân: avatar, thông tin, ngôn ngữ yêu thích, XP, rank, huy hiệu, lịch sử bài tập.
+
+○	Quản lý mật khẩu, cập nhật thông tin.
+
+2.	Làm bài & Sửa lỗi
+
+○	Chọn bài tập từ danh sách bài có sẵn bug (Syntax bug, Logic bug).
+
+○	Editor trực tuyến: hỗ trợ nhiều ngôn ngữ (Python, C++, Java,…).
+
+○	Chạy code trong môi trường sandbox an toàn (Judge0 API hoặc Docker runner).
+
+○	Nhận phản hồi ngay (test case Pass/Fail, thời gian chạy, lỗi phát sinh).
+
+○	Lưu kết quả luyện tập vào hồ sơ.
+
+3.	Hệ thống điểm & thành tích
+
+○	Nhận XP khi sửa lỗi thành công.
+
+○	Tích lũy rank, huy hiệu theo thành tích.
+
+○	Leaderboard toàn hệ thống (top điểm, top PvP, sự kiện).
+
+4.	PvP Challenge
+
+○	Tạo phòng hoặc tham gia phòng đấu trực tiếp với người khác.
+
+○	Thời gian thực: đếm ngược, so sánh kết quả submit.
+
+○	Xếp hạng người thắng dựa trên tốc độ & số test case pass.
+B. Quản trị viên (Admin)
+1.	Quản lý người dùng
+
+○	Xem danh sách user, tìm kiếm, khóa/mở tài khoản.
+
+○	Theo dõi tiến độ luyện tập, thành tích.
+
+2.	Quản lý bài tập & test case
+
+○	CRUD bài tập (tạo, sửa, xóa).
+
+○	Phân loại độ khó, loại bug, gắn tag (syntax, logic, performance).
+
+○	Quản lý test case: input, output, chấm điểm.
+
+3.	Quản lý sự kiện & PvP
+
+○	Tạo giải đấu định kỳ, xếp hạng user.
+
+○	Theo dõi số lượng người tham gia, thống kê kết quả.
+3 Các tính năng nâng cao (AI & ML/DL)
+1.	AI Debug Assistant
+
+○	Phân tích lỗi trả về từ sandbox, đọc stacktrace, gợi ý nguyên nhân và cách khắc phục.
+
+○	Đưa ra snippet mẫu.
+
+○	Hỗ trợ đa ngôn ngữ lập trình.
+
+2.	Machine Learning – Cá nhân hóa lộ trình học
+
+○	Ghi nhận lịch sử bug mà user thường gặp.
+
+○	Gợi ý bài tập phù hợp trình độ và loại lỗi hay mắc.
+
+○	Điều chỉnh độ khó tự động theo tiến bộ người dùng.
+
+3.	Deep Learning – Phân loại lỗi thông minh
+
+○	NLP đọc message lỗi → phân loại (syntax, logic, runtime, performance, security).
+
+○	Đề xuất tài liệu/hướng dẫn liên quan.
+
+4.	AI Mentor (Chatbot 24/7)
+
+○	Giải thích khái niệm lập trình, cú pháp.
+
+○	Gợi ý mẹo sửa bug & best practices coding.
+○	Idea nếu hoàn thành dự án trên 80% (Cộng đồng chatbox, hoặc chat cá nhân)
+4 Công nghệ đề xuất
+●	Frontend: React, TailwindCSS, Socket.IO
+
+●	Backend: Node.js (NestJS) hoặc Python (FastAPI)
+
+●	Sandbox: Judge0 API (ưu tiên) hoặc Docker self-host
+
+●	Database: MongoDB
+
+●	AI/ML: OpenAI API, HuggingFace Transformers, TensorFlow/PyTorch
+
+●	DevOps: GitHub Actions, Vercel/Netlify (FE), Railway/AWS (BE)
+
