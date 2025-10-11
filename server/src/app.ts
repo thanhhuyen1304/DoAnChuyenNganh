@@ -9,12 +9,23 @@ import { config } from 'dotenv';
 
 // Routes
 import authRoutes from './routes/auth.routes';
+import challengeRoutes from './routes/challenge.routes';
+import scraperRoutes from './routes/scraper.routes';
 
 // Passport strategies
 import './config/passport';
 
 // Load env vars
 config();
+
+// Environment configuration
+const ENV = {
+  PORT: process.env.PORT || 5000,
+  NODE_ENV: process.env.NODE_ENV || 'development',
+  MONGODB_URI: process.env.MONGODB_URI || 'mongodb://localhost:27017/bughunter',
+  CLIENT_URL: process.env.CLIENT_URL || 'http://localhost:3000',
+  ADMIN_EMAIL: process.env.ADMIN_EMAIL || 'admin@bughunter.com'
+};
 
 // Định nghĩa interface cho Error
 interface ErrorWithStack extends Error {
@@ -23,13 +34,13 @@ interface ErrorWithStack extends Error {
 }
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = ENV.PORT;
 
 // Middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cors({
-    origin: process.env.CLIENT_URL,
+    origin: ['http://localhost:3000', 'http://localhost:5173'],
     credentials: true
 }));
 app.use(morgan('dev'));
@@ -39,6 +50,8 @@ app.use(passport.initialize());
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/challenges', challengeRoutes);
+app.use('/api/scraper', scraperRoutes);
 
 // Error handling middleware
 app.use((err: ErrorWithStack, req: Request, res: Response, _next: NextFunction) => {
@@ -51,12 +64,14 @@ app.use((err: ErrorWithStack, req: Request, res: Response, _next: NextFunction) 
 });
 
 // Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI!)
+mongoose.connect(ENV.MONGODB_URI)
     .then(() => {
         console.log('Kết nối MongoDB thành công');
+        console.log(`Database: ${ENV.MONGODB_URI}`);
         // Start server sau khi kết nối DB thành công
         app.listen(PORT, () => {
             console.log(`Server đang chạy tại http://localhost:${PORT}`);
+            console.log(`Environment: ${ENV.NODE_ENV}`);
         });
     })
     .catch(err => {

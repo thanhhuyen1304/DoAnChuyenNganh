@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "./ui/button";
-import { Menu, X, Globe, Moon, Sun } from "lucide-react";
+import { Menu, X, Globe, Moon, Sun, User, LogOut } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useLanguage } from "./contexts/LanguageContext";
 import {
@@ -8,12 +8,47 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "./ui/dropdown-menu";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [user, setUser] = useState<any>(null);
   const { theme, setTheme } = useTheme();
   const { language, setLanguage, t } = useLanguage();
+
+  // Check if user is logged in
+  useEffect(() => {
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      setUser(JSON.parse(userData));
+    }
+  }, []);
+
+  // Handle logout
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setUser(null);
+    window.location.href = '/';
+  };
+
+  // Handle navigation
+  const handleLogin = () => {
+    window.location.href = '/login';
+  };
+
+  const handleSignup = () => {
+    window.location.href = '/register';
+  };
+
+  const handleDashboard = () => {
+    if (user?.role === 'admin') {
+      window.location.href = '/admin/dashboard';
+    } else {
+      window.location.href = '/dashboard';
+    }
+  };
 
   const navItems = [
     { labelKey: "nav.courses", href: "#courses" },
@@ -88,15 +123,45 @@ const Header = () => {
 
             {/* Auth Buttons */}
             <div className="hidden md:flex items-center gap-3">
-              <Button variant="ghost" size="sm">
-                {t("auth.login")}
-              </Button>
-              <Button 
-                size="sm"
-                className="bg-gradient-primary hover:shadow-glow transition-all duration-300"
-              >
-                {t("auth.signup")}
-              </Button>
+              {user ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="flex items-center gap-2">
+                      <User className="h-4 w-4" />
+                      {user.username}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="z-50 bg-popover">
+                    <DropdownMenuItem onClick={handleDashboard} className="cursor-pointer">
+                      <User className="h-4 w-4 mr-2" />
+                      Dashboard
+                    </DropdownMenuItem>
+                    {user.role === 'admin' && (
+                      <DropdownMenuItem onClick={() => window.location.href = '/admin/dashboard'} className="cursor-pointer">
+                        Admin Panel
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-600">
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Đăng xuất
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <>
+                  <Button variant="ghost" size="sm" onClick={handleLogin}>
+                    {t("auth.login")}
+                  </Button>
+                  <Button 
+                    size="sm"
+                    className="bg-gradient-primary hover:shadow-glow transition-all duration-300"
+                    onClick={handleSignup}
+                  >
+                    {t("auth.signup")}
+                  </Button>
+                </>
+              )}
             </div>
 
             {/* Mobile Menu Toggle */}
@@ -144,15 +209,36 @@ const Header = () => {
                 </Button>
               </div>
               <div className="flex flex-col gap-2 pt-2">
-                <Button variant="ghost" size="sm">
-                  {t("auth.login")}
-                </Button>
-                <Button 
-                  size="sm"
-                  className="bg-gradient-primary"
-                >
-                  {t("auth.signup")}
-                </Button>
+                {user ? (
+                  <>
+                    <Button variant="ghost" size="sm" onClick={handleDashboard}>
+                      <User className="h-4 w-4 mr-2" />
+                      Dashboard
+                    </Button>
+                    {user.role === 'admin' && (
+                      <Button variant="ghost" size="sm" onClick={() => window.location.href = '/admin/dashboard'}>
+                        Admin Panel
+                      </Button>
+                    )}
+                    <Button variant="ghost" size="sm" onClick={handleLogout} className="text-red-600">
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Đăng xuất
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button variant="ghost" size="sm" onClick={handleLogin}>
+                      {t("auth.login")}
+                    </Button>
+                    <Button 
+                      size="sm"
+                      className="bg-gradient-primary"
+                      onClick={handleSignup}
+                    >
+                      {t("auth.signup")}
+                    </Button>
+                  </>
+                )}
               </div>
             </nav>
           </div>

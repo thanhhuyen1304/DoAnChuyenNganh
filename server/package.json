@@ -226,7 +226,8 @@
     "dev": "nodemon src/app.ts",
     "build": "tsc",
     "lint": "eslint src/**/*.ts",
-    "format": "prettier --write \"src/**/*.ts\""
+    "format": "prettier --write \"src/**/*.ts\"",
+    "setup-db": "ts-node scripts/setup-database.ts"
   },
   "keywords": [],
   "author": "",

@@ -10,6 +10,10 @@ import AuthLayout from './components/auth/AuthLayout';
 import Login from './components/auth/Login';
 import Register from './components/auth/Register';
 import Index from "./components/pages/Index";
+import LoginPage from "./components/pages/LoginPage";
+import RegisterPage from "./components/pages/RegisterPage";
+import Dashboard from "./components/pages/Dashboard";
+import AdminDashboard from "./components/admin/AdminDashboard";
 import NotFound from "./components/pages/NotFound";
 
 // Create a client
@@ -26,16 +30,10 @@ const App = () => {
             <BrowserRouter>
               <Routes>
                 <Route path="/" element={<Index />} />
-                <Route path="/login" element={
-                  <AuthLayout>
-                    <Login />
-                  </AuthLayout>
-                } />
-                <Route path="/register" element={
-                  <AuthLayout>
-                    <Register />
-                  </AuthLayout>
-                } />
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/register" element={<RegisterPage />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/admin/dashboard" element={<AdminDashboard />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>

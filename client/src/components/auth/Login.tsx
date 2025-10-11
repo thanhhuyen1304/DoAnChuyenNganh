@@ -5,6 +5,9 @@ import { Label } from '../ui/label';
 import { Alert, AlertDescription } from '../ui/alert';
 import { useLanguage } from '../contexts/LanguageContext';
 
+// API Base URL
+const API_BASE_URL = 'http://localhost:5000/api';
+
 const Login = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -18,8 +21,7 @@ const Login = () => {
         setIsLoading(true);
 
         try {
-            // Example API call
-            const response = await fetch('/api/auth/login', {
+            const response = await fetch(`${API_BASE_URL}/auth/login`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -27,13 +29,26 @@ const Login = () => {
                 body: JSON.stringify({ email, password }),
             });
 
+            const data = await response.json();
+
             if (!response.ok) {
-                throw new Error('Login failed');
+                throw new Error(data.message || 'Đăng nhập thất bại');
             }
 
-            // Handle successful login (e.g., redirect or update state)
+            if (data.success) {
+                // Lưu token vào localStorage
+                localStorage.setItem('token', data.data.token);
+                localStorage.setItem('user', JSON.stringify(data.data.user));
+                
+                // Redirect based on user role
+                if (data.data.user.role === 'admin') {
+                    window.location.href = '/admin/dashboard';
+                } else {
+                    window.location.href = '/dashboard';
+                }
+            }
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Login failed');
+            setError(err instanceof Error ? err.message : 'Đăng nhập thất bại');
         } finally {
             setIsLoading(false);
         }
@@ -55,19 +70,19 @@ const Login = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    placeholder="Enter your email"
+                    placeholder="Nhập email của bạn"
                 />
             </div>
             
             <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">Mật khẩu</Label>
                 <Input
                     type="password"
                     id="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    placeholder="Enter your password"
+                    placeholder="Nhập mật khẩu của bạn"
                 />
             </div>
             
@@ -76,13 +91,13 @@ const Login = () => {
                 className="w-full bg-gradient-primary hover:shadow-glow"
                 disabled={isLoading}
             >
-                {isLoading ? 'Signing in...' : 'Sign In'}
+                {isLoading ? 'Đang đăng nhập...' : 'Đăng nhập'}
             </Button>
             
             <div className="text-center text-sm text-muted-foreground">
-                Don't have an account?{' '}
+                Chưa có tài khoản?{' '}
                 <a href="/register" className="text-primary hover:underline">
-                    Sign up
+                    Đăng ký ngay
                 </a>
             </div>
         </form>
