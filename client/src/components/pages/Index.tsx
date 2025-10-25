@@ -2,9 +2,8 @@ import React from "react";
 import Header from "../Header";
 import Hero from "../Hero";
 import Features from "../Features";
-import LanguageGrid from "../LanguageGrid";
+import LanguageCards from "../LanguageCards";
 import Leaderboard from "../Leaderboard";
-import Testimonials from "../Testimonials";
 import Footer from "../Footer";
 
 const Index = () => {
@@ -14,9 +13,8 @@ const Index = () => {
       <main>
         <Hero />
         <Features />
-        <LanguageGrid />
+        <LanguageCards />
         <Leaderboard />
-        <Testimonials />
       </main>
       <Footer />
     </div>

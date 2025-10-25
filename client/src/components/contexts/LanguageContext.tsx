@@ -10,7 +10,7 @@ interface LanguageContextType {
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
-const translations = {
+const translations: Record<Language, Record<string, string>> = {
   vi: {
     // Header
     "nav.courses": "Khóa học",
@@ -46,6 +46,35 @@ const translations = {
     "languages.title": "Ngôn ngữ được hỗ trợ",
     "languages.subtitle": "Luyện tập debug với các ngôn ngữ lập trình phổ biến nhất",
     "languages.exercises": "bài tập",
+    
+    // Register
+    "register.title": "Đăng ký tài khoản BugHunter",
+    "register.subtitle": "Bắt đầu hành trình chinh phục bug!",
+    "register.username": "Tên người dùng",
+    "register.username.placeholder": "Nhập tên người dùng",
+    "register.email": "Email",
+    "register.email.placeholder": "Nhập email của bạn",
+    "register.password": "Mật khẩu",
+    "register.password.placeholder": "Nhập mật khẩu (tối thiểu 6 ký tự)",
+    "register.button": "Tạo tài khoản",
+    "register.button.loading": "Đang tạo tài khoản...",
+    "register.text": "Đã có tài khoản?",
+    "register.link": "Đăng nhập",
+    "register.confirmPassword": "Xác nhận mật khẩu",
+    "register.confirmPassword.placeholder": "Nhập lại mật khẩu",
+    "register.password.mismatch": "Mật khẩu không khớp",
+    // Login (register page and login page keys)
+    "login.title": "Đăng nhập",
+    "login.subtitle": "Đăng nhập để tiếp tục",
+    "login.email": "Email",
+    "login.email.placeholder": "Nhập email của bạn",
+    "login.password": "Mật khẩu",
+    "login.password.placeholder": "Nhập mật khẩu của bạn",
+    "login.button": "Đăng nhập",
+    "login.button.loading": "Đang đăng nhập...",
+    "login.error": "Đăng nhập thất bại",
+    "login.register.text": "Chưa có tài khoản?",
+    "login.register.link": "Đăng ký ngay",
     
     // Leaderboard
     "leaderboard.title": "Top Learners",
@@ -106,6 +135,32 @@ const translations = {
     "languages.subtitle": "Practice debugging with the most popular programming languages",
     "languages.exercises": "exercises",
     
+    // Register
+    "register.title": "Create BugHunter Account",
+    "register.subtitle": "Start your bug-hunting journey!",
+    "register.username": "Username",
+    "register.username.placeholder": "Enter username",
+    "register.email": "Email",
+    "register.email.placeholder": "Enter your email",
+    "register.password": "Password",
+    "register.password.placeholder": "Enter password (min 6 characters)",
+    "register.button": "Create Account",
+    "register.button.loading": "Creating account...",
+    "register.login.text": "Already have an account?",
+  "register.login.link": "Login",
+  // Login (register page and login page keys)
+  "login.title": "Login",
+  "login.subtitle": "Sign in to continue",
+  "login.email": "Email",
+  "login.email.placeholder": "Enter your email",
+  "login.password": "Password",
+  "login.password.placeholder": "Enter your password",
+  "login.button": "Login",
+  "login.button.loading": "Signing in...",
+  "login.error": "Login failed",
+  "login.register.text": "Don't have an account?",
+  "login.register.link": "Register",
+    
     // Leaderboard
     "leaderboard.title": "Top Learners",
     "leaderboard.subtitle": "This month's top performers",
@@ -146,7 +201,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const t = (key: string): string => {
-    return translations[language][key as keyof typeof translations.vi] || key;
+    return translations[language][key] || key;
   };
 
   return (

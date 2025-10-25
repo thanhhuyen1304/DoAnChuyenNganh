@@ -59,6 +59,64 @@ export const getChallenges = async (req: Request, res: Response, next: NextFunct
   }
 };
 
+// Lấy danh sách bài tập cho admin (tất cả bài tập, kể cả inactive)
+export const getAdminChallenges = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<any> => {
+  try {
+    if (req.user?.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Chỉ admin mới có thể xem tất cả bài tập'
+      });
+    }
+
+    const {
+      page = 1,
+      limit = 50,
+      language,
+      difficulty,
+      category,
+      search,
+      isActive
+    } = req.query;
+
+    const filter: any = {};
+    
+    if (isActive !== undefined) filter.isActive = isActive === 'true';
+    if (language) filter.language = language;
+    if (difficulty) filter.difficulty = difficulty;
+    if (category) filter.category = category;
+    if (search) {
+      filter.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+        { tags: { $in: [new RegExp(search as string, 'i')] } }
+      ];
+    }
+
+    const challenges = await Challenge.find(filter)
+      .populate('createdBy', 'username email')
+      .sort({ createdAt: -1 })
+      .limit(Number(limit) * 1)
+      .skip((Number(page) - 1) * Number(limit));
+
+    const total = await Challenge.countDocuments(filter);
+
+    res.json({
+      success: true,
+      data: {
+        challenges,
+        pagination: {
+          current: Number(page),
+          pages: Math.ceil(total / Number(limit)),
+          total
+        }
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // Lấy chi tiết bài tập
 export const getChallengeById = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
   try {

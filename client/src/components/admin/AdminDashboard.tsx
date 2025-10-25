@@ -8,6 +8,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Alert, AlertDescription } from '../ui/alert';
 import { Badge } from '../ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
+import AdvancedScraper from './AdvancedScraper';
+import TokenDebugger from './TokenDebugger';
+import ScraperGuide from './ScraperGuide';
+import ChallengeStats from './ChallengeStats';
+import DatabaseDebugger from './DatabaseDebugger';
+import APITester from './APITester';
 
 // API Base URL
 const API_BASE_URL = 'http://localhost:5000/api';
@@ -29,6 +35,7 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [newChallengesCount, setNewChallengesCount] = useState(0);
   
   // Form state for creating/editing challenges
   const [formData, setFormData] = useState({
@@ -52,24 +59,51 @@ const AdminDashboard = () => {
     fetchChallenges();
   }, []);
 
-  const fetchChallenges = async () => {
+  const fetchChallenges = async (showSuccessMessage = false) => {
     try {
+      setLoading(true);
+      const previousCount = challenges.length;
+      
       const token = localStorage.getItem('token');
-      const response = await fetch(`${API_BASE_URL}/challenges`, {
+      console.log('🔍 Fetching challenges...');
+      console.log('   Token:', token ? `${token.substring(0, 20)}...` : 'No token');
+      console.log('   URL:', `${API_BASE_URL}/challenges/admin/all`);
+      
+      const response = await fetch(`${API_BASE_URL}/challenges/admin/all`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });
 
+      console.log('   Response status:', response.status);
       const data = await response.json();
+      console.log('   Response data:', data);
+      
       if (data.success) {
         setChallenges(data.data.challenges);
+        setError(''); // Clear any previous errors
+        console.log(`✅ Loaded ${data.data.challenges.length} challenges`);
+        
+        // Hiển thị thông báo thành công nếu có bài tập mới
+        if (showSuccessMessage && data.data.challenges.length > previousCount) {
+          const newCount = data.data.challenges.length - previousCount;
+          setNewChallengesCount(newCount);
+          setSuccess(`🎉 Đã thêm ${newCount} bài tập mới vào danh sách!`);
+          
+          // Tự động ẩn thông báo sau 5 giây
+          setTimeout(() => {
+            setSuccess('');
+            setNewChallengesCount(0);
+          }, 5000);
+        }
       } else {
-        setError('Không thể tải danh sách bài tập');
+        console.log('❌ API returned error:', data.message);
+        setError(`Không thể tải danh sách bài tập: ${data.message}`);
       }
     } catch (err) {
-      setError('Lỗi kết nối server');
+      console.log('❌ Network error:', err);
+      setError(`Lỗi kết nối server: ${err}`);
     } finally {
       setLoading(false);
     }
@@ -212,7 +246,16 @@ const AdminDashboard = () => {
 
       {success && (
         <Alert className="mb-4 border-green-200 bg-green-50">
-          <AlertDescription className="text-green-800">{success}</AlertDescription>
+          <AlertDescription className="text-green-800">
+            <div className="flex items-center gap-2">
+              <span>{success}</span>
+              {newChallengesCount > 0 && (
+                <Badge variant="outline" className="bg-green-100 text-green-800">
+                  +{newChallengesCount} mới
+                </Badge>
+              )}
+            </div>
+          </AlertDescription>
         </Alert>
       )}
 
@@ -220,18 +263,51 @@ const AdminDashboard = () => {
         <TabsList>
           <TabsTrigger value="challenges">Quản lý bài tập</TabsTrigger>
           <TabsTrigger value="create">Tạo bài tập</TabsTrigger>
+          <TabsTrigger value="scraper">Scraper</TabsTrigger>
+          <TabsTrigger value="debug">Debug Token</TabsTrigger>
+          <TabsTrigger value="database">Database Debug</TabsTrigger>
+          <TabsTrigger value="api">API Test</TabsTrigger>
+          <TabsTrigger value="guide">Hướng dẫn</TabsTrigger>
           <TabsTrigger value="stats">Thống kê</TabsTrigger>
         </TabsList>
 
         <TabsContent value="challenges" className="space-y-4">
+          <div className="flex justify-between items-center">
+            <div>
+              <h3 className="text-lg font-semibold">Danh sách bài tập</h3>
+              <p className="text-sm text-gray-600">Tổng cộng {challenges.length} bài tập</p>
+            </div>
+            <Button 
+              onClick={() => fetchChallenges()} 
+              variant="outline" 
+              size="sm"
+              disabled={loading}
+            >
+              {loading ? 'Đang tải...' : '🔄 Làm mới'}
+            </Button>
+          </div>
+          
           <div className="grid gap-4">
-            {challenges.map((challenge) => (
-              <Card key={challenge._id}>
+            {challenges.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <p>Chưa có bài tập nào. Hãy tạo bài tập mới hoặc scrape từ các nguồn online!</p>
+              </div>
+            ) : (
+              challenges.map((challenge) => (
+              <Card key={challenge._id} className="hover:shadow-md transition-shadow">
                 <CardHeader>
                   <div className="flex justify-between items-start">
-                    <div>
-                      <CardTitle className="text-lg">{challenge.title}</CardTitle>
-                      <CardDescription>{challenge.description}</CardDescription>
+                    <div className="flex-1">
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        {challenge.title}
+                        {challenge.title.includes('CSES:') && <Badge variant="outline" className="bg-blue-100 text-blue-800">CSES</Badge>}
+                        {challenge.title.includes('AtCoder:') && <Badge variant="outline" className="bg-green-100 text-green-800">AtCoder</Badge>}
+                        {challenge.title.includes('LeetCode:') && <Badge variant="outline" className="bg-orange-100 text-orange-800">LeetCode</Badge>}
+                      </CardTitle>
+                      <CardDescription className="mt-1">{challenge.description}</CardDescription>
+                      <div className="text-xs text-gray-500 mt-1">
+                        Tạo lúc: {new Date(challenge.createdAt).toLocaleString('vi-VN')}
+                      </div>
                     </div>
                     <Badge variant={challenge.isActive ? "default" : "secondary"}>
                       {challenge.isActive ? "Hoạt động" : "Tạm dừng"}
@@ -239,27 +315,33 @@ const AdminDashboard = () => {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex gap-2 mb-4">
-                    <Badge variant="outline">{challenge.language}</Badge>
-                    <Badge variant="outline">{challenge.difficulty}</Badge>
-                    <Badge variant="outline">{challenge.category}</Badge>
-                    <Badge variant="outline">{challenge.points} điểm</Badge>
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    <Badge variant="outline" className="bg-blue-50">{challenge.language}</Badge>
+                    <Badge variant="outline" className={
+                      challenge.difficulty === 'Easy' ? 'bg-green-50 text-green-700' :
+                      challenge.difficulty === 'Medium' ? 'bg-yellow-50 text-yellow-700' :
+                      'bg-red-50 text-red-700'
+                    }>
+                      {challenge.difficulty}
+                    </Badge>
+                    <Badge variant="outline" className="bg-purple-50">{challenge.category}</Badge>
+                    <Badge variant="outline" className="bg-orange-50">{challenge.points} điểm</Badge>
                   </div>
                   <div className="flex gap-2">
                     <Button size="sm" onClick={() => handleEdit(challenge)}>
-                      Chỉnh sửa
+                      ✏️ Chỉnh sửa
                     </Button>
                     <Button 
                       size="sm" 
                       variant="destructive" 
                       onClick={() => handleDelete(challenge._id)}
                     >
-                      Xóa
+                      🗑️ Xóa
                     </Button>
                   </div>
                 </CardContent>
               </Card>
-            ))}
+            )))}
           </div>
         </TabsContent>
 
@@ -474,39 +556,28 @@ const AdminDashboard = () => {
           </Card>
         </TabsContent>
 
+        <TabsContent value="scraper" className="space-y-4">
+          <AdvancedScraper onScrapeSuccess={() => fetchChallenges(true)} />
+        </TabsContent>
+
+        <TabsContent value="debug" className="space-y-4">
+          <TokenDebugger />
+        </TabsContent>
+
+        <TabsContent value="database" className="space-y-4">
+          <DatabaseDebugger />
+        </TabsContent>
+
+        <TabsContent value="api" className="space-y-4">
+          <APITester />
+        </TabsContent>
+
+        <TabsContent value="guide" className="space-y-4">
+          <ScraperGuide />
+        </TabsContent>
+
         <TabsContent value="stats" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Tổng bài tập</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{challenges.length}</div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader>
-                <CardTitle>Bài tập hoạt động</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {challenges.filter(c => c.isActive).length}
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader>
-                <CardTitle>Tổng điểm</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {challenges.reduce((sum, c) => sum + c.points, 0)}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          <ChallengeStats challenges={challenges} />
         </TabsContent>
       </Tabs>
     </div>

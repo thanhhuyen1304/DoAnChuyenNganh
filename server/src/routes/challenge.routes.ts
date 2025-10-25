@@ -2,6 +2,7 @@ import express from 'express';
 import { body, param, query } from 'express-validator';
 import {
   getChallenges,
+  getAdminChallenges,
   getChallengeById,
   createChallenge,
   updateChallenge,
@@ -133,6 +134,16 @@ router.get('/:id', [
 router.use(authenticateToken);
 
 // Admin routes (require admin role)
+router.get('/admin/all', [
+  query('page').optional().isInt({ min: 1 }).withMessage('Page phải là số nguyên dương'),
+  query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit phải từ 1 đến 100'),
+  query('language').optional().isIn(['Python', 'JavaScript', 'Java', 'C++', 'C#', 'C']),
+  query('difficulty').optional().isIn(['Easy', 'Medium', 'Hard']),
+  query('category').optional().isIn(['Syntax', 'Logic', 'Performance', 'Security']),
+  query('search').optional().trim().isLength({ max: 100 }).withMessage('Từ khóa tìm kiếm không được vượt quá 100 ký tự'),
+  query('isActive').optional().isBoolean().withMessage('isActive phải là boolean')
+], getAdminChallenges);
+
 router.post('/', [
   ...challengeValidation
 ], createChallenge);

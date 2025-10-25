@@ -17,7 +17,7 @@ declare module 'express-serve-static-core' {
     }
 }
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
 
 // Middleware xác thực JWT token
 export const authenticateToken = async (
@@ -53,7 +53,7 @@ export const authenticateToken = async (
             ...user.toObject(),
             id: (user._id as any).toString(),
             email: user.email,
-            role: user.email === process.env.ADMIN_EMAIL ? 'admin' : 'user'
+            role: user.email === (process.env.ADMIN_EMAIL || 'admin@bughunter.com') ? 'admin' : 'user'
         } as any;
         next();
 

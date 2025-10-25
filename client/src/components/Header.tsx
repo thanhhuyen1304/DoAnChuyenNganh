@@ -1,251 +1,308 @@
-import React, { useState, useEffect } from "react";
-import { Button } from "./ui/button";
-import { Menu, X, Globe, Moon, Sun, User, LogOut } from "lucide-react";
-import { useTheme } from "next-themes";
-import { useLanguage } from "./contexts/LanguageContext";
+import React, { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { useTheme } from 'next-themes'
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from "./ui/dropdown-menu";
-
-const Header = () => {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [user, setUser] = useState<any>(null);
-  const { theme, setTheme } = useTheme();
-  const { language, setLanguage, t } = useLanguage();
-
-  // Check if user is logged in
+  Sun,
+  Moon,
+  Menu,
+  X,
+  User,
+  ChevronDown,
+  Bug,
+  Search,
+  Bell,
+} from 'lucide-react'
+import { useLanguage } from './contexts/LanguageContext'
+interface HeaderProps {
+  // Props không còn cần thiết cho toggle theme; giữ để tương thích nếu nơi khác có truyền
+  darkMode?: boolean
+  toggleDarkMode?: () => void
+}
+const Header: React.FC<HeaderProps> = () => {
+  const { resolvedTheme, setTheme } = useTheme()
+  const darkMode = resolvedTheme === 'dark'
+  const toggleDarkMode = () => setTheme(darkMode ? 'light' : 'dark')
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [isLoggedIn] = useState(false) // For demo purposes
+  const [isScrolled, setIsScrolled] = useState(false)
+  const { language, setLanguage, t } = useLanguage()
   useEffect(() => {
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      setUser(JSON.parse(userData));
+    const handleScroll = () => {
+      if (window.scrollY > 10) {
+        setIsScrolled(true)
+      } else {
+        setIsScrolled(false)
+      }
     }
-  }, []);
-
-  // Handle logout
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    setUser(null);
-    window.location.href = '/';
-  };
-
-  // Handle navigation
-  const handleLogin = () => {
-    window.location.href = '/login';
-  };
-
-  const handleSignup = () => {
-    window.location.href = '/register';
-  };
-
-  const handleDashboard = () => {
-    if (user?.role === 'admin') {
-      window.location.href = '/admin/dashboard';
-    } else {
-      window.location.href = '/dashboard';
+    window.addEventListener('scroll', handleScroll)
+    return () => {
+      window.removeEventListener('scroll', handleScroll)
     }
-  };
-
-  const navItems = [
-    { labelKey: "nav.courses", href: "#courses" },
-    { labelKey: "nav.challenges", href: "#challenges" },
-    { labelKey: "nav.leaderboard", href: "#leaderboard" },
-    { labelKey: "nav.blog", href: "#blog" },
-  ];
-
+  }, [])
+  const toggleMenu = () => {
+    setIsMenuOpen(!isMenuOpen)
+  }
+  const handleLanguageChange = (lang: "vi" | "en") => {
+    setLanguage(lang)
+  }
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border">
-      <div className="container mx-auto px-4 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <a href="/" className="flex items-center gap-2 group">
-            <div className="w-10 h-10 bg-gradient-primary rounded-lg flex items-center justify-center shadow-glow group-hover:shadow-elegant transition-all duration-300">
-              <span className="text-2xl font-bold font-code">🐛</span>
+    <header
+      className={`sticky top-0 w-full z-[10000] transition-all duration-300 ${isScrolled ? 'bg-white/95 dark:bg-gray-900/95 backdrop-blur-lg shadow-md' : 'bg-white dark:bg-gray-900'}`}
+    >
+      <div className="container mx-auto px-4 py-4 flex justify-between items-center relative z-[10001]">
+        {/* Logo */}
+        <div className="flex items-center">
+          <div className="relative group">
+            <div className="absolute -inset-1 bg-gradient-to-r from-primary-600 to-primary-400 rounded-lg blur opacity-25 group-hover:opacity-75 transition duration-300 z-0"></div>
+            <div className="relative flex items-center bg-gradient-to-r from-[#FF007A] via-[#C77DFF] to-[#A259FF] text-white p-2 rounded-lg mr-2 shadow-lg group-hover:shadow-xl transition-all duration-300 z-0">
+              <Bug size={24} className="animate-pulse" />
             </div>
-            <span className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-              BugHunter
+          </div>
+          <div>
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#FF007A] to-[#A259FF] text-2xl font-bold tracking-tight">
+              Bug
+              <span className="text-gray-800 dark:text-white">Hunter</span>
             </span>
-          </a>
-
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-8">
-            {navItems.map((item) => (
-              <a
-                key={item.href}
-                href={item.href}
-                className="text-sm font-medium text-muted-foreground hover:text-primary transition-all duration-300 relative group"
-              >
-                {t(item.labelKey)}
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-primary group-hover:w-full transition-all duration-300" />
-              </a>
-            ))}
-          </nav>
-
-          {/* Right Side Actions */}
-          <div className="flex items-center gap-2">
-            {/* Theme Toggle */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className="hidden md:flex"
-            >
-              <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-              <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-            </Button>
-
-            {/* Language Switcher */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="hidden md:flex">
-                  <Globe className="h-5 w-5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="z-50 bg-popover">
-                <DropdownMenuItem 
-                  onClick={() => setLanguage("vi")}
-                  className="cursor-pointer"
-                >
-                  🇻🇳 Tiếng Việt
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={() => setLanguage("en")}
-                  className="cursor-pointer"
-                >
-                  🇬🇧 English
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            {/* Auth Buttons */}
-            <div className="hidden md:flex items-center gap-3">
-              {user ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="flex items-center gap-2">
-                      <User className="h-4 w-4" />
-                      {user.username}
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="z-50 bg-popover">
-                    <DropdownMenuItem onClick={handleDashboard} className="cursor-pointer">
-                      <User className="h-4 w-4 mr-2" />
-                      Dashboard
-                    </DropdownMenuItem>
-                    {user.role === 'admin' && (
-                      <DropdownMenuItem onClick={() => window.location.href = '/admin/dashboard'} className="cursor-pointer">
-                        Admin Panel
-                      </DropdownMenuItem>
-                    )}
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-600">
-                      <LogOut className="h-4 w-4 mr-2" />
-                      Đăng xuất
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              ) : (
-                <>
-                  <Button variant="ghost" size="sm" onClick={handleLogin}>
-                    {t("auth.login")}
-                  </Button>
-                  <Button 
-                    size="sm"
-                    className="bg-gradient-primary hover:shadow-glow transition-all duration-300"
-                    onClick={handleSignup}
-                  >
-                    {t("auth.signup")}
-                  </Button>
-                </>
-              )}
-            </div>
-
-            {/* Mobile Menu Toggle */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="md:hidden"
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-            >
-              {isMenuOpen ? <X /> : <Menu />}
-            </Button>
           </div>
         </div>
-
-        {/* Mobile Menu */}
-        {isMenuOpen && (
-          <div className="md:hidden py-4 border-t border-border animate-fade-in">
-            <nav className="flex flex-col gap-4">
-              {navItems.map((item) => (
-                <a
-                  key={item.href}
-                  href={item.href}
-                  className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  {t(item.labelKey)}
-                </a>
-              ))}
-              <div className="flex items-center gap-2 pt-4 border-t border-border">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                >
-                  <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-                  <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setLanguage(language === "vi" ? "en" : "vi")}
-                >
-                  <Globe className="h-4 w-4 mr-2" />
-                  {language === "vi" ? "EN" : "VI"}
-                </Button>
-              </div>
-              <div className="flex flex-col gap-2 pt-2">
-                {user ? (
-                  <>
-                    <Button variant="ghost" size="sm" onClick={handleDashboard}>
-                      <User className="h-4 w-4 mr-2" />
-                      Dashboard
-                    </Button>
-                    {user.role === 'admin' && (
-                      <Button variant="ghost" size="sm" onClick={() => window.location.href = '/admin/dashboard'}>
-                        Admin Panel
-                      </Button>
-                    )}
-                    <Button variant="ghost" size="sm" onClick={handleLogout} className="text-red-600">
-                      <LogOut className="h-4 w-4 mr-2" />
-                      Đăng xuất
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <Button variant="ghost" size="sm" onClick={handleLogin}>
-                      {t("auth.login")}
-                    </Button>
-                    <Button 
-                      size="sm"
-                      className="bg-gradient-primary"
-                      onClick={handleSignup}
-                    >
-                      {t("auth.signup")}
-                    </Button>
-                  </>
-                )}
-              </div>
-            </nav>
+        {/* Desktop Navigation */}
+        <nav className="hidden md:flex items-center space-x-8">
+          <a
+            href="#"
+            className="text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200 font-medium relative after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary-500 after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:duration-300"
+          >
+            {t("nav.courses")}
+          </a>
+          <a
+            href="#"
+            className="text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200 font-medium relative after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary-500 after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:duration-300"
+          >
+            {t("nav.challenges")}
+          </a>
+          <a
+            href="#"
+            className="text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200 font-medium relative after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary-500 after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:duration-300"
+          >
+            {t("nav.leaderboard")}
+          </a>
+          <a
+            href="#"
+            className="text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200 font-medium relative after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary-500 after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:duration-300"
+          >
+            {t("nav.blog")}
+          </a>
+        </nav>
+        {/* Right side controls */}
+        <div className="hidden md:flex items-center space-x-4">
+          {/* Search button */}
+          <button className="p-2 text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200">
+            <Search size={20} />
+          </button>
+          {/* Language Switcher */}
+          <div className="relative group">
+            <button className="flex items-center text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-400 bg-gray-100 dark:bg-gray-800 px-3 py-1.5 rounded-full">
+              <span>{language.toUpperCase()}</span>
+              <ChevronDown
+                size={16}
+                className="ml-1 group-hover:rotate-180 transition-transform duration-300"
+              />
+            </button>
+            <div className="absolute right-0 mt-2 w-24 bg-white dark:bg-gray-800 rounded-xl shadow-lg py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform group-hover:translate-y-0 translate-y-2 z-[10002]">
+              <button
+                onClick={() => handleLanguageChange('vi')}
+                className={`flex items-center w-full text-left px-4 py-2 text-sm ${language === 'vi' ? 'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20' : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+              >
+                <span className="w-2 h-2 rounded-full mr-2 bg-blue-500"></span>
+                VI
+              </button>
+              <button
+                onClick={() => handleLanguageChange('en')}
+                className={`flex items-center w-full text-left px-4 py-2 text-sm ${language === 'en' ? 'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20' : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+              >
+                <span className="w-2 h-2 rounded-full mr-2 bg-red-500"></span>
+                EN
+              </button>
+            </div>
           </div>
-        )}
+          {/* Theme Toggle */}
+          <button
+            onClick={toggleDarkMode}
+            className="p-2 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-200 relative overflow-hidden"
+            aria-label="Toggle theme"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-primary-200 to-primary-100 dark:from-primary-900 dark:to-primary-800 opacity-0 hover:opacity-20 transition-opacity duration-200"></div>
+            {darkMode ? (
+              <Sun size={20} className="text-yellow-400" />
+            ) : (
+              <Moon size={20} className="text-gray-700" />
+            )}
+          </button>
+          {/* Auth */}
+          {isLoggedIn ? (
+            <div className="flex items-center space-x-3">
+              {/* Notification bell */}
+              <div className="relative">
+                <button className="p-2 text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200">
+                  <Bell size={20} />
+                  <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
+                </button>
+              </div>
+              {/* User dropdown */}
+              <div className="relative group">
+                <button className="flex items-center">
+                  <div className="relative">
+                    <img
+                      src="https://randomuser.me/api/portraits/men/1.jpg"
+                      alt="User avatar"
+                      className="w-9 h-9 rounded-full border-2 border-primary-400 transition-transform duration-300 group-hover:scale-110"
+                    />
+                    <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-gray-800"></span>
+                  </div>
+                </button>
+                <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-xl shadow-xl py-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform group-hover:translate-y-0 translate-y-2 z-[10002]">
+                  <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                      Minh Nguyen
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                      minhnguyen@example.com
+                    </p>
+                  </div>
+                  <a
+                    href="#"
+                    className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    Hồ sơ
+                  </a>
+                  <a
+                    href="#"
+                    className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    Cài đặt
+                  </a>
+                  <a
+                    href="#"
+                    className="block px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    Đăng xuất
+                  </a>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center space-x-2">
+              <Link to="/login" className="px-4 py-2 text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200 relative overflow-hidden group">
+                <span className="relative z-10">{t("auth.login")}</span>
+                <span className="absolute bottom-0 left-0 w-full h-0.5 bg-primary-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300"></span>
+              </Link>
+              <Link to="/register" className="px-5 py-2.5 bg-gradient-to-r from-[#FF007A] via-[#C77DFF] to-[#A259FF] text-white font-medium rounded-full shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-0.5">
+                {t("auth.signup")}
+              </Link>
+            </div>
+          )}
+        </div>
+        {/* Mobile Menu Button */}
+        <div className="flex items-center space-x-3 md:hidden">
+          <button className="p-2 text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200">
+            <Search size={20} />
+          </button>
+          <button
+            onClick={toggleDarkMode}
+            className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200"
+          >
+            {darkMode ? (
+              <Sun size={20} className="text-yellow-400" />
+            ) : (
+              <Moon size={20} className="text-gray-700" />
+            )}
+          </button>
+          <button className="p-1.5" onClick={toggleMenu}>
+            {isMenuOpen ? (
+              <X size={24} className="text-gray-700 dark:text-gray-200" />
+            ) : (
+              <Menu size={24} className="text-gray-700 dark:text-gray-200" />
+            )}
+          </button>
+        </div>
       </div>
+      {/* Mobile Menu */}
+  {isMenuOpen && (
+  <div className="md:hidden bg-white dark:bg-gray-900 px-4 py-4 shadow-lg border-t border-gray-100 dark:border-gray-800 animate-fadeIn z-[10001]">
+          <nav className="flex flex-col space-y-4 pb-6">
+            <a
+              href="#"
+              className="text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-400 font-medium py-2 border-b border-gray-100 dark:border-gray-800"
+            >
+              {t("nav.courses")}
+            </a>
+            <a
+              href="#"
+              className="text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-400 font-medium py-2 border-b border-gray-100 dark:border-gray-800"
+            >
+              {t("nav.challenges")}
+            </a>
+            <a
+              href="#"
+              className="text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-400 font-medium py-2 border-b border-gray-100 dark:border-gray-800"
+            >
+              {t("nav.leaderboard")}
+            </a>
+            <a
+              href="#"
+              className="text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-400 font-medium py-2 border-b border-gray-100 dark:border-gray-800"
+            >
+              {t("nav.blog")}
+            </a>
+            <div className="flex items-center justify-between pt-4">
+              <div className="flex items-center space-x-4">
+                {/* Language Switcher */}
+                <div className="relative">
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => handleLanguageChange('vi')}
+                      className={`px-3 py-1.5 text-sm rounded-full flex items-center ${language === 'vi' ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 font-medium' : 'text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800'}`}
+                    >
+                      <span className="w-2 h-2 rounded-full mr-2 bg-blue-500"></span>
+                      VI
+                    </button>
+                    <button
+                      onClick={() => handleLanguageChange('en')}
+                      className={`px-3 py-1.5 text-sm rounded-full flex items-center ${language === 'en' ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 font-medium' : 'text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800'}`}
+                    >
+                      <span className="w-2 h-2 rounded-full mr-2 bg-red-500"></span>
+                      EN
+                    </button>
+                  </div>
+                </div>
+              </div>
+              {/* Auth */}
+              {isLoggedIn ? (
+                <div className="flex items-center">
+                  <img
+                    src="https://randomuser.me/api/portraits/men/1.jpg"
+                    alt="User avatar"
+                    className="w-9 h-9 rounded-full border-2 border-primary-400"
+                  />
+                  <User
+                    size={20}
+                    className="ml-2 text-gray-700 dark:text-gray-200"
+                  />
+                </div>
+              ) : (
+                  <div className="flex items-center space-x-2">
+                    <Link to="/login" className="px-4 py-2 text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200">
+                      {t("auth.login")}
+                    </Link>
+                    <Link to="/register" className="px-4 py-2 bg-gradient-to-r from-[#FF007A] via-[#C77DFF] to-[#A259FF] text-white rounded-full shadow-md">
+                      {t("auth.signup")}
+                    </Link>
+                  </div>
+              )}
+            </div>
+          </nav>
+        </div>
+      )}
     </header>
-  );
-};
-
-export default Header;
+  )
+}
+export default Header

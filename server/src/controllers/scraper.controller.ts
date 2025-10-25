@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { ProblemScraper } from '../services/problemScraper';
+import { RealProblemScraper } from '../services/realProblemScraper';
 
 interface AuthenticatedRequest extends Request {
   user?: any;
@@ -15,8 +15,16 @@ export const scrapeCSES = async (req: AuthenticatedRequest, res: Response, next:
       });
     }
 
-    const problems = await ProblemScraper.scrapeCSES();
-    await ProblemScraper.saveProblemsToDB(problems, req.user.id);
+    // Lấy classification settings từ request body (nếu có)
+    const classificationSettings = req.body.classification || {
+      language: 'C++',
+      difficulty: 'Medium',
+      category: 'Logic',
+      points: 20
+    };
+
+    const problems = await RealProblemScraper.scrapeCSES();
+    await RealProblemScraper.saveProblemsToDB(problems, req.user.id, classificationSettings);
 
     res.json({
       success: true,
@@ -38,8 +46,16 @@ export const scrapeAtCoder = async (req: AuthenticatedRequest, res: Response, ne
       });
     }
 
-    const problems = await ProblemScraper.scrapeAtCoder();
-    await ProblemScraper.saveProblemsToDB(problems, req.user.id);
+    // Lấy classification settings từ request body (nếu có)
+    const classificationSettings = req.body.classification || {
+      language: 'C++',
+      difficulty: 'Medium',
+      category: 'Logic',
+      points: 20
+    };
+
+    const problems = await RealProblemScraper.scrapeAtCoder();
+    await RealProblemScraper.saveProblemsToDB(problems, req.user.id, classificationSettings);
 
     res.json({
       success: true,
@@ -61,8 +77,16 @@ export const scrapeLeetCode = async (req: AuthenticatedRequest, res: Response, n
       });
     }
 
-    const problems = await ProblemScraper.scrapeLeetCode();
-    await ProblemScraper.saveProblemsToDB(problems, req.user.id);
+    // Lấy classification settings từ request body (nếu có)
+    const classificationSettings = req.body.classification || {
+      language: 'JavaScript',
+      difficulty: 'Medium',
+      category: 'Logic',
+      points: 20
+    };
+
+    const problems = await RealProblemScraper.scrapeLeetCode();
+    await RealProblemScraper.saveProblemsToDB(problems, req.user.id, classificationSettings);
 
     res.json({
       success: true,
@@ -84,14 +108,22 @@ export const scrapeAllSources = async (req: AuthenticatedRequest, res: Response,
       });
     }
 
+    // Lấy classification settings từ request body (nếu có)
+    const classificationSettings = req.body.classification || {
+      language: 'JavaScript',
+      difficulty: 'Medium',
+      category: 'Logic',
+      points: 20
+    };
+
     const [csesProblems, atcoderProblems, leetcodeProblems] = await Promise.all([
-      ProblemScraper.scrapeCSES(),
-      ProblemScraper.scrapeAtCoder(),
-      ProblemScraper.scrapeLeetCode()
+      RealProblemScraper.scrapeCSES(),
+      RealProblemScraper.scrapeAtCoder(),
+      RealProblemScraper.scrapeLeetCode()
     ]);
 
     const allProblems = [...csesProblems, ...atcoderProblems, ...leetcodeProblems];
-    await ProblemScraper.saveProblemsToDB(allProblems, req.user.id);
+    await RealProblemScraper.saveProblemsToDB(allProblems, req.user.id, classificationSettings);
 
     res.json({
       success: true,
