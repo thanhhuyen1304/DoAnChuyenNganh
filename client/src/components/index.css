@@ -1,0 +1,168 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Font */
+    --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+    /* Light theme palette per request */
+    /* Background #F9FAFB */
+    --background: 210 20% 98%;
+    /* Text #1E293B */
+    --foreground: 215 28% 17%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+
+    /* Primary #3B82F6 */
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+    /* Hover #60A5FA */
+    --primary-glow: 217 92% 70%;
+
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+
+    /* Accent #10B981 */
+    --accent: 160 84% 39%;
+    --accent-foreground: 0 0% 100%;
+    --accent-glow: 160 84% 45%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 217 91% 60%;
+
+    --radius: 0.75rem;
+
+    --gradient-primary: linear-gradient(135deg, hsl(217 91% 60%), hsl(213 94% 68%));
+    --gradient-accent: linear-gradient(135deg, hsl(160 84% 39%), hsl(160 84% 45%));
+    --gradient-card: linear-gradient(135deg, hsl(210 20% 99%), hsl(210 20% 97%));
+    
+    --shadow-glow: 0 0 40px hsl(263 70% 50% / 0.2);
+    --shadow-accent-glow: 0 0 30px hsl(30 100% 50% / 0.15);
+    --shadow-elegant: 0 10px 40px -10px hsl(263 70% 50% / 0.3);
+
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .dark {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+
+    --card: 240 8% 8%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 240 8% 8%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 263 70% 50%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 263 80% 60%;
+
+    --secondary: 240 8% 12%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 240 8% 12%;
+    --muted-foreground: 240 5% 64.9%;
+
+    --accent: 30 100% 50%;
+    --accent-foreground: 0 0% 100%;
+    --accent-glow: 30 100% 60%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 240 8% 15%;
+    --input: 240 8% 15%;
+    --ring: 263 70% 50%;
+
+    --gradient-primary: linear-gradient(135deg, hsl(263 70% 50%), hsl(220 70% 50%));
+    --gradient-accent: linear-gradient(135deg, hsl(30 100% 50%), hsl(10 100% 50%));
+    --gradient-card: linear-gradient(135deg, hsl(240 8% 10%), hsl(240 8% 8%));
+    
+    --shadow-glow: 0 0 40px hsl(263 70% 50% / 0.3);
+    --shadow-accent-glow: 0 0 30px hsl(30 100% 50% / 0.25);
+    --shadow-elegant: 0 10px 40px -10px hsl(263 70% 50% / 0.4);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Utility classes to standardize logo and CTA */
+  .logo-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+  }
+
+  .logo-badge {
+    padding: 0.45rem 0.6rem;
+    border-radius: 0.6rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--shadow-elegant);
+    background: var(--gradient-primary);
+    color: var(--primary-foreground);
+  }
+
+  .btn-gradient {
+    background: var(--gradient-primary);
+    color: var(--primary-foreground);
+    padding: 0.45rem 0.9rem;
+    border-radius: 0.6rem;
+    box-shadow: var(--shadow-glow);
+    transition: var(--transition-smooth);
+  }
+
+  .nav-link {
+    position: relative;
+    padding-bottom: 0.2rem;
+    transition: color 0.22s ease;
+  }
+
+  .nav-link::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: -2px;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, rgba(255,255,255,0), hsl(var(--primary) / 1));
+    transform-origin: left;
+    transform: scaleX(0);
+    transition: transform 0.25s ease;
+  }
+
+  .nav-link:hover::after {
+    transform: scaleX(1);
+  }
+}
