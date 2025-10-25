@@ -119,14 +119,23 @@ export class AuthController {
                 });
             }
 
-            const { email, password } = req.body;
+            const { identifier, password } = req.body;
+
+            // identifier có thể là email hoặc username
+            const query: any = {};
+            if (typeof identifier === 'string' && identifier.includes('@')) {
+                query.email = identifier.toLowerCase();
+            } else {
+                // tìm theo username hoặc email fallback
+                query.$or = [{ username: identifier }, { email: identifier }];
+            }
 
             // Tìm user và lấy cả password để so sánh
-            const user = await User.findOne({ email }).select('+password');
+            const user = await User.findOne(query).select('+password');
             if (!user) {
                 return res.status(401).json({ 
                     success: false,
-                    message: 'Email hoặc mật khẩu không đúng' 
+                    message: 'Email / tên đăng nhập hoặc mật khẩu không đúng' 
                 });
             }
 

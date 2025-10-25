@@ -23,10 +23,12 @@ const registerValidation = [
 ];
 
 const loginValidation = [
-    body('email')
-        .isEmail()
-        .withMessage('Email không hợp lệ')
-        .normalizeEmail(),
+    // identifier can be an email or a username
+    body('identifier')
+        .trim()
+        .not()
+        .isEmpty()
+        .withMessage('Email hoặc tên đăng nhập là bắt buộc'),
     body('password')
         .not()
         .isEmpty()

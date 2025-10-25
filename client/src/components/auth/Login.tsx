@@ -16,7 +16,7 @@ const decoImg = new URL('../images/1.jpg', import.meta.url).href;
 const API_BASE_URL = 'http://localhost:5000/api';
 
 const Login = () => {
-    const [email, setEmail] = useState('');
+    const [identifier, setIdentifier] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -33,7 +33,7 @@ const Login = () => {
             const response = await fetch(`${API_BASE_URL}/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password }),
+                body: JSON.stringify({ identifier, password }),
             });
 
             const data = await response.json();
@@ -46,9 +46,11 @@ const Login = () => {
                 localStorage.setItem('token', data.data.token);
                 localStorage.setItem('user', JSON.stringify(data.data.user));
                 if (data.data.user.role === 'admin') {
+                    // keep admin landing page
                     window.location.href = '/admin/dashboard';
                 } else {
-                    window.location.href = '/dashboard';
+                    // after login, redirect regular users to the homepage
+                    window.location.href = '/';
                 }
             }
         } catch (err) {
@@ -116,19 +118,19 @@ const Login = () => {
                         {/* Email Input (style giống Register) */}
                         <div className="space-y-1">
                             <Label htmlFor="email" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                {t('login.email')}
+                                {t('login.emailOrUsername')}
                             </Label>
                             <div className="relative">
                                 {/* Sử dụng icon Mail */}
                                 <Mail className={`absolute left-3 top-1/2 transform -translate-y-1/2 size-4 text-gray-400 dark:text-gray-500`} />
                                 <Input
-                                    type="email"
-                                    id="email" // Đổi id thành 'email'
-                                    name="email" // Thêm name attribute nếu cần
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
+                                    type="text"
+                                    id="identifier"
+                                    name="identifier"
+                                    value={identifier}
+                                    onChange={(e) => setIdentifier(e.target.value)}
                                     required
-                                    placeholder={t('login.email.placeholder')}
+                                    placeholder={t('login.emailOrUsername.placeholder') || 'Email hoặc tên đăng nhập'}
                                     className={`pl-9 text-sm bg-white/70 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 focus:ring-primary-500/50 focus:ring-2 placeholder:text-gray-400 dark:placeholder:text-gray-500`}
                                 />
                             </div>

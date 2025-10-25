@@ -13,6 +13,60 @@ import { useLanguage } from './contexts/LanguageContext'
 const Features: React.FC = () => {
   const { language, t } = useLanguage()
   const [activeFeature, setActiveFeature] = useState(0)
+  // Generic achievement card data (shared/common)
+  const genericCompleted = 24
+  const genericTotal = 30
+  const genericLearningTime = '12h 30m'
+  const genericRankingText = 'Top 15%'
+
+  // State used to display values (initialized with generic)
+  const [completed, setCompleted] = useState<number>(genericCompleted)
+  const [total, setTotal] = useState<number>(genericTotal)
+  const [learningTime, setLearningTime] = useState<string>(genericLearningTime)
+  const [rankingText, setRankingText] = useState<string>(genericRankingText)
+
+  // Fetch real progress for logged-in user
+  useEffect(() => {
+    const token = localStorage.getItem('token')
+    if (!token) return
+
+    const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000'
+
+    const abortController = new AbortController()
+
+    fetch(`${API_BASE}/api/users/me/progress`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      signal: abortController.signal,
+    })
+      .then(async (res) => {
+        if (!res.ok) throw new Error('Network response was not ok')
+        return res.json()
+      })
+      .then((json) => {
+        if (json && json.success && json.data) {
+          const d = json.data
+          setCompleted(typeof d.completed === 'number' ? d.completed : genericCompleted)
+          setTotal(typeof d.total === 'number' ? d.total : genericTotal)
+          if (typeof d.learningTimeMinutes === 'number') {
+            const h = Math.floor(d.learningTimeMinutes / 60)
+            const m = d.learningTimeMinutes % 60
+            setLearningTime(`${h}h ${m}m`)
+          }
+          if (typeof d.rankingPercent === 'number') {
+            setRankingText(`Top ${d.rankingPercent}%`)
+          }
+        }
+      })
+      .catch(() => {
+        // ignore errors and keep generic values
+      })
+
+    return () => abortController.abort()
+  }, [])
 
   const features = [
     {
@@ -72,6 +126,8 @@ const Features: React.FC = () => {
     }, 3500)
     return () => clearInterval(interval)
   }, [])
+
+  // (No per-user progress here — the achievement card shows shared/generic data)
 
   return (
     <section className="py-24 bg-gradient-to-br from-white via-[#FAF5FF] to-[#FFF4FA] dark:from-[#0E0A12] dark:via-[#14101D] dark:to-[#1A1623] relative overflow-hidden">
@@ -165,17 +221,17 @@ const Features: React.FC = () => {
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
                     <span className="text-gray-700 dark:text-gray-300">{language === 'vi' ? 'Bài tập đã hoàn thành' : 'Completed exercises'}</span>
-                    <span className="font-medium text-gray-900 dark:text-white">24/30</span>
+                    <span className="font-medium text-gray-900 dark:text-white">{completed}/{total}</span>
                   </div>
                   <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
-                    <div className="bg-gradient-to-r from-[#FF007A] to-[#A259FF] h-2.5 rounded-full" style={{ width: '80%' }}></div>
+                    <div className="bg-gradient-to-r from-[#FF007A] to-[#A259FF] h-2.5 rounded-full" style={{ width: `${Math.round((completed / total) * 100)}%` }}></div>
                   </div>
 
                   <div className="flex justify-between items-center mt-4">
                     <span className="text-gray-700 dark:text-gray-300">{language === 'vi' ? 'Thời gian học' : 'Learning time'}</span>
                     <div className="flex items-center">
                       <Clock size={16} className="text-gray-500 dark:text-gray-400 mr-1" />
-                      <span className="font-medium text-gray-900 dark:text-white">12h 30m</span>
+                      <span className="font-medium text-gray-900 dark:text-white">{learningTime}</span>
                     </div>
                   </div>
 
@@ -185,7 +241,7 @@ const Features: React.FC = () => {
                         {language === 'vi' ? 'Xếp hạng của bạn' : 'Your ranking'}
                       </span>
                       <div className="font-bold text-xl bg-gradient-to-r from-[#FF007A] to-[#A259FF] bg-clip-text text-transparent">
-                        Top 15%
+                        {rankingText}
                       </div>
                     </div>
                     <div className="w-12 h-12 bg-white dark:bg-gray-800 rounded-full flex items-center justify-center shadow-md">
