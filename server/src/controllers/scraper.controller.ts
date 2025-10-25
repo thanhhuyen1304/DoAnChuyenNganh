@@ -23,8 +23,8 @@ export const scrapeCSES = async (req: AuthenticatedRequest, res: Response, next:
       points: 20
     };
 
-    const problems = await RealProblemScraper.scrapeCSES();
-    await RealProblemScraper.saveProblemsToDB(problems, req.user.id, classificationSettings);
+    let problems = await RealProblemScraper.scrapeCSES();
+    const savedCount = await RealProblemScraper.saveProblemsToDB(problems, req.user.id, classificationSettings, 10);
 
     res.json({
       success: true,

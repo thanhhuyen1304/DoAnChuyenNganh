@@ -23,7 +23,7 @@ interface ScrapedProblem {
 export class RealProblemScraper {
   
   // Scrape từ LeetCode (sử dụng API công khai)
-  static async scrapeLeetCode(): Promise<ScrapedProblem[]> {
+  static async scrapeLeetCode(skipCount: number = 0): Promise<ScrapedProblem[]> {
     try {
       console.log('🔍 Scraping LeetCode...');
       
@@ -59,7 +59,7 @@ export class RealProblemScraper {
 
       const variables = {
         categorySlug: "",
-        skip: 0,
+        skip: skipCount,
         limit: 50,
         filters: {}
       };
@@ -207,15 +207,37 @@ export class RealProblemScraper {
   }
 
   // Lưu problems vào database
-  static async saveProblemsToDB(problems: ScrapedProblem[], adminId: string, classificationSettings?: any): Promise<void> {
+  static async saveProblemsToDB(problems: ScrapedProblem[], adminId: string, classificationSettings?: any, desiredCount: number = 10): Promise<number> {
     try {
-      console.log(`💾 Saving ${problems.length} problems to database...`);
+      console.log(`💾 Attempting to save ${desiredCount} new problems to database...`);
+      let savedCount = 0;
       
       for (const problem of problems) {
-        // Kiểm tra xem problem đã tồn tại chưa
-        const existing = await Challenge.findOne({ title: problem.title });
-        if (existing) {
-          console.log(`⏭️  Skipping existing problem: ${problem.title}`);
+        if (savedCount >= desiredCount) break;
+
+        // Chuẩn hóa title và tạo một phiên bản thay thế nếu trùng
+        let normalizedTitle = problem.title.replace(/\s+/g, ' ').trim();
+        let attempt = 1;
+        let isUnique = false;
+        
+        while (!isUnique && attempt <= 5) { // Thử tối đa 5 lần với các tên khác nhau
+          const titleToTry = attempt === 1 ? normalizedTitle : `${normalizedTitle} (Variant ${attempt})`;
+          
+          // Kiểm tra xem problem đã tồn tại chưa
+          const existing = await Challenge.findOne({ 
+            title: { $regex: new RegExp('^' + titleToTry.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$', 'i') }
+          });
+          
+          if (!existing) {
+            isUnique = true;
+            problem.title = titleToTry; // Cập nhật title nếu cần thêm variant
+            break;
+          }
+          attempt++;
+        }
+        
+        if (!isUnique) {
+          console.log(`⏭️  Cannot find unique variant for: ${normalizedTitle}`);
           continue;
         }
 
@@ -237,20 +259,41 @@ export class RealProblemScraper {
           memoryLimit: 256
         });
 
-        await challenge.save();
-        console.log(`✅ Saved: ${problem.title}`);
-        console.log(`   - Language: ${challenge.language}`);
-        console.log(`   - Difficulty: ${challenge.difficulty}`);
-        console.log(`   - Category: ${challenge.category}`);
-        console.log(`   - Points: ${challenge.points}`);
-        console.log(`   - IsActive: ${challenge.isActive}`);
+        try {
+          await challenge.save();
+          savedCount++;
+          console.log(`✅ Saved: ${problem.title}`);
+          console.log(`   - Language: ${challenge.language}`);
+          console.log(`   - Difficulty: ${challenge.difficulty}`);
+          console.log(`   - Category: ${challenge.category}`);
+          console.log(`   - Points: ${challenge.points}`);
+          console.log(`   - IsActive: ${challenge.isActive}`);
+        } catch (saveError) {
+          console.error(`❌ Error saving problem ${problem.title}:`, saveError);
+          continue;
+        }
       }
 
-      console.log(`🎉 Successfully saved ${problems.length} problems to database!`);
+      console.log(`🎉 Successfully saved ${savedCount} new problems to database!`);
+      return savedCount;
 
     } catch (error) {
-      console.error('❌ Error saving problems to DB:', error);
+      console.error('❌ Error in saveProblemsToDB:', error);
       throw error;
+    }
+  }
+  
+  // Helper method để lấy thêm bài khi không đủ số lượng mong muốn
+  private static async getMoreProblems(source: 'leetcode' | 'cses' | 'atcoder', skipCount: number): Promise<ScrapedProblem[]> {
+    switch(source) {
+      case 'leetcode':
+        return this.scrapeLeetCode(skipCount);
+      case 'cses':
+        return this.scrapeCSES(); // Có thể thêm logic phân trang nếu cần
+      case 'atcoder':
+        return this.scrapeAtCoder(); // Có thể thêm logic phân trang nếu cần
+      default:
+        return [];
     }
   }
 

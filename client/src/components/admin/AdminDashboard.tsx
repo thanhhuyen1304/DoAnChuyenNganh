@@ -14,6 +14,7 @@ import ScraperGuide from './ScraperGuide';
 import ChallengeStats from './ChallengeStats';
 import DatabaseDebugger from './DatabaseDebugger';
 import APITester from './APITester';
+import { EditChallengeModal } from './EditChallengeModal';
 
 // API Base URL
 const API_BASE_URL = 'http://localhost:5000/api';
@@ -163,22 +164,12 @@ const AdminDashboard = () => {
     setEditingChallenge(null);
   };
 
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [selectedChallengeId, setSelectedChallengeId] = useState<string | null>(null);
+
   const handleEdit = (challenge: Challenge) => {
-    setEditingChallenge(challenge);
-    setFormData({
-      title: challenge.title,
-      description: challenge.description,
-      problemStatement: '',
-      language: challenge.language,
-      difficulty: challenge.difficulty,
-      category: challenge.category,
-      buggyCode: '',
-      correctCode: '',
-      points: challenge.points,
-      timeLimit: 5,
-      memoryLimit: 64,
-      testCases: [{ input: '', expectedOutput: '', isHidden: false, points: 10 }]
-    });
+    setSelectedChallengeId(challenge._id);
+    setEditModalOpen(true);
   };
 
   const handleDelete = async (challengeId: string) => {
@@ -580,6 +571,16 @@ const AdminDashboard = () => {
           <ChallengeStats challenges={challenges} />
         </TabsContent>
       </Tabs>
+
+      <EditChallengeModal
+        isOpen={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        challengeId={selectedChallengeId}
+        onUpdate={() => {
+          fetchChallenges();
+          setEditModalOpen(false);
+        }}
+      />
     </div>
   );
 };

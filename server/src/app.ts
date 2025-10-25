@@ -11,6 +11,7 @@ import { config } from 'dotenv';
 import authRoutes from './routes/auth.routes';
 import challengeRoutes from './routes/challenge.routes';
 import scraperRoutes from './routes/scraper.routes';
+import importExportRoutes from './routes/import-export.routes';
 
 // Passport strategies
 import './config/passport';
@@ -50,6 +51,7 @@ app.use(passport.initialize());
 app.use('/api/auth', authRoutes);
 app.use('/api/challenges', challengeRoutes);
 app.use('/api/scraper', scraperRoutes);
+app.use('/api/import-export', importExportRoutes);
 
 // Error handling middleware
 app.use((err: ErrorWithStack, req: Request, res: Response, _next: NextFunction) => {
