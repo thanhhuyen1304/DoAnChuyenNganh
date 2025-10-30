@@ -126,12 +126,12 @@ router.get('/', [
   query('search').optional().trim().isLength({ max: 100 }).withMessage('Từ khóa tìm kiếm không được vượt quá 100 ký tự')
 ], getChallenges);
 
+// Protected routes (require authentication)
+router.use(authenticateToken);
+
 router.get('/:id', [
   param('id').isMongoId().withMessage('ID không hợp lệ')
 ], getChallengeById);
-
-// Protected routes (require authentication)
-router.use(authenticateToken);
 
 // Admin routes (require admin role)
 router.get('/admin/all', [
@@ -145,6 +145,7 @@ router.get('/admin/all', [
 ], getAdminChallenges);
 
 router.post('/', [
+  isAdmin,
   ...challengeValidation
 ], createChallenge);
 

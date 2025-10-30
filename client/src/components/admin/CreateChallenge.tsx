@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import axios from 'axios';
 import { useToast } from '../hooks/use-toast';
 import { Button } from '../ui/button';
@@ -8,13 +8,6 @@ import * as Select from '@radix-ui/react-select';
 import { Label } from '../ui/label';
 import { CodePreview } from './CodePreview';
 import { CaretSortIcon, CheckIcon } from '@radix-ui/react-icons';
-import { decodeHtml } from '../../lib/utils';
-
-interface EditChallengeProps {
-  challengeId: string;
-  onClose: () => void;
-  onUpdate: () => void;
-}
 
 interface TestCase {
   input: string;
@@ -23,129 +16,40 @@ interface TestCase {
   points: number;
 }
 
-interface Challenge {
+interface ChallengeData {
   title: string;
   description: string;
   problemStatement: string;
-  difficulty: 'Easy' | 'Medium' | 'Hard';
   language: 'Python' | 'JavaScript' | 'Java' | 'C++' | 'C#' | 'C';
+  difficulty: 'Easy' | 'Medium' | 'Hard';
   category: 'Syntax' | 'Logic' | 'Performance' | 'Security';
-  testCases: TestCase[];
   buggyCode: string;
   correctCode: string;
+  testCases: TestCase[];
   points: number;
   timeLimit: number;
   memoryLimit: number;
-  isActive: boolean;
 }
 
-export const EditChallenge: React.FC<EditChallengeProps> = ({
-  challengeId,
-  onClose,
-  onUpdate
-}) => {
+export const CreateChallenge: React.FC = () => {
   const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [challenge, setChallenge] = useState<Challenge | null>(null);
-  
-  // Khởi tạo giá trị mặc định cho các trường số
-  useEffect(() => {
-    if (challenge) {
-      setChallenge({
-        ...challenge,
-        points: challenge.points || 10,
-        timeLimit: challenge.timeLimit || 1,
-        memoryLimit: challenge.memoryLimit || 128,
-        testCases: challenge.testCases.map(tc => ({
-          ...tc,
-          points: tc.points || 10
-        }))
-      });
-    }
-  }, [challenge]);
+  const [loading, setLoading] = useState(false);
+  const [challenge, setChallenge] = useState<ChallengeData>({
+    title: '',
+    description: '',
+    problemStatement: '',
+    language: 'Python',
+    difficulty: 'Easy',
+    category: 'Syntax',
+    buggyCode: '',
+    correctCode: '',
+    testCases: [{ input: '', expectedOutput: '', isHidden: false, points: 10 }],
+    points: 10,
+    timeLimit: 1,
+    memoryLimit: 128
+  });
 
-  const [shouldRefresh, setShouldRefresh] = useState(false);
-
-  // Lấy thông tin challenge
-  const fetchChallenge = async () => {
-    try {
-      setLoading(true);
-      const token = localStorage.getItem('token');
-      const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/challenges/${challengeId}`,
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
-      );
-      const data = response.data.data;
-      // Decode HTML entities trong các trường text
-      data.title = decodeHtml(data.title);
-      data.description = decodeHtml(data.description);
-      data.problemStatement = decodeHtml(data.problemStatement);
-      data.buggyCode = decodeHtml(data.buggyCode);
-      data.correctCode = decodeHtml(data.correctCode);
-      data.testCases = data.testCases.map((tc: TestCase) => ({
-        ...tc,
-        input: decodeHtml(tc.input),
-        expectedOutput: decodeHtml(tc.expectedOutput)
-      }));
-      setChallenge(data);
-      setLoading(false);
-    } catch (error: any) {
-      console.error('Error fetching challenge:', error);
-      toast({
-        title: 'Lỗi',
-        description: error.response?.data?.message || 'Không thể tải thông tin bài tập',
-        variant: 'destructive',
-      });
-      setLoading(false);
-    }
-  };
-
-  // Load challenge khi component mount hoặc khi cần refresh
-  useEffect(() => {
-    fetchChallenge();
-  }, [challengeId, shouldRefresh]);
-
-    const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!challenge) return;
-
-    try {
-      setLoading(true);
-      const token = localStorage.getItem('token');
-      await axios.put(
-        `${import.meta.env.VITE_API_URL}/api/challenges/${challengeId}`,
-        challenge,
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
-      );
-      
-      toast({
-        title: 'Thành công',
-        description: 'Đã cập nhật bài tập',
-      });
-      
-      // Refresh dữ liệu sau khi cập nhật
-      setShouldRefresh(prev => !prev);
-      
-      // Gọi callback để cập nhật danh sách ở component cha
-      onUpdate();
-      
-      // Reset loading state
-      setLoading(false);
-    } catch (error: any) {
-      console.error('Error updating challenge:', error);
-      toast({
-        title: 'Lỗi',
-        description: error.response?.data?.message || 'Không thể cập nhật bài tập',
-        variant: 'destructive',
-      });
-      setLoading(false);
-    }
-  };  const handleTestCaseChange = (index: number, field: keyof TestCase, value: any) => {
-    if (!challenge) return;
+  const handleTestCaseChange = (index: number, field: keyof TestCase, value: any) => {
     const newTestCases = [...challenge.testCases];
     newTestCases[index] = {
       ...newTestCases[index],
@@ -157,49 +61,109 @@ export const EditChallenge: React.FC<EditChallengeProps> = ({
     });
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center p-4">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-        <span className="ml-2">Đang tải...</span>
-      </div>
-    );
-  }
-  
-  if (!challenge) {
-    return (
-      <div className="p-4 text-center text-red-600">
-        Không thể tải thông tin bài tập. Vui lòng thử lại sau.
-      </div>
-    );
-  }
+  const handleAddTestCase = () => {
+    setChallenge({
+      ...challenge,
+      testCases: [
+        ...challenge.testCases,
+        { input: '', expectedOutput: '', isHidden: false, points: 10 }
+      ]
+    });
+  };
+
+  const handleRemoveTestCase = (index: number) => {
+    if (challenge.testCases.length > 1) {
+      const newTestCases = challenge.testCases.filter((_, i) => i !== index);
+      setChallenge({
+        ...challenge,
+        testCases: newTestCases
+      });
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('token');
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_URL}/api/challenges`,
+        challenge,
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+
+      toast({
+        title: 'Thành công',
+        description: 'Đã tạo bài tập mới',
+      });
+
+      // Reset form
+      setChallenge({
+        title: '',
+        description: '',
+        problemStatement: '',
+        language: 'Python',
+        difficulty: 'Easy',
+        category: 'Syntax',
+        buggyCode: '',
+        correctCode: '',
+        testCases: [{ input: '', expectedOutput: '', isHidden: false, points: 10 }],
+        points: 10,
+        timeLimit: 1,
+        memoryLimit: 128
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Lỗi',
+        description: error.response?.data?.message || 'Không thể tạo bài tập mới',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 p-4">
-      <h2 className="text-2xl font-bold mb-4">Edit Challenge</h2>
+      <h2 className="text-2xl font-bold mb-4">Create New Challenge</h2>
       
       {/* Basic Info */}
       <div className="space-y-2">
+        <Label htmlFor="title">Tiêu đề</Label>
         <Input
+          id="title"
           type="text"
           value={challenge.title}
           onChange={(e) => setChallenge({...challenge, title: e.target.value})}
-          placeholder="Title"
+          placeholder="Tiêu đề bài tập"
+          required
         />
+
+        <Label htmlFor="description">Mô tả</Label>
         <Textarea
+          id="description"
           value={challenge.description}
           onChange={(e) => setChallenge({...challenge, description: e.target.value})}
-          placeholder="Description"
+          placeholder="Mô tả ngắn gọn về bài tập"
+          required
         />
+
+        <Label htmlFor="problemStatement">Đề bài</Label>
         <Textarea
+          id="problemStatement"
           value={challenge.problemStatement}
           onChange={(e) => setChallenge({...challenge, problemStatement: e.target.value})}
-          placeholder="Problem Statement"
+          placeholder="Nội dung chi tiết của đề bài"
+          required
         />
       </div>
 
       {/* Classification */}
       <div className="grid grid-cols-3 gap-4">
+        <div>
+          <Label htmlFor="difficulty">Độ khó</Label>
           <Select.Root
             value={challenge.difficulty}
             onValueChange={(value) => setChallenge({...challenge, difficulty: value as 'Easy' | 'Medium' | 'Hard'})}
@@ -236,10 +200,13 @@ export const EditChallenge: React.FC<EditChallengeProps> = ({
               </Select.Content>
             </Select.Portal>
           </Select.Root>
+        </div>
 
+        <div>
+          <Label htmlFor="language">Ngôn ngữ</Label>
           <Select.Root
             value={challenge.language}
-            onValueChange={(value) => setChallenge({...challenge, language: value as Challenge['language']})}
+            onValueChange={(value) => setChallenge({...challenge, language: value as ChallengeData['language']})}
           >
             <Select.Trigger className="w-full flex items-center justify-between border rounded-md px-3 py-2">
               <Select.Value />
@@ -263,10 +230,13 @@ export const EditChallenge: React.FC<EditChallengeProps> = ({
               </Select.Content>
             </Select.Portal>
           </Select.Root>
+        </div>
 
+        <div>
+          <Label htmlFor="category">Danh mục</Label>
           <Select.Root
             value={challenge.category}
-            onValueChange={(value) => setChallenge({...challenge, category: value as Challenge['category']})}
+            onValueChange={(value) => setChallenge({...challenge, category: value as ChallengeData['category']})}
           >
             <Select.Trigger className="w-full flex items-center justify-between border rounded-md px-3 py-2">
               <Select.Value />
@@ -290,16 +260,17 @@ export const EditChallenge: React.FC<EditChallengeProps> = ({
               </Select.Content>
             </Select.Portal>
           </Select.Root>
+        </div>
       </div>
 
       {/* Code Sections */}
       <div className="space-y-4">
         <div>
-          <Label>Buggy Code</Label>
+          <Label>Code có lỗi</Label>
           <div className="border rounded-md overflow-hidden">
             <CodePreview
               code={challenge.buggyCode}
-              language={challenge.language}
+              language={challenge.language.toLowerCase()}
               height="300px"
               readOnly={false}
               onChange={(value) => setChallenge({...challenge, buggyCode: value || ''})}
@@ -307,11 +278,11 @@ export const EditChallenge: React.FC<EditChallengeProps> = ({
           </div>
         </div>
         <div>
-          <Label>Correct Code</Label>
+          <Label>Code đúng</Label>
           <div className="border rounded-md overflow-hidden">
             <CodePreview
               code={challenge.correctCode}
-              language={challenge.language}
+              language={challenge.language.toLowerCase()}
               height="300px"
               readOnly={false}
               onChange={(value) => setChallenge({...challenge, correctCode: value || ''})}
@@ -322,21 +293,48 @@ export const EditChallenge: React.FC<EditChallengeProps> = ({
 
       {/* Test Cases */}
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold">Test Cases</h3>
+        <div className="flex justify-between items-center">
+          <Label>Test Cases</Label>
+          <Button 
+            type="button"
+            onClick={handleAddTestCase}
+            variant="outline"
+          >
+            Thêm Test Case
+          </Button>
+        </div>
         {challenge.testCases.map((testCase, index) => (
           <div key={index} className="space-y-2 p-4 border rounded">
+            <div className="flex justify-end">
+              <Button
+                type="button"
+                onClick={() => handleRemoveTestCase(index)}
+                variant="outline"
+                size="sm"
+                disabled={challenge.testCases.length === 1}
+              >
+                Xóa
+              </Button>
+            </div>
+            
+            <Label>Input</Label>
             <Input
               type="text"
               value={testCase.input}
               onChange={(e) => handleTestCaseChange(index, 'input', e.target.value)}
               placeholder="Input"
+              required
             />
+            
+            <Label>Expected Output</Label>
             <Input
               type="text"
               value={testCase.expectedOutput}
               onChange={(e) => handleTestCaseChange(index, 'expectedOutput', e.target.value)}
               placeholder="Expected Output"
+              required
             />
+            
             <div className="flex items-center gap-4">
               <label className="flex items-center gap-2">
                 <input
@@ -346,33 +344,37 @@ export const EditChallenge: React.FC<EditChallengeProps> = ({
                 />
                 Hidden Test Case
               </label>
-              <Input
-                type="number"
-                value={testCase.points || 0}
-                onChange={(e) => handleTestCaseChange(index, 'points', Number(e.target.value) || 0)}
-                placeholder="Points"
-                className="w-24"
-                min={0}
-                max={100}
-              />
+              <div className="space-y-1">
+                <Label htmlFor={`points-${index}`}>Điểm</Label>
+                <Input
+                  id={`points-${index}`}
+                  type="number"
+                  value={testCase.points}
+                  onChange={(e) => handleTestCaseChange(index, 'points', Number(e.target.value) || 0)}
+                  placeholder="Điểm"
+                  className="w-24"
+                  min={0}
+                  max={100}
+                  required
+                />
+              </div>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Points, Time Limit, Memory Limit and Status */}
-      <div className="grid grid-cols-4 gap-4">
+      {/* Points and Limits */}
+      <div className="grid grid-cols-3 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="points">Điểm số</Label>
+          <Label htmlFor="points">Tổng điểm</Label>
           <Input
             id="points"
             type="number"
+            value={challenge.points}
+            onChange={(e) => setChallenge({...challenge, points: Number(e.target.value) || 0})}
             min={1}
             max={1000}
-            value={challenge.points || 0}
-            onChange={(e) => setChallenge({...challenge, points: Number(e.target.value) || 0})}
-            placeholder="Điểm"
-            className="w-full"
+            required
           />
         </div>
 
@@ -381,12 +383,11 @@ export const EditChallenge: React.FC<EditChallengeProps> = ({
           <Input
             id="timeLimit"
             type="number"
+            value={challenge.timeLimit}
+            onChange={(e) => setChallenge({...challenge, timeLimit: Number(e.target.value) || 1})}
             min={1}
             max={60}
-            value={challenge.timeLimit || 1}
-            onChange={(e) => setChallenge({...challenge, timeLimit: Number(e.target.value) || 1})}
-            placeholder="Giới hạn thời gian"
-            className="w-full"
+            required
           />
         </div>
 
@@ -395,36 +396,19 @@ export const EditChallenge: React.FC<EditChallengeProps> = ({
           <Input
             id="memoryLimit"
             type="number"
+            value={challenge.memoryLimit}
+            onChange={(e) => setChallenge({...challenge, memoryLimit: Number(e.target.value) || 128})}
             min={1}
             max={512}
-            value={challenge.memoryLimit || 128}
-            onChange={(e) => setChallenge({...challenge, memoryLimit: Number(e.target.value) || 128})}
-            placeholder="Giới hạn bộ nhớ"
-            className="w-full"
+            required
           />
-        </div>
-
-        <div className="flex items-center space-x-2">
-          <Label htmlFor="isActive">Trạng thái</Label>
-          <label className="flex items-center gap-2">
-            <input
-              id="isActive"
-              type="checkbox"
-              checked={challenge.isActive}
-              onChange={(e) => setChallenge({...challenge, isActive: e.target.checked})}
-            />
-            Đang hoạt động
-          </label>
         </div>
       </div>
 
-      {/* Actions */}
-      <div className="flex justify-end gap-4">
-        <Button type="button" variant="outline" onClick={onClose}>
-          Cancel
-        </Button>
-        <Button type="submit">
-          Save Changes
+      {/* Submit Button */}
+      <div className="flex justify-end">
+        <Button type="submit" disabled={loading}>
+          {loading ? 'Đang tạo...' : 'Tạo bài tập'}
         </Button>
       </div>
     </form>

@@ -93,11 +93,13 @@ export const getAdminChallenges = async (req: AuthenticatedRequest, res: Respons
       ];
     }
 
+    console.log('📊 Fetching challenges with filter:', filter);
+    console.log('   Page:', page);
+    console.log('   Limit:', limit);
+
     const challenges = await Challenge.find(filter)
       .populate('createdBy', 'username email')
       .sort({ createdAt: -1 })
-      .limit(Number(limit) * 1)
-      .skip((Number(page) - 1) * Number(limit));
 
     const total = await Challenge.countDocuments(filter);
 
@@ -132,7 +134,13 @@ export const getChallengeById = async (req: Request, res: Response, next: NextFu
       });
     }
 
-    if (!challenge.isActive) {
+    // Convert request và check quyền admin
+    const authReq = req as AuthenticatedRequest;
+    const isAdmin = authReq.user?.role === 'admin' || 
+                   challenge.createdBy.toString() === authReq.user?.id;
+
+    // Kiểm tra active status chỉ khi không phải admin
+    if (!challenge.isActive && !isAdmin) {
       return res.status(404).json({
         success: false,
         message: 'Bài tập không khả dụng'
@@ -140,9 +148,6 @@ export const getChallengeById = async (req: Request, res: Response, next: NextFu
     }
 
     // Ẩn test cases và correct code cho user thường
-    const authReq = req as AuthenticatedRequest;
-    const isAdmin = authReq.user?.role === 'admin' || 
-                   challenge.createdBy.toString() === authReq.user?.id;
 
     const challengeData = challenge.toObject();
     if (!isAdmin) {

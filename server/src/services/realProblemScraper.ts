@@ -209,11 +209,20 @@ export class RealProblemScraper {
   // Lưu problems vào database
   static async saveProblemsToDB(problems: ScrapedProblem[], adminId: string, classificationSettings?: any, desiredCount: number = 10): Promise<number> {
     try {
-      console.log(`💾 Attempting to save ${desiredCount} new problems to database...`);
+      console.log(`\n💾 Starting save operation...`);
+      console.log(`   Total problems to process: ${problems.length}`);
+      console.log(`   Desired count: ${desiredCount}`);
+      console.log(`   Classification settings:`, classificationSettings);
+      
       let savedCount = 0;
+      let duplicateCount = 0;
+      let errorCount = 0;
       
       for (const problem of problems) {
-        if (savedCount >= desiredCount) break;
+        if (savedCount >= desiredCount) {
+          console.log(`\n✅ Reached desired count of ${desiredCount} problems`);
+          break;
+        }
 
         // Chuẩn hóa title và tạo một phiên bản thay thế nếu trùng
         let normalizedTitle = problem.title.replace(/\s+/g, ' ').trim();
@@ -274,12 +283,22 @@ export class RealProblemScraper {
         }
       }
 
-      console.log(`🎉 Successfully saved ${savedCount} new problems to database!`);
+      console.log(`\n📊 Final Statistics:`);
+      console.log(`   ✅ Successfully saved: ${savedCount} problems`);
+      console.log(`   ⚠️ Duplicates skipped: ${duplicateCount} problems`);
+      console.log(`   ❌ Errors encountered: ${errorCount} problems`);
+      console.log(`   💯 Success rate: ${((savedCount / problems.length) * 100).toFixed(1)}%`);
+
+      // Verify final count in database
+      const totalInDb = await Challenge.countDocuments({});
+      console.log(`\n🔍 Database verification:`);
+      console.log(`   Current total in database: ${totalInDb}`);
+
       return savedCount;
 
     } catch (error) {
       console.error('❌ Error in saveProblemsToDB:', error);
-      throw error;
+      throw new Error(`Failed to save problems: ${error.message}`);
     }
   }
   

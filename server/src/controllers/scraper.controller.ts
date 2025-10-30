@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { RealProblemScraper } from '../services/realProblemScraper';
+import Challenge from '../models/challenge.model';
 
 interface AuthenticatedRequest extends Request {
   user?: any;
@@ -26,10 +27,22 @@ export const scrapeCSES = async (req: AuthenticatedRequest, res: Response, next:
     let problems = await RealProblemScraper.scrapeCSES();
     const savedCount = await RealProblemScraper.saveProblemsToDB(problems, req.user.id, classificationSettings, 10);
 
+    // Lấy tổng số bài tập hiện tại trong database
+    const totalChallenges = await Challenge.countDocuments({});
+    
     res.json({
       success: true,
-      message: `Đã scrape và lưu ${problems.length} problems từ CSES`,
-      data: { count: problems.length }
+      message: `Đã scrape và lưu ${savedCount} problems từ CSES`,
+      data: { 
+        count: savedCount,
+        total: totalChallenges,
+        details: {
+          source: 'CSES',
+          newProblems: savedCount,
+          totalScraped: problems.length,
+          timestamp: new Date().toISOString()
+        }
+      }
     });
   } catch (error) {
     next(error);

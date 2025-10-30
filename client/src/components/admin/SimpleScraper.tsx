@@ -21,6 +21,10 @@ const SimpleScraper = () => {
         throw new Error('Chưa đăng nhập');
       }
 
+      // Log trạng thái trước khi gửi request
+      console.log('🔍 Starting scrape operation...');
+      console.log('Token:', token.substring(0, 20) + '...');
+
       const response = await fetch(`${API_BASE_URL}/scraper/cses`, {
         method: 'POST',
         headers: {
@@ -29,15 +33,35 @@ const SimpleScraper = () => {
         },
       });
 
+      // Log response status
+      console.log('Response status:', response.status);
+      
       const data = await response.json();
+      console.log('Response data:', data);
 
       if (response.ok) {
-        setResult(`Thành công: ${data.message}`);
+        if (data.success) {
+          const newCount = data.data?.count || 0;
+          setResult(
+            `✅ Thành công!\n` +
+            `📝 ${data.message}\n` +
+            `🆕 Đã thêm ${newCount} bài tập mới\n` +
+            `📊 Tổng số bài tập: ${data.data?.total || 'N/A'}`
+          );
+          console.log('✅ Scrape operation completed successfully', data);
+        } else {
+          throw new Error(data.message || 'Lỗi không xác định từ server');
+        }
       } else {
-        setError(`Lỗi: ${data.message}`);
+        throw new Error(data.message || `Lỗi HTTP: ${response.status}`);
       }
-    } catch (err) {
-      setError(`Lỗi: ${err}`);
+    } catch (err: any) {
+      console.error('❌ Scrape operation failed:', err);
+      setError(
+        err.message || 
+        (err.response?.data?.message) || 
+        'Có lỗi xảy ra khi scrape dữ liệu'
+      );
     } finally {
       setIsLoading(false);
     }
