@@ -92,7 +92,7 @@ const Register = () => {
             console.log('Sending registration request to:', `${API_BASE_URL}/auth/register`);
             console.log('With data:', formData);
             console.log('Attempting to register with:', formData);
-            const response = await fetch('http://localhost:5000/api/auth/register', {
+            const response = await fetch(`${API_BASE_URL}/auth/register`, {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json'
