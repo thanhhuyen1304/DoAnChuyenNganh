@@ -114,4 +114,44 @@ export const getProgressByUsername = async (req: Request, res: Response) => {
   }
 }
 
-export default { getMyProgress }
+// PATCH /api/users/me  (update profile)
+export const updateMe = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.id
+    if (!userId) return res.status(401).json({ success: false, message: 'Chưa xác thực' })
+
+    const allowed: any = {}
+    const { username, avatar, favoriteLanguages } = req.body || {}
+    if (typeof username === 'string' && username.trim().length >= 3) allowed.username = username.trim()
+    if (typeof avatar === 'string') allowed.avatar = avatar.trim()
+    if (Array.isArray(favoriteLanguages)) allowed.favoriteLanguages = favoriteLanguages
+
+    if (Object.keys(allowed).length === 0) {
+      return res.status(400).json({ success: false, message: 'Không có trường nào để cập nhật' })
+    }
+
+    if (allowed.username) {
+      const exists = await User.findOne({ username: allowed.username, _id: { $ne: req.user?.id } })
+      if (exists) return res.status(400).json({ success: false, message: 'Tên người dùng đã được sử dụng' })
+    }
+
+    const updated = await User.findByIdAndUpdate(userId, { $set: allowed }, { new: true })
+    if (!updated) return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng' })
+
+    return res.json({
+      success: true,
+      data: {
+        id: (updated._id as any).toString(),
+        email: updated.email,
+        username: updated.username,
+        avatar: updated.avatar,
+        favoriteLanguages: updated.favoriteLanguages,
+      }
+    })
+  } catch (err) {
+    console.error('updateMe error', err)
+    return res.status(500).json({ success: false, message: 'Lỗi máy chủ' })
+  }
+}
+
+export default { getMyProgress, updateMe }

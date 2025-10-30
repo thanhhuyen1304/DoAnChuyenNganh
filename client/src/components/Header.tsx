@@ -198,18 +198,18 @@ const Header: React.FC<HeaderProps> = () => {
                       {user?.email}
                     </p>
                   </div>
-                  <a
-                    href="#"
+                  <Link
+                    to="/profile"
                     className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                   >
                     Hồ sơ
-                  </a>
-                  <a
-                    href="#"
+                  </Link>
+                  <Link
+                    to="/settings"
                     className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                   >
                     Cài đặt
-                  </a>
+                  </Link>
                   <button 
                     onClick={logout}
                     className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"

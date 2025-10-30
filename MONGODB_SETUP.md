@@ -68,6 +68,25 @@ Sau khi kết nối thành công, tạo database `bughunter` và các collection
 - `challenges` - Lưu thông tin bài tập
 - `submissions` - Lưu kết quả làm bài
 
+### Cấu trúc collection `users`
+
+Các trường chính (schema thực tế được định nghĩa trong `server/src/models/user.model.ts`):
+
+- `email: String` (unique, required)
+- `username: String` (unique, required)
+- `password: String` (hash, required)
+- `avatar: String`
+- `favoriteLanguages: String[]`
+- `experience: Number` (default: 0)
+- `rank: String` (enum: 'Newbie' | 'Junior' | 'Intermediate' | 'Senior' | 'Expert')
+- `badges: String[]`
+- `loginMethod: String` (enum: 'local' | 'google' | 'github' | 'facebook', default: 'local')
+- `oauth: { google?: String; github?: String; facebook?: String }`
+
+Lưu ý cập nhật mới:
+
+- Đã thêm trường mới vào collection `users`: `oauth.facebook` (String) để lưu Facebook User ID khi đăng nhập bằng Facebook. Nếu ứng dụng chưa được cấp quyền email, hệ thống vẫn có thể tạo/tìm user bằng giá trị fallback dựa trên Facebook ID.
+
 ## 5. Cấu hình Environment Variables
 
 Tạo file `.env` trong thư mục `server/` với nội dung:
