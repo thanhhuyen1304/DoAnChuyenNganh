@@ -4,19 +4,20 @@ import cors from 'cors';
 import morgan from 'morgan';
 import helmet from 'helmet';
 import compression from 'compression';
-import passport from 'passport';
 import { config } from 'dotenv';
+import passport from 'passport';
+
+// Load env vars FIRST - before importing passport config
+config();
 
 // Routes
 import authRoutes from './routes/auth.routes';
 import challengeRoutes from './routes/challenge.routes';
 import scraperRoutes from './routes/scraper.routes';
+import userRoutes from './routes/user.routes';
 
-// Passport strategies
+// Passport strategies - must be imported AFTER dotenv config
 import './config/passport';
-
-// Load env vars
-config();
 
 // Environment configuration
 const ENV = {
@@ -50,6 +51,7 @@ app.use(passport.initialize());
 app.use('/api/auth', authRoutes);
 app.use('/api/challenges', challengeRoutes);
 app.use('/api/scraper', scraperRoutes);
+app.use('/api/users', userRoutes);
 
 // Error handling middleware
 app.use((err: ErrorWithStack, req: Request, res: Response, _next: NextFunction) => {

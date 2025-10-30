@@ -15,6 +15,11 @@ import RegisterPage from "./components/pages/RegisterPage";
 import Dashboard from "./components/pages/Dashboard";
 import AdminDashboard from "./components/admin/AdminDashboard";
 import NotFound from "./components/pages/NotFound";
+import OAuthCallback from "./components/pages/OAuthCallback";
+import OAuthError from "./components/pages/OAuthError";
+import OAuthDebug from "./components/pages/OAuthDebug";
+import Profile from "./components/pages/Profile";
+import Settings from "./components/pages/Settings";
 
 // Create a client
 const queryClient = new QueryClient();
@@ -32,7 +37,12 @@ const App = () => {
                 <Route path="/" element={<Index />} />
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
+                <Route path="/auth/callback" element={<OAuthCallback />} />
+                <Route path="/auth/error" element={<OAuthError />} />
+                <Route path="/auth/debug" element={<OAuthDebug />} />
                 <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/settings" element={<Settings />} />
                 <Route path="/admin/dashboard" element={<AdminDashboard />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>

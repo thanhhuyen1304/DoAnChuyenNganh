@@ -1,6 +1,6 @@
 # BugHunter Project Memory Bank
 
-## Last Updated: December 19, 2024
+## Last Updated: December 28, 2024
 
 ## Project Overview
 - **Name**: BugHunter
@@ -20,7 +20,12 @@
 
 ### 1. User Features
 #### Account Management
-- ✅ Đăng ký/Đăng nhập (email + OAuth Google/GitHub/Facebook)
+- ✅ Đăng ký/Đăng nhập với email và password
+- ✅ OAuth Integration (Google, GitHub, Facebook) - COMPLETE
+- ✅ User Model với trường loginMethod để lưu phương thức đăng nhập
+- ✅ JWT Authentication với role-based access
+- ✅ OAuth Buttons trên frontend (Login & Register)
+- ✅ OAuth Callback & Error Handlers
 - ❌ Hồ sơ cá nhân: avatar, thông tin, ngôn ngữ yêu thích, XP, rank, huy hiệu
 - ❌ Quản lý mật khẩu, cập nhật thông tin
 
@@ -112,7 +117,11 @@
    - ✅ Complete Controller Structure
    - ✅ JWT Implementation với role-based access
    - ✅ Login/Register Routes với validation
-   - ✅ OAuth Integration (Google, GitHub, Facebook)
+   - ✅ OAuth Integration (Google, GitHub, Facebook) - Complete
+     - ✅ Passport.js strategies configured
+     - ✅ OAuth callbacks với JWT token generation
+     - ✅ User Model với loginMethod field
+     - ✅ Routes: /google, /github, /facebook với callbacks
    - ✅ TypeScript Type Definitions
    - ✅ Error Handling với consistent response format
    - ✅ Admin role system
@@ -121,6 +130,11 @@
 
 2. **Database Models**
    - ✅ User Model (Complete với OAuth, XP, rank, badges)
+     - ✅ Fields: email, username, password, avatar
+     - ✅ OAuth fields: oauth.google, oauth.github, oauth.facebook
+     - ✅ loginMethod field để lưu phương thức đăng nhập ('local', 'google', 'github', 'facebook')
+     - ✅ XP, rank, badges support
+     - ✅ Password hashing với bcryptjs
    - ✅ Challenge Model với test cases và validation
    - ✅ Submission Model cho kết quả làm bài
    - ❌ Badge Model
@@ -150,8 +164,10 @@
    - ✅ Complete Layout với responsive design
    - ✅ Login Form với API integration
    - ✅ Register Form với validation
-   - ❌ OAuth Buttons
+   - ✅ OAuth Buttons (Google, GitHub, Facebook) trong Login và Register
    - ✅ Form Validation với error handling
+   - ✅ OAuth Callback handler (OAuthCallback.tsx và OAuthError.tsx)
+   - ✅ Routes trong App.tsx
    - ❌ Password Reset
 
 2. **Main Components**
@@ -248,6 +264,18 @@
 6. ❌ Missing rate limiting
 
 ## Recent Changes Log
+
+### December 28, 2024 - OAuth Implementation Complete
+- ✅ **Backend OAuth Complete**: 
+  - Passport.js strategies configured cho Google, GitHub, Facebook
+  - OAuth routes với callbacks
+  - User model có loginMethod field để lưu phương thức đăng nhập
+  - JWT token generation trong OAuth callbacks
+- ✅ **Frontend OAuth Complete**: 
+  - OAuth buttons đã được thêm vào Login và Register components
+  - OAuth callback handler page đã được tạo
+  - OAuth error handler page đã được tạo
+  - Routes đã được cập nhật trong App.tsx
 
 ### December 19, 2024 - Major Update
 - ✅ **Database Setup**: Thiết lập MongoDB với Mongoose và environment configuration

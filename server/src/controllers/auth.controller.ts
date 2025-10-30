@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { validationResult } from 'express-validator';
 import jwt, { Secret, SignOptions } from 'jsonwebtoken';
+import passport from 'passport';
 import User, { IUser } from '../models/user.model';
 
 // Environment configuration
@@ -71,7 +72,8 @@ export class AuthController {
             user = new User({
                 email,
                 username,
-                password
+                password,
+                loginMethod: 'local'
             });
 
             await user.save();
@@ -119,14 +121,23 @@ export class AuthController {
                 });
             }
 
-            const { email, password } = req.body;
+            const { identifier, password } = req.body;
+
+            // identifier có thể là email hoặc username
+            const query: any = {};
+            if (typeof identifier === 'string' && identifier.includes('@')) {
+                query.email = identifier.toLowerCase();
+            } else {
+                // tìm theo username hoặc email fallback
+                query.$or = [{ username: identifier }, { email: identifier }];
+            }
 
             // Tìm user và lấy cả password để so sánh
-            const user = await User.findOne({ email }).select('+password');
+            const user = await User.findOne(query).select('+password');
             if (!user) {
                 return res.status(401).json({ 
                     success: false,
-                    message: 'Email hoặc mật khẩu không đúng' 
+                    message: 'Email / tên đăng nhập hoặc mật khẩu không đúng' 
                 });
             }
 
@@ -207,31 +218,170 @@ export class AuthController {
         }
     }
 
-    // OAuth callbacks
-    async googleCallback(_req: Request, res: Response): Promise<void> {
+    // OAuth callbacks - Updated to generate JWT tokens
+    async googleCallback(req: AuthRequest, res: Response): Promise<void> {
         try {
-            res.redirect(`${CLIENT_URL}/auth/success`);
+            const user = req.user as IUser;
+            if (!user) {
+                return res.redirect(`${CLIENT_URL}/auth/error?message=Không thể xác thực tài khoản Google`);
+            }
+
+            // Update loginMethod if not set
+            if (user.loginMethod !== 'google') {
+                user.loginMethod = 'google';
+                await user.save();
+            }
+
+            // Generate JWT token
+            const token = generateToken(user.id);
+
+            // Redirect to frontend with token
+            res.redirect(`${CLIENT_URL}/auth/callback?token=${token}&user=${encodeURIComponent(JSON.stringify({
+                id: user.id,
+                email: user.email,
+                username: user.username,
+                avatar: user.avatar,
+                experience: user.experience,
+                rank: user.rank,
+                badges: user.badges,
+                favoriteLanguages: user.favoriteLanguages,
+                loginMethod: user.loginMethod,
+                role: user.email === ENV.ADMIN_EMAIL ? 'admin' : 'user'
+            }))}`);
         } catch (error) {
             console.error('Lỗi Google OAuth:', error);
-            res.redirect(`${CLIENT_URL}/auth/error`);
+            res.redirect(`${CLIENT_URL}/auth/error?message=Đã xảy ra lỗi khi đăng nhập bằng Google`);
         }
     }
 
-    async githubCallback(_req: Request, res: Response): Promise<void> {
+    async githubCallback(req: AuthRequest, res: Response): Promise<void> {
         try {
-            res.redirect(`${CLIENT_URL}/auth/success`);
+            const user = req.user as IUser;
+            if (!user) {
+                return res.redirect(`${CLIENT_URL}/auth/error?message=Không thể xác thực tài khoản GitHub`);
+            }
+
+            // Update loginMethod if not set
+            if (user.loginMethod !== 'github') {
+                user.loginMethod = 'github';
+                await user.save();
+            }
+
+            // Generate JWT token
+            const token = generateToken(user.id);
+
+            // Redirect to frontend with token
+            res.redirect(`${CLIENT_URL}/auth/callback?token=${token}&user=${encodeURIComponent(JSON.stringify({
+                id: user.id,
+                email: user.email,
+                username: user.username,
+                avatar: user.avatar,
+                experience: user.experience,
+                rank: user.rank,
+                badges: user.badges,
+                favoriteLanguages: user.favoriteLanguages,
+                loginMethod: user.loginMethod,
+                role: user.email === ENV.ADMIN_EMAIL ? 'admin' : 'user'
+            }))}`);
         } catch (error) {
             console.error('Lỗi GitHub OAuth:', error);
-            res.redirect(`${CLIENT_URL}/auth/error`);
+            res.redirect(`${CLIENT_URL}/auth/error?message=Đã xảy ra lỗi khi đăng nhập bằng GitHub`);
         }
     }
 
-    async facebookCallback(_req: Request, res: Response): Promise<void> {
+    async facebookCallback(req: AuthRequest, res: Response): Promise<void> {
         try {
-            res.redirect(`${CLIENT_URL}/auth/success`);
+            const user = req.user as IUser;
+            if (!user) {
+                return res.redirect(`${CLIENT_URL}/auth/error?message=Không thể xác thực tài khoản Facebook`);
+            }
+
+            // Update loginMethod if not set
+            if (user.loginMethod !== 'facebook') {
+                user.loginMethod = 'facebook';
+                await user.save();
+            }
+
+            // Generate JWT token
+            const token = generateToken(user.id);
+
+            // Redirect to frontend with token
+            res.redirect(`${CLIENT_URL}/auth/callback?token=${token}&user=${encodeURIComponent(JSON.stringify({
+                id: user.id,
+                email: user.email,
+                username: user.username,
+                avatar: user.avatar,
+                experience: user.experience,
+                rank: user.rank,
+                badges: user.badges,
+                favoriteLanguages: user.favoriteLanguages,
+                loginMethod: user.loginMethod,
+                role: user.email === ENV.ADMIN_EMAIL ? 'admin' : 'user'
+            }))}`);
         } catch (error) {
             console.error('Lỗi Facebook OAuth:', error);
-            res.redirect(`${CLIENT_URL}/auth/error`);
+            res.redirect(`${CLIENT_URL}/auth/error?message=Đã xảy ra lỗi khi đăng nhập bằng Facebook`);
+        }
+    }
+
+    // Đổi mật khẩu
+    async changePassword(req: AuthRequest, res: Response): Promise<any> {
+        try {
+            const { currentPassword, newPassword } = req.body;
+
+            if (!currentPassword || !newPassword) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Vui lòng nhập đầy đủ mật khẩu hiện tại và mật khẩu mới'
+                });
+            }
+
+            if (newPassword.length < 6) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Mật khẩu mới phải có ít nhất 6 ký tự'
+                });
+            }
+
+            const user = await User.findById(req.user?.id).select('+password');
+            if (!user) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Không tìm thấy người dùng'
+                });
+            }
+
+            // Kiểm tra login method
+            if (user.loginMethod !== 'local') {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Chỉ có thể đổi mật khẩu cho tài khoản đăng nhập bằng email/password'
+                });
+            }
+
+            // Kiểm tra mật khẩu hiện tại
+            const isMatch = await user.comparePassword(currentPassword);
+            if (!isMatch) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'Mật khẩu hiện tại không đúng'
+                });
+            }
+
+            // Cập nhật mật khẩu mới
+            user.password = newPassword;
+            await user.save();
+
+            return res.json({
+                success: true,
+                message: 'Đổi mật khẩu thành công'
+            });
+        } catch (error) {
+            console.error('Lỗi đổi mật khẩu:', error);
+            return res.status(500).json({
+                success: false,
+                message: 'Lỗi server'
+            });
         }
     }
 }

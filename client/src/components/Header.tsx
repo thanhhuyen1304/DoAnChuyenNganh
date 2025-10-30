@@ -23,7 +23,7 @@ const Header: React.FC<HeaderProps> = () => {
   const darkMode = resolvedTheme === 'dark'
   const toggleDarkMode = () => setTheme(darkMode ? 'light' : 'dark')
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const [isLoggedIn] = useState(false) // For demo purposes
+  const [user, setUser] = useState<any | null>(null)
   const [isScrolled, setIsScrolled] = useState(false)
   const { language, setLanguage, t } = useLanguage()
   useEffect(() => {
@@ -42,6 +42,35 @@ const Header: React.FC<HeaderProps> = () => {
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen)
   }
+  const logout = () => {
+    // Clear auth and reload UI
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
+    setUser(null)
+    // redirect to home page
+    window.location.href = '/'
+  }
+
+  // Load user from localStorage and listen for changes (multi-tab)
+  useEffect(() => {
+    const raw = localStorage.getItem('user')
+    if (raw) {
+      try {
+        setUser(JSON.parse(raw))
+      } catch (e) {
+        setUser(null)
+      }
+    }
+
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === 'user') {
+        if (e.newValue) setUser(JSON.parse(e.newValue))
+        else setUser(null)
+      }
+    }
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+  }, [])
   const handleLanguageChange = (lang: "vi" | "en") => {
     setLanguage(lang)
   }
@@ -138,7 +167,7 @@ const Header: React.FC<HeaderProps> = () => {
             )}
           </button>
           {/* Auth */}
-          {isLoggedIn ? (
+          {user ? (
             <div className="flex items-center space-x-3">
               {/* Notification bell */}
               <div className="relative">
@@ -152,40 +181,41 @@ const Header: React.FC<HeaderProps> = () => {
                 <button className="flex items-center">
                   <div className="relative">
                     <img
-                      src="https://randomuser.me/api/portraits/men/1.jpg"
+                      src={user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.username || user?.email || 'User')}&background=7c3aed&color=fff`}
                       alt="User avatar"
                       className="w-9 h-9 rounded-full border-2 border-primary-400 transition-transform duration-300 group-hover:scale-110"
                     />
                     <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-gray-800"></span>
                   </div>
+                  <span className="ml-3 hidden md:inline-block text-sm font-medium text-gray-700 dark:text-white">{user?.username}</span>
                 </button>
                 <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-xl shadow-xl py-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform group-hover:translate-y-0 translate-y-2 z-[10002]">
                   <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
                     <p className="text-sm font-medium text-gray-900 dark:text-white">
-                      Minh Nguyen
+                      {user?.username || user?.email || 'User'}
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                      minhnguyen@example.com
+                      {user?.email}
                     </p>
                   </div>
-                  <a
-                    href="#"
+                  <Link
+                    to="/profile"
                     className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                   >
                     Hồ sơ
-                  </a>
-                  <a
-                    href="#"
+                  </Link>
+                  <Link
+                    to="/settings"
                     className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                   >
                     Cài đặt
-                  </a>
-                  <a
-                    href="#"
-                    className="block px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  </Link>
+                  <button 
+                    onClick={logout}
+                    className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                   >
                     Đăng xuất
-                  </a>
+                  </button>
                 </div>
               </div>
             </div>
@@ -276,10 +306,10 @@ const Header: React.FC<HeaderProps> = () => {
                 </div>
               </div>
               {/* Auth */}
-              {isLoggedIn ? (
+              {user ? (
                 <div className="flex items-center">
                   <img
-                    src="https://randomuser.me/api/portraits/men/1.jpg"
+                    src={user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.username || user?.email || 'User')}&background=7c3aed&color=fff`}
                     alt="User avatar"
                     className="w-9 h-9 rounded-full border-2 border-primary-400"
                   />
