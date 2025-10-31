@@ -86,8 +86,9 @@ export const CreateChallenge: React.FC = () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
+      const { buildApi } = await import('../../lib/api');
       const response = await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/challenges`,
+        buildApi('/challenges'),
         challenge,
         {
           headers: { Authorization: `Bearer ${token}` }

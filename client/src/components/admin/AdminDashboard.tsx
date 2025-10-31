@@ -1,25 +1,36 @@
 import React, { useState, useEffect } from 'react';
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import { Label } from '../ui/label';
-import { Textarea } from '../ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { Alert, AlertDescription } from '../ui/alert';
-import { Badge } from '../ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
+import { 
+  LayoutDashboard, 
+  Database, 
+  Webhook, 
+  BarChart2 as BarChart, 
+  Code2,
+  Loader2,
+  KeyRound,
+  FileQuestion,
+  ListTodo,
+  PlusCircle,
+  Search,
+  Home
+} from 'lucide-react';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { useLanguage } from '@/components/contexts/LanguageContext';
+import { CreateChallenge } from './CreateChallenge';
 import AdvancedScraper from './AdvancedScraper';
 import TokenDebugger from './TokenDebugger';
-import ScraperGuide from './ScraperGuide';
-import ChallengeStats from './ChallengeStats';
 import DatabaseDebugger from './DatabaseDebugger';
 import APITester from './APITester';
+import ScraperGuide from './ScraperGuide';
+import ChallengeStats from './ChallengeStats';
 import { EditChallengeModal } from './EditChallengeModal';
-import { CreateChallenge } from './CreateChallenge';
 
-// API Base URL
-const API_BASE_URL = 'http://localhost:5000/api';
+// Constants
+const API_BASE_URL = 'http://localhost:5000/api' as const;
 
+// Types
 interface Challenge {
   _id: string;
   title: string;
@@ -32,45 +43,163 @@ interface Challenge {
   createdAt: string;
 }
 
-const AdminDashboard = () => {
+// Navigation items
+const CHALLENGE_TABS = [
+  { 
+    id: 'challenges', 
+    icon: ListTodo, 
+    label: { vi: 'Danh sách', en: 'List' }, 
+    color: 'text-blue-500' 
+  },
+  { 
+    id: 'create', 
+    icon: PlusCircle, 
+    label: { vi: 'Tạo mới', en: 'Create' }, 
+    color: 'text-green-500' 
+  },
+  { 
+    id: 'scraper', 
+    icon: Search, 
+    label: { vi: 'Scraper', en: 'Scraper' }, 
+    color: 'text-purple-500' 
+  }
+];
+
+// First, let's add the imports for our new icons
+import { 
+  Users, 
+  Settings, 
+  Flag, 
+  MessageSquare, 
+  Award,
+  Shield
+} from 'lucide-react';
+
+const OTHER_TABS = [
+  // Admin Management Features
+  { id: 'users', icon: Users, label: { vi: 'Quản lý người dùng', en: 'User Management' }, color: 'text-blue-500' },
+  { id: 'roles', icon: Shield, label: { vi: 'Phân quyền', en: 'Role Management' }, color: 'text-indigo-500' },
+  { id: 'reports', icon: Flag, label: { vi: 'Báo cáo vi phạm', en: 'Reports' }, color: 'text-red-500' },
+  { id: 'feedback', icon: MessageSquare, label: { vi: 'Phản hồi', en: 'Feedback' }, color: 'text-emerald-500' },
+  { id: 'achievements', icon: Award, label: { vi: 'Huy hiệu & thành tích', en: 'Achievements' }, color: 'text-amber-500' },
+  { id: 'settings', icon: Settings, label: { vi: 'Cài đặt hệ thống', en: 'System Settings' }, color: 'text-gray-500' },
+  
+  // Development Tools
+  // { id: 'debug', icon: KeyRound, label: { vi: 'Debug Token', en: 'Debug' }, color: 'text-amber-500' },
+  // { id: 'database', icon: Database, label: { vi: 'Database', en: 'Database' }, color: 'text-blue-500' },
+  // { id: 'api', icon: Webhook, label: { vi: 'API Test', en: 'API Test' }, color: 'text-purple-500' },
+  // { id: 'guide', icon: FileQuestion, label: { vi: 'Hướng dẫn', en: 'Guide' }, color: 'text-green-500' },
+  { id: 'stats', icon: BarChart, label: { vi: 'Thống kê', en: 'Stats' }, color: 'text-orange-500' }
+];
+
+// Sidebar toggle button component
+const SidebarToggle: React.FC<{ isVisible: boolean; onClick: () => void }> = ({ isVisible, onClick }) => (
+  <button
+    aria-label="Toggle sidebar"
+    onClick={onClick}
+    className="w-full p-4 hover:bg-gray-100 dark:hover:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-center"
+  >
+    <Code2 className="w-6 h-6 text-primary-500" />
+    {isVisible && (
+      <span className="ml-3 font-semibold">
+        Admin Dashboard
+      </span>
+    )}
+  </button>
+);
+
+// Challenge list card component
+const ChallengeList: React.FC<{
+  challenges: Challenge[];
+  onEdit: (challenge: Challenge) => void;
+  onDelete: (id: string) => void;
+  language: string;
+}> = ({ challenges, onEdit, onDelete, language }) => {
+  if (challenges.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <div className="flex flex-col items-center gap-4 text-gray-500">
+          <Code2 className="w-12 h-12 text-primary-400" />
+          <p className="text-lg">
+            {language === 'vi'
+              ? 'Chưa có bài tập nào. Hãy tạo bài tập mới hoặc scrape từ các nguồn online!'
+              : 'No challenges yet. Create new ones or scrape from online sources!'}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid gap-4">
+      {challenges.map((challenge) => (
+        <Card key={challenge._id} className="bg-white/80 dark:bg-gray-900/70 backdrop-blur-xl">
+          <CardHeader>
+            <div className="flex justify-between items-start">
+              <div>
+                <CardTitle>{challenge.title}</CardTitle>
+                <CardDescription>{challenge.description}</CardDescription>
+              </div>
+              <Badge variant={challenge.isActive ? 'default' : 'secondary'}>
+                {challenge.isActive 
+                  ? (language === 'vi' ? 'Hoạt động' : 'Active')
+                  : (language === 'vi' ? 'Tạm dừng' : 'Inactive')}
+              </Badge>
+            </div>
+            <div className="flex flex-wrap gap-2 mt-2">
+              <Badge variant="outline" className="bg-blue-50">{challenge.language}</Badge>
+              <Badge variant="outline" className="bg-yellow-50">{challenge.difficulty}</Badge>
+              <Badge variant="outline" className="bg-purple-50">{challenge.category}</Badge>
+              <Badge variant="outline" className="bg-green-50">
+                {challenge.points} {language === 'vi' ? 'điểm' : 'points'}
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-2">
+              <Button size="sm" onClick={() => onEdit(challenge)}>
+                ✏️ {language === 'vi' ? 'Chỉnh sửa' : 'Edit'}
+              </Button>
+              <Button size="sm" variant="destructive" onClick={() => onDelete(challenge._id)}>
+                🗑️ {language === 'vi' ? 'Xóa' : 'Delete'}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+};
+
+// Main component
+const AdminDashboard: React.FC = () => {
+  // State management
   const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [newChallengesCount, setNewChallengesCount] = useState(0);
-  
-  // Form state for creating/editing challenges
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    problemStatement: '',
-    language: '',
-    difficulty: '',
-    category: '',
-    buggyCode: '',
-    correctCode: '',
-    points: 10,
-    timeLimit: 5,
-    memoryLimit: 64,
-    testCases: [{ input: '', expectedOutput: '', isHidden: false, points: 10 }]
-  });
-  
-  const [editingChallenge, setEditingChallenge] = useState<Challenge | null>(null);
+  const [isVisible, setIsVisible] = useState(true);
+  const [isChallengeTabsVisible, setIsChallengeTabsVisible] = useState(false);
+  const [activeGroup, setActiveGroup] = useState('challenges');
+  const [activeChallengeTab, setActiveChallengeTab] = useState('challenges');
+  const [activeOtherTab, setActiveOtherTab] = useState('debug');
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [selectedChallengeId, setSelectedChallengeId] = useState<string | null>(null);
+  const { language } = useLanguage();
 
+  // Effects
   useEffect(() => {
     fetchChallenges();
   }, []);
 
+  // API calls
   const fetchChallenges = async (showSuccessMessage = false) => {
     try {
       setLoading(true);
       const previousCount = challenges.length;
       
       const token = localStorage.getItem('token');
-      console.log('🔍 Fetching challenges...');
-      console.log('   Token:', token ? `${token.substring(0, 20)}...` : 'No token');
-      console.log('   URL:', `${API_BASE_URL}/challenges/admin/all`);
-      
       const response = await fetch(`${API_BASE_URL}/challenges/admin/all`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -78,95 +207,38 @@ const AdminDashboard = () => {
         },
       });
 
-      console.log('   Response status:', response.status);
       const data = await response.json();
-      console.log('   Response data:', data);
       
       if (data.success) {
         setChallenges(data.data.challenges);
-        setError(''); // Clear any previous errors
-        console.log(`✅ Loaded ${data.data.challenges.length} challenges`);
+        setError('');
         
-        // Hiển thị thông báo thành công nếu có bài tập mới
         if (showSuccessMessage && data.data.challenges.length > previousCount) {
           const newCount = data.data.challenges.length - previousCount;
           setNewChallengesCount(newCount);
-          setSuccess(`🎉 Đã thêm ${newCount} bài tập mới vào danh sách!`);
+          setSuccess(language === 'vi' 
+            ? `🎉 Đã thêm ${newCount} bài tập mới vào danh sách!`
+            : `🎉 Added ${newCount} new challenges to the list!`);
           
-          // Tự động ẩn thông báo sau 5 giây
           setTimeout(() => {
             setSuccess('');
             setNewChallengesCount(0);
           }, 5000);
         }
       } else {
-        console.log('❌ API returned error:', data.message);
-        setError(`Không thể tải danh sách bài tập: ${data.message}`);
+        setError(language === 'vi'
+          ? `Không thể tải danh sách bài tập: ${data.message}`
+          : `Could not load challenges: ${data.message}`);
       }
     } catch (err) {
-      console.log('❌ Network error:', err);
-      setError(`Lỗi kết nối server: ${err}`);
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      setError(language === 'vi' 
+        ? `Lỗi kết nối server: ${errorMessage}`
+        : `Server connection error: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
   };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setSuccess('');
-
-    try {
-      const token = localStorage.getItem('token');
-      const url = editingChallenge 
-        ? `${API_BASE_URL}/challenges/${editingChallenge._id}`
-        : `${API_BASE_URL}/challenges`;
-      
-      const method = editingChallenge ? 'PUT' : 'POST';
-      
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
-
-      const data = await response.json();
-      
-      if (data.success) {
-        setSuccess(editingChallenge ? 'Cập nhật bài tập thành công' : 'Tạo bài tập thành công');
-        fetchChallenges();
-        resetForm();
-      } else {
-        setError(data.message || 'Có lỗi xảy ra');
-      }
-    } catch (err) {
-      setError('Lỗi kết nối server');
-    }
-  };
-
-  const resetForm = () => {
-    setFormData({
-      title: '',
-      description: '',
-      problemStatement: '',
-      language: '',
-      difficulty: '',
-      category: '',
-      buggyCode: '',
-      correctCode: '',
-      points: 10,
-      timeLimit: 5,
-      memoryLimit: 64,
-      testCases: [{ input: '', expectedOutput: '', isHidden: false, points: 10 }]
-    });
-    setEditingChallenge(null);
-  };
-
-  const [editModalOpen, setEditModalOpen] = useState(false);
-  const [selectedChallengeId, setSelectedChallengeId] = useState<string | null>(null);
 
   const handleEdit = (challenge: Challenge) => {
     setSelectedChallengeId(challenge._id);
@@ -174,7 +246,11 @@ const AdminDashboard = () => {
   };
 
   const handleDelete = async (challengeId: string) => {
-    if (!confirm('Bạn có chắc chắn muốn xóa bài tập này?')) return;
+    if (!confirm(language === 'vi'
+      ? 'Bạn có chắc chắn muốn xóa bài tập này?'
+      : 'Are you sure you want to delete this challenge?')) {
+      return;
+    }
 
     try {
       const token = localStorage.getItem('token');
@@ -189,183 +265,326 @@ const AdminDashboard = () => {
       const data = await response.json();
       
       if (data.success) {
-        setSuccess('Xóa bài tập thành công');
+        setSuccess(language === 'vi' 
+          ? 'Xóa bài tập thành công'
+          : 'Challenge deleted successfully');
         fetchChallenges();
       } else {
-        setError(data.message || 'Có lỗi xảy ra');
+        setError(data.message || (language === 'vi' ? 'Có lỗi xảy ra' : 'An error occurred'));
       }
     } catch (err) {
-      setError('Lỗi kết nối server');
-    }
-  };
-
-  const addTestCase = () => {
-    setFormData({
-      ...formData,
-      testCases: [...formData.testCases, { input: '', expectedOutput: '', isHidden: false, points: 10 }]
-    });
-  };
-
-  const updateTestCase = (index: number, field: string, value: any) => {
-    const newTestCases = [...formData.testCases];
-    newTestCases[index] = { ...newTestCases[index], [field]: value };
-    setFormData({ ...formData, testCases: newTestCases });
-  };
-
-  const removeTestCase = (index: number) => {
-    if (formData.testCases.length > 1) {
-      const newTestCases = formData.testCases.filter((_, i) => i !== index);
-      setFormData({ ...formData, testCases: newTestCases });
+      setError(language === 'vi' ? 'Lỗi kết nối server' : 'Server connection error');
     }
   };
 
   if (loading) {
-    return <div className="p-8 text-center">Đang tải...</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
   }
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-        <p className="text-muted-foreground">Quản lý bài tập và hệ thống</p>
-      </div>
-
-      {error && (
-        <Alert variant="destructive" className="mb-4">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
-      {success && (
-        <Alert className="mb-4 border-green-200 bg-green-50">
-          <AlertDescription className="text-green-800">
-            <div className="flex items-center gap-2">
-              <span>{success}</span>
-              {newChallengesCount > 0 && (
-                <Badge variant="outline" className="bg-green-100 text-green-800">
-                  +{newChallengesCount} mới
-                </Badge>
-              )}
-            </div>
-          </AlertDescription>
-        </Alert>
-      )}
-
-      <Tabs defaultValue="challenges" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="challenges">Quản lý bài tập</TabsTrigger>
-          <TabsTrigger value="create">Tạo bài tập</TabsTrigger>
-          <TabsTrigger value="scraper">Scraper</TabsTrigger>
-          <TabsTrigger value="debug">Debug Token</TabsTrigger>
-          <TabsTrigger value="database">Database Debug</TabsTrigger>
-          <TabsTrigger value="api">API Test</TabsTrigger>
-          <TabsTrigger value="guide">Hướng dẫn</TabsTrigger>
-          <TabsTrigger value="stats">Thống kê</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="challenges" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <div>
-              <h3 className="text-lg font-semibold">Danh sách bài tập</h3>
-              <p className="text-sm text-gray-600">Tổng cộng {challenges.length} bài tập</p>
-            </div>
-            <Button 
-              onClick={() => fetchChallenges()} 
-              variant="outline" 
-              size="sm"
-              disabled={loading}
+    <div className="min-h-screen relative bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-gray-800">
+      {/* Sidebar */}
+      <aside className={`fixed top-0 left-0 h-screen z-30 transition-all duration-300 ${
+        isVisible ? 'w-60' : 'w-16'
+      } bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-r border-gray-100/20 dark:border-gray-700/50`}>
+        <SidebarToggle isVisible={isVisible} onClick={() => setIsVisible(!isVisible)} />
+        
+        <nav className="p-4 space-y-6">
+          {/* Home Button */}
+          <div>
+            <button
+              onClick={() => window.location.href = '/'}
+              className="w-full flex items-center gap-3 p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200"
             >
-              {loading ? 'Đang tải...' : '🔄 Làm mới'}
-            </Button>
+              <Home 
+                className="w-5 h-5 text-gray-500 dark:text-gray-400"
+              />
+              {isVisible && (
+                <span className="text-gray-600 dark:text-gray-300">
+                  {language === 'vi' ? 'Trang chủ' : 'Home'}
+                </span>
+              )}
+            </button>
           </div>
-          
-          <div className="grid gap-4">
-            {challenges.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <p>Chưa có bài tập nào. Hãy tạo bài tập mới hoặc scrape từ các nguồn online!</p>
+
+          {/* Challenge Management */}
+          <div>
+            <button
+              onClick={() => {
+                if (activeGroup === 'challenges') {
+                  setIsChallengeTabsVisible(!isChallengeTabsVisible);
+                } else {
+                  setActiveGroup('challenges');
+                  setActiveChallengeTab('challenges');
+                  setIsChallengeTabsVisible(true);
+                }
+              }}
+              className={`w-full flex items-center gap-3 p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 ${
+                activeGroup === 'challenges' ? 'bg-primary-50 dark:bg-primary-900/30' : ''
+              }`}
+            >
+              <LayoutDashboard 
+                className={`w-5 h-5 transition-all duration-200 ${
+                  activeGroup === 'challenges'
+                    ? 'scale-110 text-indigo-500'
+                    : 'text-gray-500 dark:text-gray-400'
+                }`}
+              />
+              {isVisible && (
+                <div className="flex items-center justify-between flex-1">
+                  <span className={`transition-all duration-200 no-underline hover:no-underline ${
+                    activeGroup === 'challenges'
+                      ? 'text-indigo-500 font-medium'
+                      : 'text-gray-600 dark:text-gray-300'
+                  }`} style={{ textDecoration: 'none' }}>
+                    {language === 'vi' ? 'Quản lý bài tập' : 'Manage Challenges'}
+                  </span>
+                  <span className={`transform transition-transform duration-200 ${isChallengeTabsVisible ? 'rotate-90' : ''}`}>
+                    ▸
+                  </span>
+                </div>
+              )}
+            </button>
+
+            {activeGroup === 'challenges' && isChallengeTabsVisible && (
+              <div className={`mt-2 space-y-1 ${isVisible ? 'pl-6' : 'pl-2'} transition-all duration-200`}>
+                {CHALLENGE_TABS.map(tab => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveChallengeTab(tab.id)}
+                    className={`w-full p-2 rounded-md transition-all duration-200 ${
+                      activeChallengeTab === tab.id ? 'bg-gray-100 dark:bg-gray-800' : ''
+                    } flex items-center gap-3`}
+                  >
+                    <tab.icon 
+                      className={`w-5 h-5 transition-all duration-200 ${
+                        activeChallengeTab === tab.id
+                          ? 'scale-110 ' + tab.color
+                          : 'text-gray-500 dark:text-gray-400'
+                      }`}
+                      strokeWidth={2}
+                    />
+                    {isVisible && (
+                      <span className={`transition-all duration-200 ${
+                        activeChallengeTab === tab.id
+                          ? tab.color + ' font-medium'
+                          : 'text-gray-600 dark:text-gray-300'
+                      }`}>
+                        {tab.label[language === 'vi' ? 'vi' : 'en']}
+                      </span>
+                    )}
+                  </button>
+                ))}
               </div>
-            ) : (
-              challenges.map((challenge) => (
-              <Card key={challenge._id} className="hover:shadow-md transition-shadow">
-                <CardHeader>
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <CardTitle className="text-lg flex items-center gap-2">
-                        {challenge.title}
-                        {challenge.title.includes('CSES:') && <Badge variant="outline" className="bg-blue-100 text-blue-800">CSES</Badge>}
-                        {challenge.title.includes('AtCoder:') && <Badge variant="outline" className="bg-green-100 text-green-800">AtCoder</Badge>}
-                        {challenge.title.includes('LeetCode:') && <Badge variant="outline" className="bg-orange-100 text-orange-800">LeetCode</Badge>}
-                      </CardTitle>
-                      <CardDescription className="mt-1">{challenge.description}</CardDescription>
-                      <div className="text-xs text-gray-500 mt-1">
-                        Tạo lúc: {new Date(challenge.createdAt).toLocaleString('vi-VN')}
-                      </div>
-                    </div>
-                    <Badge variant={challenge.isActive ? "default" : "secondary"}>
-                      {challenge.isActive ? "Hoạt động" : "Tạm dừng"}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    <Badge variant="outline" className="bg-blue-50">{challenge.language}</Badge>
-                    <Badge variant="outline" className={
-                      challenge.difficulty === 'Easy' ? 'bg-green-50 text-green-700' :
-                      challenge.difficulty === 'Medium' ? 'bg-yellow-50 text-yellow-700' :
-                      'bg-red-50 text-red-700'
-                    }>
-                      {challenge.difficulty}
-                    </Badge>
-                    <Badge variant="outline" className="bg-purple-50">{challenge.category}</Badge>
-                    <Badge variant="outline" className="bg-orange-50">{challenge.points} điểm</Badge>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button size="sm" onClick={() => handleEdit(challenge)}>
-                      ✏️ Chỉnh sửa
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="destructive" 
-                      onClick={() => handleDelete(challenge._id)}
-                    >
-                      🗑️ Xóa
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )))}
+            )}
           </div>
-        </TabsContent>
 
-        <TabsContent value="create" className="space-y-4">
-          <CreateChallenge />
-        </TabsContent>
+          {/* Other Tools */}
+          <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+            {OTHER_TABS.map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => {
+                  setActiveGroup('others');
+                  setActiveOtherTab(tab.id);
+                }}
+                className={`w-full flex items-center gap-3 p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 ${
+                  activeGroup === 'others' && activeOtherTab === tab.id
+                    ? 'bg-primary-50 dark:bg-primary-900/30'
+                    : ''
+                }`}
+              >
+                <tab.icon 
+                  className={`w-5 h-5 transition-all duration-200 ${
+                    activeGroup === 'others' && activeOtherTab === tab.id
+                      ? 'scale-110 ' + tab.color
+                      : 'text-gray-500 dark:text-gray-400'
+                  }`} 
+                />
+                {isVisible && (
+                  <span className={`transition-all duration-200 ${
+                    activeGroup === 'others' && activeOtherTab === tab.id
+                      ? tab.color + ' font-medium'
+                      : 'text-gray-600 dark:text-gray-300'
+                  }`}>
+                    {tab.label[language === 'vi' ? 'vi' : 'en']}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        </nav>
+      </aside>
 
-        <TabsContent value="scraper" className="space-y-4">
-          <AdvancedScraper onScrapeSuccess={() => fetchChallenges(true)} />
-        </TabsContent>
+      {/* Main content */}
+      <main className={`transition-all duration-300 ${isVisible ? 'ml-60' : 'ml-16'} p-6`}>
+        {/* Header */}
+        {/* <div className="mb-6">
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
+            {language === 'vi' ? 'Quản lý' : 'Manage'}{' '}
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#FF007A] to-[#A259FF]">
+              {language === 'vi' ? 'Bài tập' : 'Challenges'}
+            </span>
+          </h1>
+        </div> */}
 
-        <TabsContent value="debug" className="space-y-4">
-          <TokenDebugger />
-        </TabsContent>
+        {/* Alerts */}
+        {error && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertDescription>❌ {error}</AlertDescription>
+          </Alert>
+        )}
 
-        <TabsContent value="database" className="space-y-4">
-          <DatabaseDebugger />
-        </TabsContent>
+        {success && (
+          <Alert className="mb-4">
+            <AlertDescription>
+              <div className="flex items-center gap-2">
+                ✨ {success}
+                {newChallengesCount > 0 && (
+                  <Badge variant="outline" className="bg-gradient-to-r from-green-500 to-emerald-500">
+                    +{newChallengesCount} {language === 'vi' ? 'mới' : 'new'}
+                  </Badge>
+                )}
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
 
-        <TabsContent value="api" className="space-y-4">
-          <APITester />
-        </TabsContent>
+        {/* Content */}
+        {activeGroup === 'challenges' && (
+          <div className="space-y-6">
+            {/* Tab content */}
+            {activeChallengeTab === 'challenges' && (
+              <ChallengeList
+                challenges={challenges}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                language={language}
+              />
+            )}
+            {activeChallengeTab === 'create' && <CreateChallenge />}
+            {activeChallengeTab === 'scraper' && (
+              <AdvancedScraper onScrapeSuccess={() => fetchChallenges(true)} />
+            )}
+          </div>
+        )}
 
-        <TabsContent value="guide" className="space-y-4">
-          <ScraperGuide />
-        </TabsContent>
+        {/* Other tools content */}
+        {activeGroup === 'others' && (
+          <>
+            {/* Admin Management Features */}
+            {activeOtherTab === 'users' && (
+              <div className="space-y-4">
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {language === 'vi' ? 'Quản lý người dùng' : 'User Management'}
+                </h2>
+                <Card>
+                  <CardContent className="p-6">
+                    <p className="text-gray-500 dark:text-gray-400">
+                      {language === 'vi' 
+                        ? 'Chức năng quản lý người dùng đang được phát triển...'
+                        : 'User management feature is under development...'}
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+            {activeOtherTab === 'roles' && (
+              <div className="space-y-4">
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {language === 'vi' ? 'Phân quyền' : 'Role Management'}
+                </h2>
+                <Card>
+                  <CardContent className="p-6">
+                    <p className="text-gray-500 dark:text-gray-400">
+                      {language === 'vi'
+                        ? 'Chức năng phân quyền đang được phát triển...'
+                        : 'Role management feature is under development...'}
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+            {activeOtherTab === 'reports' && (
+              <div className="space-y-4">
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {language === 'vi' ? 'Báo cáo vi phạm' : 'Reports'}
+                </h2>
+                <Card>
+                  <CardContent className="p-6">
+                    <p className="text-gray-500 dark:text-gray-400">
+                      {language === 'vi'
+                        ? 'Chức năng báo cáo vi phạm đang được phát triển...'
+                        : 'Reports feature is under development...'}
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+            {activeOtherTab === 'feedback' && (
+              <div className="space-y-4">
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {language === 'vi' ? 'Phản hồi' : 'Feedback'}
+                </h2>
+                <Card>
+                  <CardContent className="p-6">
+                    <p className="text-gray-500 dark:text-gray-400">
+                      {language === 'vi'
+                        ? 'Chức năng phản hồi đang được phát triển...'
+                        : 'Feedback feature is under development...'}
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+            {activeOtherTab === 'achievements' && (
+              <div className="space-y-4">
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {language === 'vi' ? 'Huy hiệu & thành tích' : 'Achievements'}
+                </h2>
+                <Card>
+                  <CardContent className="p-6">
+                    <p className="text-gray-500 dark:text-gray-400">
+                      {language === 'vi'
+                        ? 'Chức năng quản lý huy hiệu và thành tích đang được phát triển...'
+                        : 'Achievements management feature is under development...'}
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+            {activeOtherTab === 'settings' && (
+              <div className="space-y-4">
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {language === 'vi' ? 'Cài đặt hệ thống' : 'System Settings'}
+                </h2>
+                <Card>
+                  <CardContent className="p-6">
+                    <p className="text-gray-500 dark:text-gray-400">
+                      {language === 'vi'
+                        ? 'Chức năng cài đặt hệ thống đang được phát triển...'
+                        : 'System settings feature is under development...'}
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
 
-        <TabsContent value="stats" className="space-y-4">
-          <ChallengeStats challenges={challenges} />
-        </TabsContent>
-      </Tabs>
+            {/* Development Tools */}
+            {activeOtherTab === 'debug' && <TokenDebugger />}
+            {activeOtherTab === 'database' && <DatabaseDebugger />}
+            {activeOtherTab === 'api' && <APITester />}
+            {activeOtherTab === 'guide' && <ScraperGuide />}
+            {activeOtherTab === 'stats' && <ChallengeStats challenges={challenges} />}
+          </>
+        )}
+      </main>
 
+      {/* Edit modal */}
       <EditChallengeModal
         isOpen={editModalOpen}
         onClose={() => setEditModalOpen(false)}

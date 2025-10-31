@@ -10,4 +10,8 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  // server: {
+  //   port: 5173, // Cố định port ở đây
+  //   strictPort: true, // Thêm dòng này để nếu port 5173 bận, nó sẽ báo lỗi thay vì tự đổi port
+  // },
 })

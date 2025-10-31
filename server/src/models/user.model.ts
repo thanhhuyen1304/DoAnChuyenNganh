@@ -10,6 +10,7 @@ export interface IUser extends Document {
   experience: number;
   rank: string;
   badges: string[];
+  loginMethod?: string; // 'local', 'google', 'github', 'facebook'
   oauth: {
     google?: string;
     github?: string;
@@ -62,6 +63,11 @@ const userSchema = new Schema<IUser>(
     badges: [{
       type: String,
     }],
+    loginMethod: {
+      type: String,
+      enum: ['local', 'google', 'github', 'facebook'],
+      default: 'local'
+    },
     oauth: {
       google: String,
       github: String,

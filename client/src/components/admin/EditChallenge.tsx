@@ -71,8 +71,10 @@ export const EditChallenge: React.FC<EditChallengeProps> = ({
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
+      // use buildApi helper to avoid double /api issues if VITE_API_URL already contains /api
+      const { buildApi } = await import('../../lib/api');
       const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/challenges/${challengeId}`,
+        buildApi(`/challenges/${challengeId}`),
         {
           headers: { Authorization: `Bearer ${token}` }
         }
@@ -114,8 +116,9 @@ export const EditChallenge: React.FC<EditChallengeProps> = ({
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
+      const { buildApi } = await import('../../lib/api');
       await axios.put(
-        `${import.meta.env.VITE_API_URL}/api/challenges/${challengeId}`,
+        buildApi(`/challenges/${challengeId}`),
         challenge,
         {
           headers: { Authorization: `Bearer ${token}` }
