@@ -16,6 +16,7 @@ import authRoutes from './routes/auth.routes';
 import challengeRoutes from './routes/challenge.routes';
 import scraperRoutes from './routes/scraper.routes';
 import userRoutes from './routes/user.routes';
+import submissionRoutes from './routes/submission.routes';
 
 // Passport strategies - must be imported AFTER dotenv config
 import './config/passport';
@@ -53,6 +54,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/challenges', challengeRoutes);
 app.use('/api/scraper', scraperRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/submissions', submissionRoutes);
 
 // Error handling middleware
 app.use((err: ErrorWithStack, req: Request, res: Response, _next: NextFunction) => {

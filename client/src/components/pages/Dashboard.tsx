@@ -4,6 +4,7 @@ import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { User, Trophy, Target, Clock, ArrowRight } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useNavigate } from 'react-router-dom';
 
 const decoImg = new URL('../images/2.jpg', import.meta.url).href;
 
@@ -11,6 +12,7 @@ const Dashboard = () => {
   const [user, setUser] = useState<any>(null);
   const [isVisible, setIsVisible] = useState(false);
   const { language } = useLanguage();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const userData = localStorage.getItem('user');
@@ -144,9 +146,9 @@ const Dashboard = () => {
               <div className="space-y-4">
                 <Button 
                   className="w-full bg-gradient-to-r from-[#FF007A] to-[#A259FF] hover:from-primary-700 hover:to-primary-600 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
-                  onClick={() => window.location.href = '/challenges'}
+                  onClick={() => navigate('/practice')}
                 >
-                  {language === 'vi' ? 'Xem danh sách bài tập' : 'View Challenges'}
+                  {language === 'vi' ? 'Bắt đầu luyện tập' : 'Start Practice'}
                 </Button>
                 <div className="text-sm text-gray-600 dark:text-gray-300 space-y-2">
                   <p className="flex items-center">

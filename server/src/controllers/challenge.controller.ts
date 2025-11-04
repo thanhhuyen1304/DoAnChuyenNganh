@@ -18,10 +18,20 @@ export const getChallenges = async (req: Request, res: Response, next: NextFunct
       difficulty,
       category,
       search,
-      isActive = true
+      isActive
     } = req.query;
 
-    const filter: any = { isActive };
+    // Parse isActive - default to true if not provided
+    let isActiveFilter = true;
+    if (isActive !== undefined) {
+      if (typeof isActive === 'string') {
+        isActiveFilter = isActive === 'true' || isActive === '';
+      } else {
+        isActiveFilter = Boolean(isActive);
+      }
+    }
+
+    const filter: any = { isActive: isActiveFilter };
     
     if (language) filter.language = language;
     if (difficulty) filter.difficulty = difficulty;
