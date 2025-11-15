@@ -3,6 +3,7 @@ import { AuthController } from '../controllers/auth.controller';
 import { body, validationResult } from 'express-validator';
 import { authenticate } from '../middleware/auth';
 import passport from 'passport';
+import { otpRequestRateLimitIP, otpRequestRateLimitIdentifier, otpVerifyRateLimitIP, otpVerifyRateLimitIdentifier } from '../middleware/rateLimit';
 
 const router = Router();
 const authController = new AuthController();
@@ -38,6 +39,31 @@ const loginValidation = [
 // Auth routes
 router.post('/register', registerValidation, authController.register);
 router.post('/login', loginValidation, authController.login);
+// Password reset: request code
+router.post('/request-reset', [
+    body('emailOrPhone').not().isEmpty().withMessage('Email hoặc số điện thoại là bắt buộc')
+], (req: Request, res: Response, next: NextFunction) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        res.status(400).json({ success: false, message: 'Dữ liệu không hợp lệ', errors: errors.array() });
+        return;
+    }
+    next();
+}, otpRequestRateLimitIP, otpRequestRateLimitIdentifier, authController.requestPasswordReset);
+
+// Password reset: verify code and set new password
+router.post('/verify-reset', [
+    body('emailOrPhone').not().isEmpty().withMessage('Email hoặc số điện thoại là bắt buộc'),
+    body('code').not().isEmpty().withMessage('Mã xác thực là bắt buộc'),
+    body('newPassword').isLength({ min: 6 }).withMessage('Mật khẩu mới phải có ít nhất 6 ký tự')
+], (req: Request, res: Response, next: NextFunction) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        res.status(400).json({ success: false, message: 'Dữ liệu không hợp lệ', errors: errors.array() });
+        return;
+    }
+    next();
+}, otpVerifyRateLimitIP, otpVerifyRateLimitIdentifier, authController.verifyPasswordReset);
 router.get('/me', authenticate, authController.getCurrentUser);
 
 // Change password validation

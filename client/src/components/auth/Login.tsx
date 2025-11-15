@@ -46,11 +46,14 @@ const Login = () => {
             if (data.success) {
                 localStorage.setItem('token', data.data.token);
                 localStorage.setItem('user', JSON.stringify(data.data.user));
-                if (data.data.user.role === 'admin') {
-                    // keep admin landing page
+                
+                // Check role and redirect accordingly
+                const userRole = data.data.user.role;
+                if (userRole === 'admin') {
+                    // Redirect admin to admin dashboard
                     window.location.href = '/admin/dashboard';
                 } else {
-                    // after login, redirect regular users to the homepage
+                    // Redirect regular users to homepage
                     window.location.href = '/';
                 }
             }
@@ -165,6 +168,12 @@ const Login = () => {
                                 >
                                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                                 </button>
+                            </div>
+                            {/* Link Quên mật khẩu */}
+                            <div className="pt-2 text-right">
+                                <a href="/forgot-password" className="text-xs text-pink-600 hover:underline font-bold">
+                                    Quên mật khẩu?
+                                </a>
                             </div>
                              {/* Không cần hiển thị lỗi password riêng ở đây nếu chỉ có lỗi chung */}
                         </div>

@@ -172,7 +172,7 @@
 
 2. **Main Components**
    - ❌ Dashboard
-   - ❌ Challenge List
+   - ✅ Challenge List
    - ❌ Challenge Detail
    - ❌ Code Editor
    - ❌ Submission Form
