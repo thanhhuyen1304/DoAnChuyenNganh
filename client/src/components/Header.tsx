@@ -201,14 +201,22 @@ const Header: React.FC<HeaderProps> = () => {
                     </p>
                   </div>
                   <div className="py-3 border-b border-gray-100 dark:border-gray-700">
-                    {user?.role === 'admin' && (
+                    {user?.role === 'admin' ? (
                       <Link
-                          to="/admin/dashboard"
-                          className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                        >
-                          <ClipboardList size={16} className="mr-2 text-gray-500 dark:text-gray-300" />
-                          Kho bài tập
-                        </Link>
+                        to="/admin/dashboard"
+                        className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                      >
+                        <ClipboardList size={16} className="mr-2 text-gray-500 dark:text-gray-300" />
+                        Quản lý
+                      </Link>
+                    ) : (
+                      <Link
+                        to="/clientdashboard"
+                        className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                      >
+                        <ClipboardList size={16} className="mr-2 text-gray-500 dark:text-gray-300" />
+                        Kho của tôi
+                      </Link>
                     )}
                   </div>
                   <div className="py-3 border-b border-gray-100 dark:border-gray-700">

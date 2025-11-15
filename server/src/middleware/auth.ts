@@ -48,12 +48,38 @@ export const authenticateToken = async (
             });
         }
 
+        // Kiểm tra trạng thái banned
+        if (user.isBanned) {
+            // Kiểm tra nếu có thời hạn ban và đã hết hạn
+            if (user.bannedUntil && new Date(user.bannedUntil) < new Date()) {
+                // Hết hạn ban, tự động unban
+                user.isBanned = false;
+                user.banReason = undefined;
+                user.bannedUntil = undefined;
+                await user.save();
+            } else {
+                // Vẫn còn bị ban
+                return res.status(403).json({ 
+                    success: false,
+                    message: user.bannedUntil 
+                        ? `Tài khoản của bạn đã bị khóa đến ${new Date(user.bannedUntil).toLocaleString('vi-VN')}. ${user.banReason ? `Lý do: ${user.banReason}` : ''}`
+                        : `Tài khoản của bạn đã bị khóa. ${user.banReason ? `Lý do: ${user.banReason}` : ''}`
+                });
+            }
+        }
+
+        // Xác định role: ưu tiên role từ database, nếu không có thì kiểm tra email admin
+        let userRole = user.role || 'user';
+        if (!user.role && user.email === (process.env.ADMIN_EMAIL || 'admin@bughunter.com')) {
+            userRole = 'admin';
+        }
+
         // Thêm user vào request
         req.user = {
             ...user.toObject(),
             id: (user._id as any).toString(),
             email: user.email,
-            role: user.email === (process.env.ADMIN_EMAIL || 'admin@bughunter.com') ? 'admin' : 'user'
+            role: userRole
         } as any;
         next();
 

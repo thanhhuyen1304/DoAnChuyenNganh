@@ -1,0 +1,23 @@
+:root {
+  --background-image: url('../images/1.jpg');
+}
+
+body {
+  position: relative;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image: var(--background-image);
+  background-size: cover;
+  background-position: center;
+  opacity: 0.4;
+  filter: blur(8px);
+}
+
+.dark body::before {
+  opacity: 0.3;
+}

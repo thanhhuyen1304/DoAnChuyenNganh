@@ -1,6 +1,12 @@
 import mongoose from 'mongoose';
+import { config } from 'dotenv';
+import path from 'path';
 import User from '../src/models/user.model';
 import Challenge from '../src/models/challenge.model';
+
+// Load .env file
+const envPath = path.resolve(__dirname, '..', '.env');
+config({ path: envPath });
 
 // Environment configuration
 const ENV = {
@@ -157,8 +163,37 @@ console.log(countDown(5));`,
 async function setupDatabase() {
   try {
     console.log('🔌 Đang kết nối MongoDB...');
-    await mongoose.connect(ENV.MONGODB_URI);
-    console.log('✅ Kết nối MongoDB thành công');
+    console.log(`   URI: ${ENV.MONGODB_URI}`);
+    
+    // Xử lý lỗi case sensitivity của database name
+    try {
+      await mongoose.connect(ENV.MONGODB_URI);
+      console.log('✅ Kết nối MongoDB thành công');
+    } catch (connectError: any) {
+      // Nếu lỗi do case sensitivity, thử normalize database name
+      if (connectError?.code === 13297 || connectError?.message?.includes('different case')) {
+        console.log('⚠️  Phát hiện xung đột tên database (case sensitivity)');
+        console.log('💡 Đang thử normalize database name...');
+        
+        // Extract database name và normalize
+        const uri = new URL(ENV.MONGODB_URI);
+        const dbName = uri.pathname.slice(1); // Remove leading /
+        const normalizedDbName = dbName.toLowerCase();
+        uri.pathname = `/${normalizedDbName}`;
+        const normalizedUri = uri.toString();
+        
+        console.log(`   Database cũ: ${dbName}`);
+        console.log(`   Database mới: ${normalizedDbName}`);
+        
+        await mongoose.connect(normalizedUri);
+        console.log('✅ Kết nối MongoDB thành công với database name đã normalize');
+        
+        // Update ENV để dùng cho các operations sau
+        ENV.MONGODB_URI = normalizedUri;
+      } else {
+        throw connectError;
+      }
+    }
 
     // Tạo admin user
     console.log('👤 Đang tạo admin user...');
@@ -169,6 +204,7 @@ async function setupDatabase() {
         email: ENV.ADMIN_EMAIL,
         username: 'admin',
         password: 'admin123', // Mật khẩu mặc định, nên thay đổi sau
+        role: 'admin', // Set role admin
         favoriteLanguages: ['Python', 'JavaScript', 'Java'],
         experience: 1000,
         rank: 'Expert',
@@ -180,8 +216,16 @@ async function setupDatabase() {
       console.log(`   Email: ${ENV.ADMIN_EMAIL}`);
       console.log(`   Username: admin`);
       console.log(`   Password: admin123`);
+      console.log(`   Role: admin`);
     } else {
-      console.log('ℹ️  Admin user đã tồn tại');
+      // Cập nhật admin user hiện có để đảm bảo có role='admin'
+      if (adminExists.role !== 'admin') {
+        adminExists.role = 'admin';
+        await adminExists.save();
+        console.log('✅ Đã cập nhật role admin cho user hiện có');
+      } else {
+        console.log('ℹ️  Admin user đã tồn tại với role admin');
+      }
     }
 
     // Tạo sample challenges
@@ -227,6 +271,7 @@ async function setupDatabase() {
 }
 
 // Chạy setup nếu file được gọi trực tiếp
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 if (require.main === module) {
   setupDatabase();
 }

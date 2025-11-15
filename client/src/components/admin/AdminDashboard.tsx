@@ -1,13 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { 
   LayoutDashboard, 
-  Database, 
-  Webhook, 
   BarChart2 as BarChart, 
   Code2,
   Loader2,
-  KeyRound,
-  FileQuestion,
   ListTodo,
   PlusCircle,
   Search,
@@ -26,6 +22,11 @@ import APITester from './APITester';
 import ScraperGuide from './ScraperGuide';
 import ChallengeStats from './ChallengeStats';
 import { EditChallengeModal } from './EditChallengeModal';
+import UserManagement from './UserManagement';
+import ReportManagement from './ReportManagement';
+import FeedbackManagement from './FeedbackManagement';
+import AchievementManagement from './AchievementManagement';
+import SystemSettings from './SystemSettings';
 
 // Constants
 const API_BASE_URL = 'http://localhost:5000/api' as const;
@@ -78,10 +79,9 @@ import {
 const OTHER_TABS = [
   // Admin Management Features
   { id: 'users', icon: Users, label: { vi: 'Quản lý người dùng', en: 'User Management' }, color: 'text-blue-500' },
-  { id: 'roles', icon: Shield, label: { vi: 'Phân quyền', en: 'Role Management' }, color: 'text-indigo-500' },
   { id: 'reports', icon: Flag, label: { vi: 'Báo cáo vi phạm', en: 'Reports' }, color: 'text-red-500' },
   { id: 'feedback', icon: MessageSquare, label: { vi: 'Phản hồi', en: 'Feedback' }, color: 'text-emerald-500' },
-  { id: 'achievements', icon: Award, label: { vi: 'Huy hiệu & thành tích', en: 'Achievements' }, color: 'text-amber-500' },
+  { id: 'achievements', icon: Award, label: { vi: 'Thành tích', en: 'Achievements' }, color: 'text-amber-500' },
   { id: 'settings', icon: Settings, label: { vi: 'Cài đặt hệ thống', en: 'System Settings' }, color: 'text-gray-500' },
   
   // Development Tools
@@ -286,7 +286,16 @@ const AdminDashboard: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen relative bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-gray-800">
+    <div className="min-h-screen relative bg-gradient-to-br from-slate-300 via-slate-50 to-slate-100 dark:from-gray-900 dark:via-gray-850 dark:to-gray-800 overflow-hidden">
+      {/* Background effects */}
+      <div
+        className="fixed inset-0 z-0 bg-cover bg-center opacity-40 dark:opacity-30 filter blur-sm"
+        style={{ backgroundImage: `url(${new URL('../images/1.jpg', import.meta.url).href})` }}
+      />
+      <div className="absolute inset-0 pointer-events-none bg-white/30 dark:bg-black/30 z-10" />
+      <div className="absolute top-20 right-0 w-60 h-60 bg-yellow-400/5 rounded-full blur-3xl"></div>
+      <div className="absolute bottom-4 left-6 w-60 h-60 bg-primary-400/5 rounded-full blur-3xl"></div>
+      
       {/* Sidebar */}
       <aside className={`fixed top-0 left-0 h-screen z-30 transition-all duration-300 ${
         isVisible ? 'w-60' : 'w-16'
@@ -421,26 +430,29 @@ const AdminDashboard: React.FC = () => {
       </aside>
 
       {/* Main content */}
-      <main className={`transition-all duration-300 ${isVisible ? 'ml-60' : 'ml-16'} p-6`}>
+      <main className={`transition-all duration-300 ${isVisible ? 'ml-60' : 'ml-16'} p-6 relative z-20`}>
         {/* Header */}
-        {/* <div className="mb-6">
+        <div className="mb-6">
+          <span className="inline-block py-1 px-3 mb-4 text-sm font-medium bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 rounded-full">
+            {language === 'vi' ? 'Bảng điều khiển quản trị' : 'Admin Dashboard'}
+          </span>
           <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
             {language === 'vi' ? 'Quản lý' : 'Manage'}{' '}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#FF007A] to-[#A259FF]">
               {language === 'vi' ? 'Bài tập' : 'Challenges'}
             </span>
           </h1>
-        </div> */}
+        </div>
 
         {/* Alerts */}
         {error && (
-          <Alert variant="destructive" className="mb-4">
+          <Alert variant="destructive" className="mb-4 bg-white/80 dark:bg-gray-900/70 backdrop-blur-xl border border-gray-100/20 dark:border-gray-700/50">
             <AlertDescription>❌ {error}</AlertDescription>
           </Alert>
         )}
 
         {success && (
-          <Alert className="mb-4">
+          <Alert className="mb-4 bg-white/80 dark:bg-gray-900/70 backdrop-blur-xl border border-gray-100/20 dark:border-gray-700/50">
             <AlertDescription>
               <div className="flex items-center gap-2">
                 ✨ {success}
@@ -456,7 +468,7 @@ const AdminDashboard: React.FC = () => {
 
         {/* Content */}
         {activeGroup === 'challenges' && (
-          <div className="space-y-6">
+          <div className="space-y-6 bg-white/80 dark:bg-gray-900/70 backdrop-blur-xl rounded-2xl p-6 shadow-[0_0_25px_rgba(162,89,255,0.15)] border border-gray-100/20 dark:border-gray-700/50">
             {/* Tab content */}
             {activeChallengeTab === 'challenges' && (
               <ChallengeList
@@ -478,99 +490,28 @@ const AdminDashboard: React.FC = () => {
           <>
             {/* Admin Management Features */}
             {activeOtherTab === 'users' && (
-              <div className="space-y-4">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {language === 'vi' ? 'Quản lý người dùng' : 'User Management'}
-                </h2>
-                <Card>
-                  <CardContent className="p-6">
-                    <p className="text-gray-500 dark:text-gray-400">
-                      {language === 'vi' 
-                        ? 'Chức năng quản lý người dùng đang được phát triển...'
-                        : 'User management feature is under development...'}
-                    </p>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
-            {activeOtherTab === 'roles' && (
-              <div className="space-y-4">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {language === 'vi' ? 'Phân quyền' : 'Role Management'}
-                </h2>
-                <Card>
-                  <CardContent className="p-6">
-                    <p className="text-gray-500 dark:text-gray-400">
-                      {language === 'vi'
-                        ? 'Chức năng phân quyền đang được phát triển...'
-                        : 'Role management feature is under development...'}
-                    </p>
-                  </CardContent>
-                </Card>
+              <div className="space-y-4 bg-white/80 dark:bg-gray-900/70 backdrop-blur-xl rounded-2xl p-6 shadow-[0_0_25px_rgba(162,89,255,0.15)] border border-gray-100/20 dark:border-gray-700/50">
+                <UserManagement />
               </div>
             )}
             {activeOtherTab === 'reports' && (
-              <div className="space-y-4">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {language === 'vi' ? 'Báo cáo vi phạm' : 'Reports'}
-                </h2>
-                <Card>
-                  <CardContent className="p-6">
-                    <p className="text-gray-500 dark:text-gray-400">
-                      {language === 'vi'
-                        ? 'Chức năng báo cáo vi phạm đang được phát triển...'
-                        : 'Reports feature is under development...'}
-                    </p>
-                  </CardContent>
-                </Card>
+              <div className="space-y-4 bg-white/80 dark:bg-gray-900/70 backdrop-blur-xl rounded-2xl p-6 shadow-[0_0_25px_rgba(162,89,255,0.15)] border border-gray-100/20 dark:border-gray-700/50">
+                <ReportManagement />
               </div>
             )}
             {activeOtherTab === 'feedback' && (
-              <div className="space-y-4">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {language === 'vi' ? 'Phản hồi' : 'Feedback'}
-                </h2>
-                <Card>
-                  <CardContent className="p-6">
-                    <p className="text-gray-500 dark:text-gray-400">
-                      {language === 'vi'
-                        ? 'Chức năng phản hồi đang được phát triển...'
-                        : 'Feedback feature is under development...'}
-                    </p>
-                  </CardContent>
-                </Card>
+              <div className="space-y-4 bg-white/80 dark:bg-gray-900/70 backdrop-blur-xl rounded-2xl p-6 shadow-[0_0_25px_rgba(162,89,255,0.15)] border border-gray-100/20 dark:border-gray-700/50">
+                <FeedbackManagement />
               </div>
             )}
             {activeOtherTab === 'achievements' && (
-              <div className="space-y-4">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {language === 'vi' ? 'Huy hiệu & thành tích' : 'Achievements'}
-                </h2>
-                <Card>
-                  <CardContent className="p-6">
-                    <p className="text-gray-500 dark:text-gray-400">
-                      {language === 'vi'
-                        ? 'Chức năng quản lý huy hiệu và thành tích đang được phát triển...'
-                        : 'Achievements management feature is under development...'}
-                    </p>
-                  </CardContent>
-                </Card>
+              <div className="space-y-4 bg-white/80 dark:bg-gray-900/70 backdrop-blur-xl rounded-2xl p-6 shadow-[0_0_25px_rgba(162,89,255,0.15)] border border-gray-100/20 dark:border-gray-700/50">
+                <AchievementManagement />
               </div>
             )}
             {activeOtherTab === 'settings' && (
-              <div className="space-y-4">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {language === 'vi' ? 'Cài đặt hệ thống' : 'System Settings'}
-                </h2>
-                <Card>
-                  <CardContent className="p-6">
-                    <p className="text-gray-500 dark:text-gray-400">
-                      {language === 'vi'
-                        ? 'Chức năng cài đặt hệ thống đang được phát triển...'
-                        : 'System settings feature is under development...'}
-                    </p>
-                  </CardContent>
-                </Card>
+              <div className="space-y-4 bg-white/80 dark:bg-gray-900/70 backdrop-blur-xl rounded-2xl p-6 shadow-[0_0_25px_rgba(162,89,255,0.15)] border border-gray-100/20 dark:border-gray-700/50">
+                <SystemSettings />
               </div>
             )}
 
