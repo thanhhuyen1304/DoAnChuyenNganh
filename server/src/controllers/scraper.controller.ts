@@ -24,7 +24,8 @@ export const scrapeCSES = async (req: AuthenticatedRequest, res: Response, next:
       points: 20
     };
 
-    let problems = await RealProblemScraper.scrapeCSES();
+    // Pass requested language to scraper
+    let problems = await RealProblemScraper.scrapeCSES(classificationSettings.language);
     const savedCount = await RealProblemScraper.saveProblemsToDB(problems, req.user.id, classificationSettings, 10);
 
     // Lấy tổng số bài tập hiện tại trong database
@@ -67,7 +68,7 @@ export const scrapeAtCoder = async (req: AuthenticatedRequest, res: Response, ne
       points: 20
     };
 
-    const problems = await RealProblemScraper.scrapeAtCoder();
+    const problems = await RealProblemScraper.scrapeAtCoder(classificationSettings.language);
     await RealProblemScraper.saveProblemsToDB(problems, req.user.id, classificationSettings);
 
     res.json({
@@ -98,7 +99,7 @@ export const scrapeLeetCode = async (req: AuthenticatedRequest, res: Response, n
       points: 20
     };
 
-    const problems = await RealProblemScraper.scrapeLeetCode();
+    const problems = await RealProblemScraper.scrapeLeetCode(0, classificationSettings.language);
     await RealProblemScraper.saveProblemsToDB(problems, req.user.id, classificationSettings);
 
     res.json({
@@ -129,10 +130,11 @@ export const scrapeAllSources = async (req: AuthenticatedRequest, res: Response,
       points: 20
     };
 
+    const requestedLang = classificationSettings.language;
     const [csesProblems, atcoderProblems, leetcodeProblems] = await Promise.all([
-      RealProblemScraper.scrapeCSES(),
-      RealProblemScraper.scrapeAtCoder(),
-      RealProblemScraper.scrapeLeetCode()
+      RealProblemScraper.scrapeCSES(requestedLang),
+      RealProblemScraper.scrapeAtCoder(requestedLang),
+      RealProblemScraper.scrapeLeetCode(0, requestedLang)
     ]);
 
     const allProblems = [...csesProblems, ...atcoderProblems, ...leetcodeProblems];
