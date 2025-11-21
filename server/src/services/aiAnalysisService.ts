@@ -87,22 +87,39 @@ class AIAnalysisService {
     // Phân tích từng test case
     const testCaseAnalyses = this.analyzeTestCases(executionResults);
 
-    // Phân tích lỗi từ status và error message
-    const errorAnalyses = this.analyzeErrors(status, errorMessage, userCode, language);
+    // Chỉ phân tích lỗi nếu thực sự có lỗi (không phải Accepted)
+    // Và chỉ phân tích khi có test case fail hoặc status là lỗi
+    const passedCount = executionResults.filter(r => r.passed).length;
+    const hasErrors = status !== 'Accepted' || passedCount < executionResults.length;
+    
+    const errorAnalyses = hasErrors 
+      ? this.analyzeErrors(status, errorMessage, userCode, language, executionResults)
+      : [];
 
     // So sánh code với correct code nếu có
-    const codeSuggestions = correctCode 
+    // KHÔNG so sánh code nếu là lỗi hệ thống (không phải lỗi code)
+    const isSystemError = errorAnalyses.some(e => 
+      e.errorType === 'other' && 
+      (e.errorMessage.includes('Judge0 không thể') || 
+       e.errorMessage.includes('No such file or directory') ||
+       e.errorMessage.includes('Lỗi hệ thống'))
+    );
+    
+    const codeSuggestions = (!isSystemError && correctCode)
       ? this.compareCode(userCode, correctCode, language)
       : [];
 
-    // Tính điểm tổng
-    const passedCount = executionResults.filter(r => r.passed).length;
+    // Tính điểm tổng (sử dụng passedCount đã tính ở trên)
     const totalCount = executionResults.length;
     const score = executionResults.reduce((sum, r) => sum + (r.passed ? 1 : 0), 0);
     
     // Xác định overall status
+    // Nếu là lỗi hệ thống, không đánh giá code là incorrect
     let overallStatus: 'correct' | 'partial' | 'incorrect';
-    if (passedCount === totalCount) {
+    if (isSystemError) {
+      // Lỗi hệ thống - không đánh giá code
+      overallStatus = 'incorrect'; // Vẫn set incorrect để hiển thị, nhưng summary sẽ giải thích rõ
+    } else if (passedCount === totalCount) {
       overallStatus = 'correct';
     } else if (passedCount > 0) {
       overallStatus = 'partial';
@@ -110,8 +127,8 @@ class AIAnalysisService {
       overallStatus = 'incorrect';
     }
 
-    // Tạo summary
-    const summary = this.generateSummary(overallStatus, passedCount, totalCount, errorAnalyses);
+    // Tạo summary - truyền thêm thông tin về lỗi hệ thống
+    const summary = this.generateSummary(overallStatus, passedCount, totalCount, errorAnalyses, isSystemError);
 
     // Tạo recommendations
     const recommendations = this.generateRecommendations(errorAnalyses, codeSuggestions, testCaseAnalyses);
@@ -190,9 +207,28 @@ class AIAnalysisService {
     status: string,
     errorMessage: string | undefined,
     userCode: string,
-    language: string
+    language: string,
+    executionResults?: Array<{ passed: boolean; errorMessage?: string; status?: string }>
   ): ErrorAnalysis[] {
     const errors: ErrorAnalysis[] = [];
+
+    // Kiểm tra xem có phải lỗi từ Judge0 system không (không phải lỗi code)
+    const isSystemError = errorMessage && (
+      errorMessage.includes('Judge0 không thể') ||
+      errorMessage.includes('No such file or directory') ||
+      errorMessage.includes('Lỗi hệ thống')
+    );
+
+    // Nếu là lỗi hệ thống, chỉ báo lỗi hệ thống, không phân tích code
+    if (isSystemError) {
+      errors.push({
+        errorType: 'other',
+        errorMessage: errorMessage || 'Lỗi hệ thống',
+        severity: 'high',
+        description: 'Có lỗi xảy ra với hệ thống chấm bài. Vui lòng thử lại sau hoặc liên hệ admin.'
+      });
+      return errors;
+    }
 
     switch (status) {
       case 'Compilation Error':
@@ -206,13 +242,28 @@ class AIAnalysisService {
         break;
 
       case 'Runtime Error':
-        errors.push({
-          errorType: 'runtime',
-          errorMessage: errorMessage || 'Lỗi runtime',
-          severity: 'high',
-          description: 'Lỗi xảy ra khi chạy code. Kiểm tra null pointer, array index out of bounds, hoặc division by zero.',
-          errorLocation: this.findErrorLocation(userCode, errorMessage)
-        });
+        // Kiểm tra xem có phải lỗi memory thực sự không
+        const hasMemoryError = errorMessage && (
+          errorMessage.toLowerCase().includes('memory') ||
+          errorMessage.toLowerCase().includes('out of memory')
+        );
+        
+        if (hasMemoryError) {
+          errors.push({
+            errorType: 'memory',
+            errorMessage: 'Vượt quá bộ nhớ cho phép',
+            severity: 'high',
+            description: 'Code sử dụng quá nhiều bộ nhớ. Kiểm tra việc tạo mảng lớn hoặc đệ quy sâu.',
+          });
+        } else {
+          errors.push({
+            errorType: 'runtime',
+            errorMessage: errorMessage || 'Lỗi runtime',
+            severity: 'high',
+            description: 'Lỗi xảy ra khi chạy code. Kiểm tra null pointer, array index out of bounds, hoặc division by zero.',
+            errorLocation: this.findErrorLocation(userCode, errorMessage)
+          });
+        }
         break;
 
       case 'Time Limit Exceeded':
@@ -243,7 +294,8 @@ class AIAnalysisService {
         break;
 
       default:
-        if (errorMessage) {
+        // Chỉ thêm lỗi nếu thực sự có error message và không phải Accepted
+        if (status !== 'Accepted' && errorMessage) {
           errors.push({
             errorType: 'other',
             errorMessage,
@@ -357,8 +409,23 @@ class AIAnalysisService {
     overallStatus: 'correct' | 'partial' | 'incorrect',
     passedCount: number,
     totalCount: number,
-    errorAnalyses: ErrorAnalysis[]
+    errorAnalyses: ErrorAnalysis[],
+    isSystemError?: boolean
   ): string {
+    // Nếu là lỗi hệ thống, hiển thị thông báo rõ ràng
+    if (isSystemError) {
+      const systemError = errorAnalyses.find(e => 
+        e.errorType === 'other' && 
+        (e.errorMessage.includes('Judge0 không thể') || 
+         e.errorMessage.includes('No such file or directory') ||
+         e.errorMessage.includes('Lỗi hệ thống'))
+      );
+      if (systemError) {
+        return systemError.description || 'Có lỗi xảy ra với hệ thống chấm bài. Vui lòng thử lại sau hoặc liên hệ admin.';
+      }
+      return 'Có lỗi xảy ra với hệ thống chấm bài. Vui lòng thử lại sau hoặc liên hệ admin.';
+    }
+    
     if (overallStatus === 'correct') {
       return `Tuyệt vời! Bạn đã pass tất cả ${totalCount} test case.`;
     } else if (overallStatus === 'partial') {
@@ -382,7 +449,23 @@ class AIAnalysisService {
   ): string[] {
     const recommendations: string[] = [];
 
-    // Từ error analyses
+    // Kiểm tra xem có phải lỗi hệ thống không
+    const isSystemError = errorAnalyses.some(e => 
+      e.errorType === 'other' && 
+      (e.errorMessage.includes('Judge0 không thể') || 
+       e.errorMessage.includes('No such file or directory') ||
+       e.errorMessage.includes('Lỗi hệ thống'))
+    );
+
+    // Nếu là lỗi hệ thống, chỉ đưa ra recommendations về hệ thống
+    if (isSystemError) {
+      recommendations.push('Vui lòng thử lại sau vài phút');
+      recommendations.push('Nếu lỗi vẫn tiếp tục, vui lòng liên hệ admin để được hỗ trợ');
+      recommendations.push('Code của bạn có thể đúng, nhưng hệ thống chấm bài đang gặp sự cố');
+      return recommendations;
+    }
+
+    // Từ error analyses (chỉ khi không phải lỗi hệ thống)
     errorAnalyses.forEach(error => {
       if (error.errorType === 'syntax') {
         recommendations.push('Kiểm tra cú pháp: dấu ngoặc, dấu chấm phẩy, và các từ khóa');
@@ -392,15 +475,17 @@ class AIAnalysisService {
         recommendations.push('Kiểm tra null pointer, array bounds, và division by zero');
       } else if (error.errorType === 'timeout') {
         recommendations.push('Tối ưu hóa thuật toán để giảm thời gian chạy');
+      } else if (error.errorType === 'memory') {
+        recommendations.push('Tối ưu hóa việc sử dụng bộ nhớ, tránh tạo mảng quá lớn');
       }
     });
 
-    // Từ code suggestions
+    // Từ code suggestions (chỉ khi không phải lỗi hệ thống)
     if (codeSuggestions.length > 0) {
       recommendations.push(`Có ${codeSuggestions.length} vị trí trong code cần được sửa`);
     }
 
-    // Từ test case analyses
+    // Từ test case analyses (chỉ khi không phải lỗi hệ thống)
     const failedTests = testCaseAnalyses.filter(tc => !tc.passed);
     if (failedTests.length > 0) {
       const firstFailed = failedTests[0];
@@ -459,26 +544,60 @@ class AIAnalysisService {
       }
       
       const genAI = new GoogleGenerativeAI(ENV.GEMINI_API_KEY);
-      const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+      
+      // Thử các model names - nếu tất cả đều fail, sẽ fallback về rule-based
+      // Model names có thể thay đổi theo API version
+      // Thử các model theo thứ tự: gemini-pro (stable), gemini-1.5-flash, gemini-1.5-pro
+      const modelNames = ['gemini-pro', 'gemini-1.5-flash', 'gemini-1.5-pro'];
+      let lastError: any = null;
+      
+      // Thử từng model cho đến khi tìm được model hoạt động
+      for (const modelName of modelNames) {
+        try {
+          console.log(`🔍 Thử sử dụng Gemini model: ${modelName}`);
+          const model = genAI.getGenerativeModel({ model: modelName });
 
-      // Tạo prompt cho Gemini
-      const prompt = this.buildGeminiPrompt(options);
+          // Tạo prompt cho Gemini
+          const prompt = this.buildGeminiPrompt(options);
 
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
+          const result = await model.generateContent(prompt);
+          const response = await result.response;
+          const text = response.text();
 
-      // Parse JSON response từ Gemini
-      try {
-        const aiAnalysis = JSON.parse(text);
-        return await this.validateAndMergeAnalysis(aiAnalysis, options);
-      } catch (parseError) {
-        // Nếu Gemini không trả về JSON hợp lệ, fallback về rule-based
-        console.warn('Gemini response không phải JSON hợp lệ, sử dụng rule-based');
-        return this.analyzeSubmission(options);
+          // Parse JSON response từ Gemini
+          try {
+            const aiAnalysis = JSON.parse(text);
+            console.log(`✅ Gemini model ${modelName} hoạt động thành công`);
+            return await this.validateAndMergeAnalysis(aiAnalysis, options);
+          } catch (parseError) {
+            // Nếu Gemini không trả về JSON hợp lệ, thử model tiếp theo
+            console.warn(`⚠️ Gemini model ${modelName} trả về response không phải JSON, thử model khác...`);
+            lastError = parseError;
+            continue;
+          }
+        } catch (error: any) {
+          // Nếu model không tồn tại hoặc có lỗi, thử model tiếp theo
+          lastError = error;
+          // Chỉ log warning, không log error vì sẽ thử model khác
+          if (error.status === 404) {
+            console.warn(`⚠️ Gemini model ${modelName} không tìm thấy, thử model khác...`);
+          } else {
+            console.warn(`⚠️ Gemini model ${modelName} lỗi: ${error.message}, thử model khác...`);
+          }
+          continue;
+        }
       }
+      
+      // Nếu tất cả models đều fail, fallback về rule-based
+      console.warn('⚠️ Tất cả Gemini models đều không hoạt động, sử dụng rule-based analysis');
+      if (lastError) {
+        // Chỉ log error nếu tất cả models đều fail
+        console.error('Gemini API error (tất cả models):', lastError.message || lastError);
+      }
+      return this.analyzeSubmission(options);
     } catch (error: any) {
-      console.error('Gemini API error:', error);
+      // Lỗi không liên quan đến model (ví dụ: import error, API key error)
+      console.warn('⚠️ Gemini API không khả dụng, sử dụng rule-based analysis:', error.message || error);
       // Fallback về rule-based nếu Gemini fail
       return this.analyzeSubmission(options);
     }

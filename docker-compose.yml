@@ -28,12 +28,26 @@ services:
       - POSTGRES_USER=judge0
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=judge0
+      # Thêm các biến môi trường để fix lỗi script creation
+      - ENABLE_WORKER=true
+      - ENABLE_CE=true
+      - DISABLE_WORKER=false
+      # Cấu hình timeout và limits
+      - CPU_TIME_LIMIT=5
+      - MEMORY_LIMIT=128000
+      - MAX_PROCESSES_AND_OR_THREADS=60
     depends_on:
       - redis
       - postgres
     networks:
       - judge0-network
     restart: unless-stopped
+    # Thêm privileged mode để có quyền tạo file trong container
+    privileged: true
+    # Thêm tmpfs để đảm bảo có thể ghi file tạm
+    tmpfs:
+      - /tmp
+      - /box
 
   # PostgreSQL - Judge0 cần database
   postgres:

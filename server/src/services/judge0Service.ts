@@ -42,8 +42,12 @@ class Judge0Service {
   private apiKey: string | null;
 
   constructor() {
-    this.apiUrl = ENV.JUDGE0_API_URL || 'https://judge0-ce.p.rapidapi.com';
+    this.apiUrl = ENV.JUDGE0_API_URL || 'http://localhost:2358';
     this.apiKey = ENV.JUDGE0_API_KEY || null;
+    
+    console.log(`🔧 Judge0 Service initialized:`);
+    console.log(`   API URL: ${this.apiUrl}`);
+    console.log(`   API Key: ${this.apiKey ? 'Set' : 'Not set (self-hosted)'}`);
   }
 
   /**
@@ -76,13 +80,25 @@ class Judge0Service {
     }
 
     try {
+      // Xác định xem đang dùng self-hosted hay RapidAPI
+      const isSelfHosted = this.apiUrl.includes('localhost') || this.apiUrl.includes('127.0.0.1');
+      
+      // Headers khác nhau cho self-hosted vs RapidAPI
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      
+      // Chỉ thêm RapidAPI headers nếu dùng RapidAPI (có API key và URL là RapidAPI)
+      if (!isSelfHosted && this.apiKey) {
+        headers['X-RapidAPI-Key'] = this.apiKey;
+        headers['X-RapidAPI-Host'] = 'judge0-ce.p.rapidapi.com';
+      }
+      
+      console.log(`🔍 Submitting to Judge0: ${this.apiUrl} (${isSelfHosted ? 'Self-hosted' : 'RapidAPI'})`);
+      
       const response = await fetch(`${this.apiUrl}/submissions?base64_encoded=false&wait=true`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(this.apiKey && { 'X-RapidAPI-Key': this.apiKey }),
-          ...(this.apiKey && { 'X-RapidAPI-Host': 'judge0-ce.p.rapidapi.com' }),
-        },
+        headers,
         body: JSON.stringify(submission),
       });
 
@@ -92,6 +108,30 @@ class Judge0Service {
       }
 
       const result: Judge0Response = await response.json();
+      
+      // Log chi tiết để debug - nhưng không log lỗi hệ thống Judge0 như error
+      if (result.status.id !== 3) { // Không phải Accepted
+        // Kiểm tra xem có phải lỗi hệ thống Judge0 không (status id 13)
+        const isSystemError = result.status.id === 13;
+        
+        if (isSystemError) {
+          // Lỗi hệ thống Judge0 - chỉ log warning, không log như error
+          console.warn('⚠️ Judge0 system error (sẽ fallback):', {
+            status: result.status,
+            message: result.message
+          });
+        } else {
+          // Lỗi thực sự từ code (compile error, runtime error, etc.)
+          console.log('Judge0 response:', {
+            status: result.status,
+            stdout: result.stdout,
+            stderr: result.stderr,
+            compile_output: result.compile_output,
+            message: result.message
+          });
+        }
+      }
+      
       return result;
     } catch (error: any) {
       console.error('Judge0 API error:', error);
@@ -136,8 +176,47 @@ class Judge0Service {
 
         const status = this.mapStatus(result.status.id);
         const passed = status === 'Accepted';
-        const actualOutput = result.stdout || result.stderr || '';
-        const errorMessage = result.stderr || result.compile_output || result.message || undefined;
+        
+        // Kiểm tra lỗi hệ thống Judge0 (status id 13 - Internal Error)
+        const isSystemError = result.status.id === 13;
+        
+        // Xử lý error message trước để có thể dùng cho actualOutput nếu cần
+        let errorMessage: string | undefined = undefined;
+        if (status !== 'Accepted' || isSystemError) {
+          if (isSystemError && result.message) {
+            // Lỗi hệ thống Judge0 - không log chi tiết vì đã có fallback
+            // Chỉ set error message nếu cần thiết cho UI
+            if (result.message.includes('No such file or directory')) {
+              errorMessage = 'Lỗi hệ thống: Judge0 không thể tạo file script. Hệ thống sẽ sử dụng phương pháp dự phòng để đánh giá.';
+            } else {
+              errorMessage = `Lỗi hệ thống Judge0. Hệ thống sẽ sử dụng phương pháp dự phòng để đánh giá.`;
+            }
+          } else if (result.stderr) {
+            errorMessage = String(result.stderr).trim();
+          } else if (result.compile_output) {
+            errorMessage = String(result.compile_output).trim();
+          } else if (result.message) {
+            errorMessage = String(result.message).trim();
+          }
+        }
+        
+        // Xử lý output - ưu tiên stdout, nếu không có thì lấy stderr hoặc compile_output
+        // QUAN TRỌNG: actualOutput phải luôn có giá trị (không được empty string) để pass MongoDB validation
+        let actualOutput = '';
+        if (result.stdout) {
+          actualOutput = String(result.stdout).trim();
+        } else if (result.stderr && !isSystemError) {
+          actualOutput = String(result.stderr).trim();
+        } else if (result.compile_output && !isSystemError) {
+          actualOutput = String(result.compile_output).trim();
+        } else if (result.message && !isSystemError) {
+          actualOutput = String(result.message).trim();
+        }
+        
+        // Nếu vẫn không có output (đặc biệt là lỗi hệ thống), dùng errorMessage hoặc message mặc định
+        if (!actualOutput || actualOutput.trim() === '') {
+          actualOutput = errorMessage || 'Không có output từ Judge0';
+        }
 
         results.push({
           testCaseIndex: i,
@@ -161,7 +240,7 @@ class Judge0Service {
           testCaseIndex: i,
           input: testCase.input,
           expectedOutput: testCase.expectedOutput,
-          actualOutput: '',
+          actualOutput: error.message || '', // Đảm bảo luôn là string
           passed: false,
           executionTime: 0,
           memoryUsed: 0,
@@ -192,7 +271,7 @@ class Judge0Service {
       10: 'Runtime Error',
       11: 'Runtime Error',
       12: 'Runtime Error',
-      13: 'Memory Limit Exceeded',
+      13: 'Runtime Error', // Internal Error - thường là lỗi hệ thống Judge0
       14: 'Runtime Error',
     };
 
@@ -204,14 +283,28 @@ class Judge0Service {
    */
   async checkHealth(): Promise<boolean> {
     try {
+      // Xác định xem đang dùng self-hosted hay RapidAPI
+      const isSelfHosted = this.apiUrl.includes('localhost') || this.apiUrl.includes('127.0.0.1');
+      
+      // Headers khác nhau cho self-hosted vs RapidAPI
+      const headers: Record<string, string> = {};
+      
+      // Chỉ thêm RapidAPI headers nếu dùng RapidAPI
+      if (!isSelfHosted && this.apiKey) {
+        headers['X-RapidAPI-Key'] = this.apiKey;
+        headers['X-RapidAPI-Host'] = 'judge0-ce.p.rapidapi.com';
+      }
+      
       const response = await fetch(`${this.apiUrl}/languages`, {
-        headers: {
-          ...(this.apiKey && { 'X-RapidAPI-Key': this.apiKey }),
-          ...(this.apiKey && { 'X-RapidAPI-Host': 'judge0-ce.p.rapidapi.com' }),
-        },
+        headers,
       });
-      return response.ok;
-    } catch {
+      
+      const isHealthy = response.ok;
+      console.log(`🔍 Judge0 health check: ${isHealthy ? '✅ Healthy' : '❌ Unhealthy'} (${this.apiUrl})`);
+      
+      return isHealthy;
+    } catch (error: any) {
+      console.error('❌ Judge0 health check failed:', error.message);
       return false;
     }
   }

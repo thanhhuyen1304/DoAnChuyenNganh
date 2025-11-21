@@ -33,13 +33,20 @@ export function CodeEditor({ problemId, challenge, onSubmissionSuccess }: CodeEd
   const [isFullScreen, setIsFullScreen] = useState(false)
   const [showConsole, setShowConsole] = useState(true)
   const [selectedTestCase, setSelectedTestCase] = useState(0)
+  const [lastProblemId, setLastProblemId] = useState<string | null>(null)
 
   useEffect(() => {
-    if (challenge?.buggyCode) {
+    // Chỉ reset code khi chuyển sang bài khác (problemId thay đổi), không reset khi submit
+    if (challenge?.buggyCode && challenge?._id === problemId && lastProblemId !== problemId) {
       setCode(challenge.buggyCode)
       setLanguage(challenge.language)
+      setLastProblemId(problemId)
+      // Reset các state khác khi chuyển bài
+      setTestResults(null)
+      setAiAnalysis(null)
+      setConsoleTab("result")
     }
-  }, [challenge])
+  }, [problemId, challenge?._id, lastProblemId]) // Chỉ trigger khi problemId thay đổi
 
   const handleRun = async () => {
     setIsRunning(true)
@@ -73,7 +80,18 @@ export function CodeEditor({ problemId, challenge, onSubmissionSuccess }: CodeEd
       return
     }
 
+    // Validate code không rỗng
+    if (!code || code.trim().length === 0) {
+      toast({
+        title: "Lỗi",
+        description: "Vui lòng nhập code trước khi submit",
+        variant: "destructive"
+      })
+      return
+    }
+
     setIsSubmitting(true)
+    
     try {
       const token = localStorage.getItem('token')
       if (!token) {
@@ -82,23 +100,56 @@ export function CodeEditor({ problemId, challenge, onSubmissionSuccess }: CodeEd
           description: "Vui lòng đăng nhập để nộp bài",
           variant: "destructive"
         })
+        setIsSubmitting(false)
         return
       }
 
-      const response = await fetch(buildApi('/submissions/submit'), {
+      const submitData = {
+        challengeId: challenge._id,
+        code: code.trim(),
+        language
+      }
+
+      console.log('🚀 Submitting:', {
+        challengeId: submitData.challengeId,
+        language: submitData.language,
+        codeLength: submitData.code.length
+      })
+
+      const apiUrl = buildApi('/submissions/submit')
+      console.log('📡 API URL:', apiUrl)
+
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({
-          challengeId: challenge._id,
-          code,
-          language
-        })
+        body: JSON.stringify(submitData)
       })
 
+      console.log('📥 Response status:', response.status)
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        let errorData
+        try {
+          errorData = JSON.parse(errorText)
+        } catch {
+          errorData = { message: errorText || `HTTP ${response.status}` }
+        }
+        
+        console.error('❌ Submission failed:', errorData)
+        toast({
+          title: "Lỗi",
+          description: errorData.message || `Lỗi ${response.status}: ${response.statusText}`,
+          variant: "destructive"
+        })
+        return
+      }
+
       const result = await response.json()
+      console.log('✅ Submission result:', result)
 
       if (result.success) {
         const submission = result.data.submission
@@ -166,9 +217,16 @@ export function CodeEditor({ problemId, challenge, onSubmissionSuccess }: CodeEd
         })
       }
     } catch (error: any) {
+      console.error('❌ Submission error:', error)
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      })
+      
       toast({
         title: "Lỗi",
-        description: error.message || "Có lỗi xảy ra khi nộp bài",
+        description: error.message || "Có lỗi xảy ra khi nộp bài. Vui lòng kiểm tra console để biết thêm chi tiết.",
         variant: "destructive"
       })
     } finally {
