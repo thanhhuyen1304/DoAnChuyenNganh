@@ -2,10 +2,11 @@
 
 ## 🔍 Vấn đề
 
-Lỗi này xảy ra khi Judge0 không thể tạo file script trong container `/box/script.py`. Đây là lỗi hệ thống của Judge0, thường do:
+Lỗi này xảy ra khi Judge0 không thể tạo file script trong container `/box/script.py` hoặc không thể ghi vào cgroup. Đây là lỗi hệ thống của Judge0, thường do:
 - Container không có quyền ghi file
 - Thiếu cấu hình volumes hoặc tmpfs
 - Judge0 worker không chạy đúng
+- **Trên Windows**: Cgroup không hoạt động đúng, cần disable memory limit
 
 ## ✅ Giải pháp Triệt Để
 
@@ -13,8 +14,16 @@ Lỗi này xảy ra khi Judge0 không thể tạo file script trong container `/
 
 File `docker-compose.yml` đã được cập nhật với:
 - `privileged: true` - Cho phép container có quyền cao hơn để tạo file
-- `tmpfs` cho `/tmp` và `/box` - Đảm bảo có thể ghi file tạm
+- `tmpfs` cho `/tmp` - Đảm bảo có thể ghi file tạm (KHÔNG mount `/box` vì Judge0 tự quản lý)
+- `MEMORY_LIMIT=0` - Disable memory limit để tránh lỗi cgroup trên Windows
+- `ENABLE_CGROUP=false` - Disable cgroup trên Windows
+- `security_opt: seccomp:unconfined` - Disable seccomp trên Windows
 - Thêm các environment variables cần thiết
+
+**LƯU Ý QUAN TRỌNG**: Không mount `/box` vào tmpfs vì:
+- Judge0 tự tạo và quản lý thư mục `/box` trong container
+- Mount tmpfs từ bên ngoài có thể gây xung đột quyền truy cập
+- User `judge0` (không phải root) cần quyền ghi vào `/box`
 
 ### Bước 2: Rebuild và Restart Judge0
 
@@ -49,9 +58,10 @@ File `docker-compose.yml` đã được cập nhật với:
 
 1. **Health check**:
    ```powershell
-   curl http://localhost:2358/health
+   # Judge0 không có endpoint /health, dùng /languages thay thế
+   curl http://localhost:2358/languages
    ```
-   Kết quả mong đợi: `{"status":"OK"}`
+   Kết quả mong đợi: JSON array với danh sách languages
 
 2. **Test submission đơn giản**:
    ```powershell
