@@ -96,8 +96,11 @@ class AIAnalysisService {
       ? this.analyzeErrors(status, errorMessage, userCode, language, executionResults)
       : [];
 
-    // So sánh code với correct code nếu có
-    // KHÔNG so sánh code nếu là lỗi hệ thống (không phải lỗi code)
+    // Không so sánh với correctCode nữa - chỉ phân tích code user submit
+    // AI sẽ phân tích code dựa trên execution results và error messages
+    const codeSuggestions: CodeSuggestion[] = [];
+    
+    // Kiểm tra lỗi hệ thống
     const isSystemError = errorAnalyses.some(e => 
       e.errorType === 'other' && 
       (e.errorMessage.includes('Judge0 không thể') || 
@@ -105,9 +108,26 @@ class AIAnalysisService {
        e.errorMessage.includes('Lỗi hệ thống'))
     );
     
-    const codeSuggestions = (!isSystemError && correctCode)
-      ? this.compareCode(userCode, correctCode, language)
-      : [];
+    // Nếu có lỗi và không phải lỗi hệ thống, phân tích code để tìm vấn đề
+    if (!isSystemError && status !== 'Accepted' && executionResults.some(r => !r.passed)) {
+      // Phân tích code dựa trên test cases fail
+      const failedTests = executionResults.filter(r => !r.passed);
+      for (const failedTest of failedTests) {
+        if (failedTest.errorMessage) {
+          // Tìm vị trí lỗi trong code
+          const errorLocation = this.findErrorLocation(userCode, failedTest.errorMessage);
+          if (errorLocation) {
+            codeSuggestions.push({
+              line: errorLocation.line,
+              currentCode: errorLocation.codeSnippet || '',
+              suggestedCode: '', // Không có correctCode để suggest
+              explanation: `Lỗi ở test case ${failedTest.testCaseIndex + 1}: ${failedTest.errorMessage}`,
+              confidence: 0.7
+            });
+          }
+        }
+      }
+    }
 
     // Tính điểm tổng (sử dụng passedCount đã tính ở trên)
     const totalCount = executionResults.length;
@@ -306,78 +326,6 @@ class AIAnalysisService {
     }
 
     return errors;
-  }
-
-  /**
-   * So sánh code user với correct code
-   */
-  private compareCode(
-    userCode: string,
-    correctCode: string,
-    language: string
-  ): CodeSuggestion[] {
-    const suggestions: CodeSuggestion[] = [];
-    const userLines = userCode.split('\n');
-    const correctLines = correctCode.split('\n');
-
-    // So sánh từng dòng (đơn giản)
-    const maxLines = Math.max(userLines.length, correctLines.length);
-    
-    for (let i = 0; i < maxLines; i++) {
-      const userLine = userLines[i]?.trim() || '';
-      const correctLine = correctLines[i]?.trim() || '';
-
-      if (userLine !== correctLine && correctLine) {
-        // Chỉ suggest nếu khác biệt đáng kể
-        if (this.isSignificantDifference(userLine, correctLine)) {
-          suggestions.push({
-            line: i + 1,
-            currentCode: userLine,
-            suggestedCode: correctLine,
-            explanation: this.generateExplanation(userLine, correctLine),
-            confidence: 0.7
-          });
-        }
-      }
-    }
-
-    return suggestions;
-  }
-
-  /**
-   * Kiểm tra xem có khác biệt đáng kể không
-   */
-  private isSignificantDifference(userLine: string, correctLine: string): boolean {
-    // Bỏ qua sự khác biệt về whitespace
-    const userNormalized = userLine.replace(/\s+/g, ' ');
-    const correctNormalized = correctLine.replace(/\s+/g, ' ');
-    
-    if (userNormalized === correctNormalized) return false;
-
-    // Bỏ qua comment-only differences
-    if (userNormalized.startsWith('//') && correctNormalized.startsWith('//')) {
-      return false;
-    }
-
-    return true;
-  }
-
-  /**
-   * Tạo explanation cho suggestion
-   */
-  private generateExplanation(userLine: string, correctLine: string): string {
-    // Phân tích sự khác biệt và đưa ra explanation
-    if (correctLine.includes('return') && !userLine.includes('return')) {
-      return 'Cần thêm return statement';
-    }
-    if (correctLine.includes('if') && !userLine.includes('if')) {
-      return 'Thiếu điều kiện kiểm tra';
-    }
-    if (correctLine.includes('=') && userLine.includes('==')) {
-      return 'Cần sử dụng phép gán thay vì so sánh';
-    }
-    
-    return 'Cần sửa code tại dòng này để khớp với giải pháp đúng';
   }
 
   /**
@@ -615,9 +563,7 @@ class AIAnalysisService {
     prompt += `## Ngôn ngữ: ${language}\n\n`;
     prompt += `## Code của học sinh:\n\`\`\`${language}\n${userCode}\n\`\`\`\n\n`;
 
-    if (correctCode) {
-      prompt += `## Code đúng (chỉ để tham khảo, không tiết lộ cho học sinh):\n\`\`\`${language}\n${correctCode}\n\`\`\`\n\n`;
-    }
+    // Không cần correctCode nữa - AI sẽ phân tích dựa trên execution results
 
     prompt += `## Kết quả chạy test cases:\n`;
     executionResults.forEach((result, idx) => {

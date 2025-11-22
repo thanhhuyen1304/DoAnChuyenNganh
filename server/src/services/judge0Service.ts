@@ -4,6 +4,10 @@
  */
 
 import { ENV } from '../../config/environment';
+import { spawn } from 'child_process';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
 
 interface Judge0Submission {
   source_code: string;
@@ -23,8 +27,8 @@ interface Judge0Response {
     id: number;
     description: string;
   };
-  time: string;
-  memory: number;
+  time: string | null;
+  memory: number | null;
 }
 
 // Language ID mapping cho Judge0
@@ -67,12 +71,17 @@ class Judge0Service {
       throw new Error(`Ngôn ngữ ${language} không được hỗ trợ`);
     }
 
+    // Xác định xem đang dùng self-hosted hay RapidAPI
+    const isSelfHosted = this.apiUrl.includes('localhost') || this.apiUrl.includes('127.0.0.1');
+    
+    // Trên Windows/self-hosted, không gửi memory_limit để Judge0 không dùng cgroup
+    // Chỉ set memory_limit khi dùng RapidAPI (cloud)
     const submission: Judge0Submission = {
       source_code: code,
       language_id: languageId,
       stdin: input,
       cpu_time_limit: timeLimit || 2, // Default 2 seconds
-      memory_limit: memoryLimit ? memoryLimit * 1024 : 128000, // Convert MB to KB
+      ...(isSelfHosted ? {} : { memory_limit: memoryLimit ? memoryLimit * 1024 : 128000 })
     };
 
     if (expectedOutput) {
@@ -80,9 +89,6 @@ class Judge0Service {
     }
 
     try {
-      // Xác định xem đang dùng self-hosted hay RapidAPI
-      const isSelfHosted = this.apiUrl.includes('localhost') || this.apiUrl.includes('127.0.0.1');
-      
       // Headers khác nhau cho self-hosted vs RapidAPI
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
@@ -108,6 +114,17 @@ class Judge0Service {
       }
 
       const result: Judge0Response = await response.json();
+      
+      // Log toàn bộ response để debug
+      console.log('📊 Judge0 full response:', JSON.stringify(result, null, 2));
+      console.log('📊 Judge0 response metrics:', {
+        time: result.time,
+        memory: result.memory,
+        timeType: typeof result.time,
+        memoryType: typeof result.memory,
+        status: result.status.id,
+        statusDescription: result.status.description
+      });
       
       // Log chi tiết để debug - nhưng không log lỗi hệ thống Judge0 như error
       if (result.status.id !== 3) { // Không phải Accepted
@@ -165,7 +182,7 @@ class Judge0Service {
       const testCase = testCases[i];
       
       try {
-        const result = await this.submitCode(
+        let result = await this.submitCode(
           code,
           language,
           testCase.input,
@@ -174,11 +191,86 @@ class Judge0Service {
           memoryLimit
         );
 
-        const status = this.mapStatus(result.status.id);
-        const passed = status === 'Accepted';
+        let status = this.mapStatus(result.status.id);
         
         // Kiểm tra lỗi hệ thống Judge0 (status id 13 - Internal Error)
-        const isSystemError = result.status.id === 13;
+        let isSystemError = result.status.id === 13;
+        
+        // Nếu Judge0 fail với system error và không có stdout, thử fallback
+        if (isSystemError && !result.stdout && (language === 'Python' || language === 'JavaScript')) {
+          console.log(`⚠️ Judge0 system error, thử fallback execution cho test case ${i + 1}`);
+          try {
+            const fallbackResult = await this.runCodeFallback(code, language, testCase.input, timeLimit || 2);
+            console.log(`📊 Fallback result cho test case ${i + 1}:`, {
+              stdout: fallbackResult.stdout,
+              stderr: fallbackResult.stderr,
+              executionTime: fallbackResult.executionTime
+            });
+            
+            if (fallbackResult.stdout && !fallbackResult.stderr.includes('was not found')) {
+              // Có output từ fallback và không phải lỗi "not found", dùng nó
+              // Normalize output (loại bỏ \r\n)
+              const normalizedOutput = fallbackResult.stdout.replace(/\r\n/g, '\n').trim();
+              result = {
+                ...result,
+                stdout: normalizedOutput,
+                stderr: fallbackResult.stderr ? fallbackResult.stderr.trim() : null,
+                status: { id: 3, description: 'Accepted' }, // Accepted
+                time: String(fallbackResult.executionTime / 1000),
+                memory: 0
+              };
+              // Update status và isSystemError sau khi fallback thành công
+              status = 'Accepted';
+              isSystemError = false;
+              console.log(`✅ Fallback execution thành công cho test case ${i + 1}, output: "${normalizedOutput}"`);
+            } else if (fallbackResult.stderr.includes('was not found')) {
+              // Thử với python3 hoặc python
+              console.log(`⚠️ Thử lại với python3...`);
+              try {
+                const fallbackResult2 = await this.runCodeFallback(code, language, testCase.input, timeLimit || 2, 'python3');
+                if (fallbackResult2.stdout && !fallbackResult2.stderr.includes('was not found')) {
+                  const normalizedOutput2 = fallbackResult2.stdout.replace(/\r\n/g, '\n').trim();
+                  result = {
+                    ...result,
+                    stdout: normalizedOutput2,
+                    stderr: fallbackResult2.stderr ? fallbackResult2.stderr.trim() : null,
+                    status: { id: 3, description: 'Accepted' },
+                    time: String(fallbackResult2.executionTime / 1000),
+                    memory: 0
+                  };
+                  status = 'Accepted';
+                  isSystemError = false;
+                  console.log(`✅ Fallback execution thành công với python3 cho test case ${i + 1}, output: "${normalizedOutput2}"`);
+                } else {
+                  // Thử với python
+                  console.log(`⚠️ Thử lại với python...`);
+                  const fallbackResult3 = await this.runCodeFallback(code, language, testCase.input, timeLimit || 2, 'python');
+                  if (fallbackResult3.stdout && !fallbackResult3.stderr.includes('was not found')) {
+                    const normalizedOutput3 = fallbackResult3.stdout.replace(/\r\n/g, '\n').trim();
+                    result = {
+                      ...result,
+                      stdout: normalizedOutput3,
+                      stderr: fallbackResult3.stderr ? fallbackResult3.stderr.trim() : null,
+                      status: { id: 3, description: 'Accepted' },
+                      time: String(fallbackResult3.executionTime / 1000),
+                      memory: 0
+                    };
+                    status = 'Accepted';
+                    isSystemError = false;
+                    console.log(`✅ Fallback execution thành công với python cho test case ${i + 1}, output: "${normalizedOutput3}"`);
+                  }
+                }
+              } catch (e: any) {
+                console.log(`⚠️ Fallback với python3/python cũng fail: ${e.message}`);
+              }
+            }
+          } catch (fallbackError: any) {
+            console.log(`⚠️ Fallback execution cũng fail: ${fallbackError.message}`);
+            if (fallbackError.stack) {
+              console.log(`   Stack: ${fallbackError.stack}`);
+            }
+          }
+        }
         
         // Xử lý error message trước để có thể dùng cho actualOutput nếu cần
         let errorMessage: string | undefined = undefined;
@@ -203,11 +295,22 @@ class Judge0Service {
         // Xử lý output - ưu tiên stdout, nếu không có thì lấy stderr hoặc compile_output
         // QUAN TRỌNG: actualOutput phải luôn có giá trị (không được empty string) để pass MongoDB validation
         let actualOutput = '';
+        
+        // Kiểm tra xem stderr có phải là output của code hay là lỗi hệ thống
+        const stderrIsSystemError = result.stderr && (
+          result.stderr.includes('No such file or directory') ||
+          result.stderr.includes('cgroup') ||
+          result.stderr.includes('box-')
+        );
+        
         if (result.stdout) {
+          // Ưu tiên stdout
           actualOutput = String(result.stdout).trim();
-        } else if (result.stderr && !isSystemError) {
+        } else if (result.stderr && !stderrIsSystemError) {
+          // Nếu stderr không phải lỗi hệ thống, có thể là output của code
           actualOutput = String(result.stderr).trim();
-        } else if (result.compile_output && !isSystemError) {
+        } else if (result.compile_output) {
+          // Compile output có thể chứa thông tin hữu ích
           actualOutput = String(result.compile_output).trim();
         } else if (result.message && !isSystemError) {
           actualOutput = String(result.message).trim();
@@ -217,6 +320,74 @@ class Judge0Service {
         if (!actualOutput || actualOutput.trim() === '') {
           actualOutput = errorMessage || 'Không có output từ Judge0';
         }
+        
+        // So sánh actualOutput với expectedOutput để xác định passed
+        // QUAN TRỌNG: Nếu có stdout (code đã chạy được), vẫn so sánh output dù có lỗi hệ thống
+        let passed = false;
+        
+        // Nếu có stdout và expectedOutput, so sánh output (kể cả khi có lỗi hệ thống)
+        if (result.stdout && testCase.expectedOutput) {
+          const normalizedActual = String(result.stdout).trim();
+          const normalizedExpected = testCase.expectedOutput.trim();
+          passed = normalizedActual === normalizedExpected;
+          console.log(`🔍 Test case ${i + 1} - So sánh output:`, {
+            actual: normalizedActual,
+            expected: normalizedExpected,
+            passed: passed,
+            hasSystemError: isSystemError
+          });
+        } 
+        // Nếu có actualOutput từ các nguồn khác (stderr, compile_output) và có expectedOutput, vẫn so sánh
+        else if (actualOutput && actualOutput !== errorMessage && testCase.expectedOutput) {
+          const normalizedActual = actualOutput.trim();
+          const normalizedExpected = testCase.expectedOutput.trim();
+          passed = normalizedActual === normalizedExpected;
+          console.log(`🔍 Test case ${i + 1} - So sánh output (từ stderr/compile):`, {
+            actual: normalizedActual,
+            expected: normalizedExpected,
+            passed: passed
+          });
+        }
+        // Nếu status là Accepted và không phải lỗi hệ thống thì pass
+        else if (status === 'Accepted' && !isSystemError) {
+          passed = true;
+        }
+        // Nếu là lỗi hệ thống nhưng không có output để so sánh, fail
+        else {
+          passed = false;
+        }
+
+        // Parse execution time - CHỈ parse khi Judge0 chạy thành công (không phải lỗi hệ thống)
+        // Khi Judge0 lỗi hệ thống (status 13), time và memory = 0 không phải giá trị thực
+        let executionTimeMs = 0;
+        
+        // Chỉ parse time nếu Judge0 chạy thành công (status 3 = Accepted hoặc các status khác nhưng không phải Internal Error)
+        if (!isSystemError && result.time !== null && result.time !== undefined && result.time !== '') {
+          const timeValue = parseFloat(String(result.time));
+          if (!isNaN(timeValue) && timeValue > 0) { // Chỉ lấy giá trị > 0
+            executionTimeMs = timeValue * 1000; // Convert seconds to milliseconds
+          }
+        }
+        
+        // Parse memory - CHỈ parse khi Judge0 chạy thành công
+        let memoryUsedKB = 0;
+        if (!isSystemError && result.memory !== null && result.memory !== undefined) {
+          const memoryValue = parseFloat(String(result.memory));
+          if (!isNaN(memoryValue) && memoryValue > 0) { // Chỉ lấy giá trị > 0
+            memoryUsedKB = memoryValue; // Already in KB
+          }
+        }
+        
+        // Log kết quả cuối cùng
+        if (isSystemError) {
+          console.log(`⚠️ Test case ${i + 1} - Judge0 system error, không có metrics thực tế`);
+        } else {
+          console.log(`📊 Test case ${i + 1} final metrics:`, {
+            executionTimeMs,
+            memoryUsedKB,
+            status: status
+          });
+        }
 
         results.push({
           testCaseIndex: i,
@@ -224,8 +395,8 @@ class Judge0Service {
           expectedOutput: testCase.expectedOutput,
           actualOutput: actualOutput.trim(),
           passed,
-          executionTime: parseFloat(result.time || '0') * 1000, // Convert to milliseconds
-          memoryUsed: result.memory || 0, // Already in KB
+          executionTime: executionTimeMs,
+          memoryUsed: memoryUsedKB,
           errorMessage,
           status,
         });
@@ -251,6 +422,128 @@ class Judge0Service {
     }
 
     return results;
+  }
+
+  /**
+   * Fallback: Chạy code trực tiếp khi Judge0 fail với system error
+   * CHỈ DÙNG CHO DEVELOPMENT - KHÔNG AN TOÀN CHO PRODUCTION
+   */
+  private async runCodeFallback(
+    code: string,
+    language: string,
+    input: string,
+    timeLimit: number,
+    customExecutable?: string
+  ): Promise<{ stdout: string; stderr: string; executionTime: number }> {
+    const tempDir = os.tmpdir();
+    const tempFile = path.join(tempDir, `judge0-fallback-${Date.now()}-${Math.random().toString(36).substring(7)}`);
+    let fileExtension = '';
+    
+    try {
+      let executable = '';
+      let args: string[] = [];
+      
+      if (language === 'Python') {
+        fileExtension = '.py';
+        // Tạo file Python
+        await fs.promises.writeFile(tempFile + fileExtension, code, 'utf8');
+        // Chạy Python - dùng customExecutable nếu có, nếu không thì thử py (Windows) hoặc python3 (Linux/Mac)
+        if (customExecutable) {
+          executable = customExecutable;
+        } else if (process.platform === 'win32') {
+          executable = 'py';
+        } else {
+          executable = 'python3';
+        }
+        args = [tempFile + fileExtension];
+      } else if (language === 'JavaScript') {
+        fileExtension = '.js';
+        // Tạo file JavaScript
+        await fs.promises.writeFile(tempFile + fileExtension, code, 'utf8');
+        // Chạy Node.js
+        executable = 'node';
+        args = [tempFile + fileExtension];
+      } else {
+        throw new Error(`Fallback không hỗ trợ ngôn ngữ: ${language}`);
+      }
+      
+      const startTime = Date.now();
+      
+      // Chạy code với spawn và pipe stdin
+      const result = await new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {
+        const child = spawn(executable, args, {
+          stdio: ['pipe', 'pipe', 'pipe'],
+        });
+        
+        let stdout = '';
+        let stderr = '';
+        let isResolved = false;
+        
+        child.stdout.on('data', (data) => {
+          stdout += data.toString();
+        });
+        
+        child.stderr.on('data', (data) => {
+          stderr += data.toString();
+        });
+        
+        child.on('error', (error) => {
+          if (!isResolved) {
+            isResolved = true;
+            reject(error);
+          }
+        });
+        
+        // Timeout
+        const timeout = setTimeout(() => {
+          if (!isResolved) {
+            isResolved = true;
+            child.kill();
+            reject(new Error('Timeout'));
+          }
+        }, timeLimit * 1000 + 1000);
+        
+        child.on('close', (code) => {
+          if (!isResolved) {
+            isResolved = true;
+            clearTimeout(timeout);
+            resolve({ stdout, stderr });
+          }
+        });
+        
+        // Gửi input vào stdin
+        if (input) {
+          child.stdin.write(input);
+          child.stdin.end();
+        } else {
+          child.stdin.end();
+        }
+      });
+      
+      const executionTime = Date.now() - startTime;
+      
+      return {
+        stdout: result.stdout || '',
+        stderr: result.stderr || '',
+        executionTime
+      };
+    } catch (error: any) {
+      // Nếu timeout hoặc lỗi khác, trả về error message
+      return {
+        stdout: '',
+        stderr: error.message || 'Lỗi khi chạy code',
+        executionTime: 0
+      };
+    } finally {
+      // Xóa file tạm
+      try {
+        if (fileExtension) {
+          await fs.promises.unlink(tempFile + fileExtension).catch(() => {});
+        }
+      } catch (e) {
+        // Ignore cleanup errors
+      }
+    }
   }
 
   /**

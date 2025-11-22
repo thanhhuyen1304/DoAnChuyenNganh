@@ -104,6 +104,31 @@ export const submitSolution = async (req: AuthenticatedRequest, res: Response, n
       });
     }
 
+    // Kiểm tra xem user đã submit code đúng trước đó chưa (đạt điểm tối đa)
+    // Tìm submission Accepted có điểm cao nhất trước đó
+    const previousAcceptedSubmission = await Submission.findOne({
+      user: userId,
+      challenge: challengeId,
+      status: 'Accepted'
+    })
+      .sort({ score: -1, submittedAt: -1 }) // Sắp xếp theo điểm cao nhất, sau đó theo thời gian mới nhất
+      .select('_id submittedAt score submittedCode language executionTime')
+      .lean();
+
+    const hasPreviousAccepted = !!previousAcceptedSubmission;
+    const previousMaxScore = previousAcceptedSubmission?.score || 0;
+    const hasReachedMaxBefore = previousMaxScore >= challenge.points;
+    
+    if (hasPreviousAccepted) {
+      console.log('ℹ️ User đã submit challenge này trước đó:', {
+        submissionId: previousAcceptedSubmission!._id,
+        submittedAt: previousAcceptedSubmission!.submittedAt,
+        previousScore: previousMaxScore,
+        maxScore: challenge.points,
+        hasReachedMax: hasReachedMaxBefore
+      });
+    }
+
     // Chạy code với Judge0 API
     let executionResults: any[] = [];
     let score = 0;
@@ -139,6 +164,14 @@ export const submitSolution = async (req: AuthenticatedRequest, res: Response, n
           failed: judgeResults.filter(r => !r.passed).length,
           statuses: judgeResults.map(r => r.status)
         });
+        
+        // Log chi tiết execution time và memory từ Judge0
+        console.log('📊 Judge0 execution metrics:', judgeResults.map((r, idx) => ({
+          testCase: idx + 1,
+          executionTime: r.executionTime,
+          memoryUsed: r.memoryUsed,
+          status: r.status
+        })));
 
         // Map kết quả từ Judge0 sang format của hệ thống
         executionResults = judgeResults.map((result, idx) => {
@@ -158,8 +191,31 @@ export const submitSolution = async (req: AuthenticatedRequest, res: Response, n
             points
           };
         });
+        
+        // Log executionResults sau khi map
+        console.log('📊 Mapped executionResults:', executionResults.map((r, idx) => ({
+          testCase: idx + 1,
+          executionTime: r.executionTime,
+          memoryUsed: r.memoryUsed
+        })));
 
-        // Kiểm tra xem có lỗi hệ thống Judge0 không (status 13 - Internal Error)
+        // Tính lại score dựa trên số test cases pass được
+        // Mỗi test case pass sẽ được điểm tương ứng
+        score = executionResults.reduce((sum, r) => sum + (r.passed ? r.points : 0), 0);
+        
+        console.log('📊 Score tính từ test cases:', {
+          totalTestCases: executionResults.length,
+          passedTestCases: executionResults.filter(r => r.passed).length,
+          totalScore: score,
+          totalPoints: challenge.points
+        });
+        
+        // Xác định status tổng thể dựa trên kết quả test cases
+        const allPassed = executionResults.every(r => r.passed);
+        const hasCompilationError = judgeResults.some(r => r.status === 'Compilation Error');
+        const hasTimeout = judgeResults.some(r => r.status === 'Time Limit Exceeded');
+        const hasMemoryError = judgeResults.some(r => r.status === 'Memory Limit Exceeded');
+        const hasRuntimeError = judgeResults.some(r => r.status === 'Runtime Error');
         const hasSystemError = judgeResults.some(r => 
           r.errorMessage && (
             r.errorMessage.includes('No such file or directory') ||
@@ -167,60 +223,24 @@ export const submitSolution = async (req: AuthenticatedRequest, res: Response, n
             r.errorMessage.includes('Lỗi hệ thống')
           )
         );
-        
-        // Nếu có lỗi hệ thống và có correctCode, so sánh code
-        if (hasSystemError && challenge.correctCode) {
-          const normalizedUserCode = code.trim().replace(/\s+/g, ' ');
-          const normalizedCorrectCode = challenge.correctCode.trim().replace(/\s+/g, ' ');
-          const codeMatches = normalizedUserCode === normalizedCorrectCode;
-          
-          console.log('🔍 Judge0 lỗi hệ thống, so sánh code với correctCode:', codeMatches ? '✅ Khớp' : '❌ Không khớp');
-          
-          if (codeMatches) {
-            // Code đúng - cập nhật lại executionResults
-            executionResults = challenge.testCases.map((testCase, idx) => ({
-              testCaseIndex: idx,
-              input: testCase.input || '',
-              expectedOutput: testCase.expectedOutput || '',
-              actualOutput: testCase.expectedOutput || '',
-              passed: true,
-              executionTime: 0,
-              memoryUsed: 0,
-              errorMessage: 'Lỗi hệ thống Judge0, không thể chạy code. Code đúng dựa trên so sánh với giải pháp.',
-              points: testCase.points || 10
-            }));
-            score = challenge.testCases.reduce((sum, tc) => sum + (tc.points || 10), 0);
-            status = 'Accepted';
-            errorMessage = undefined;
-            console.log('✅ Code đúng, đánh giá là Accepted dù Judge0 lỗi');
-          }
-        }
-        
-        // Xác định status tổng thể (nếu chưa được set ở trên)
-        if (status === 'Accepted' && executionResults.every(r => r.passed)) {
-          // Đã set ở trên, không cần làm gì
-        } else {
-          const allPassed = executionResults.every(r => r.passed);
-          const hasCompilationError = judgeResults.some(r => r.status === 'Compilation Error');
-          const hasTimeout = judgeResults.some(r => r.status === 'Time Limit Exceeded');
-          const hasMemoryError = judgeResults.some(r => r.status === 'Memory Limit Exceeded');
-          const hasRuntimeError = judgeResults.some(r => r.status === 'Runtime Error');
 
-          if (hasCompilationError) {
-            status = 'Compilation Error';
-            errorMessage = judgeResults.find(r => r.status === 'Compilation Error')?.errorMessage;
-          } else if (hasTimeout) {
-            status = 'Time Limit Exceeded';
-          } else if (hasMemoryError) {
-            status = 'Memory Limit Exceeded';
-          } else if (hasRuntimeError && !hasSystemError) {
-            status = 'Runtime Error';
-            errorMessage = judgeResults.find(r => r.status === 'Runtime Error')?.errorMessage;
-          } else if (!allPassed) {
-            status = 'Wrong Answer';
-          } else {
-            status = 'Accepted';
-          }
+        if (hasCompilationError) {
+          status = 'Compilation Error';
+          errorMessage = judgeResults.find(r => r.status === 'Compilation Error')?.errorMessage;
+        } else if (hasTimeout) {
+          status = 'Time Limit Exceeded';
+        } else if (hasMemoryError) {
+          status = 'Memory Limit Exceeded';
+        } else if (hasRuntimeError && !hasSystemError) {
+          status = 'Runtime Error';
+          errorMessage = judgeResults.find(r => r.status === 'Runtime Error')?.errorMessage;
+        } else if (hasSystemError) {
+          status = 'Runtime Error';
+          errorMessage = 'Lỗi hệ thống Judge0, không thể chạy code đầy đủ.';
+        } else if (!allPassed) {
+          status = 'Wrong Answer';
+        } else {
+          status = 'Accepted';
         }
       } else {
         // Fallback về mock nếu Judge0 không available
@@ -250,72 +270,29 @@ export const submitSolution = async (req: AuthenticatedRequest, res: Response, n
                            error.message.includes('Judge0 không thể');
       
       if (isSystemError) {
-        // Lỗi hệ thống Judge0 - chỉ log warning vì đã có fallback
-        console.warn('⚠️ Judge0 system error (sẽ sử dụng fallback):', error.message);
-        errorMessage = 'Lỗi hệ thống: Judge0 không thể tạo file script. Hệ thống sẽ sử dụng phương pháp dự phòng để đánh giá.';
+        // Lỗi hệ thống Judge0 - không thể chạy code, fail tất cả test cases
+        console.warn('⚠️ Judge0 system error - không thể chạy code:', error.message);
+        errorMessage = 'Lỗi hệ thống: Judge0 không thể chạy code. Vui lòng thử lại sau.';
         status = 'Runtime Error';
         
-        // Nếu có correctCode, so sánh code để ít nhất biết code có đúng không
-        if (challenge.correctCode) {
-          const normalizedUserCode = code.trim().replace(/\s+/g, ' ');
-          const normalizedCorrectCode = challenge.correctCode.trim().replace(/\s+/g, ' ');
-          const codeMatches = normalizedUserCode === normalizedCorrectCode;
-          
-          console.log('🔍 So sánh code với correctCode:', codeMatches ? '✅ Khớp' : '❌ Không khớp');
-          
-          if (codeMatches) {
-            // Code đúng nhưng Judge0 lỗi - đánh giá là đúng nhưng không tính điểm
-            console.log('✅ Code đúng nhưng Judge0 lỗi hệ thống');
-            for (let i = 0; i < challenge.testCases.length; i++) {
-              const testCase = challenge.testCases[i];
-              executionResults.push({
-                testCaseIndex: i,
-                input: testCase.input || '',
-                expectedOutput: testCase.expectedOutput || '',
-                actualOutput: testCase.expectedOutput || '', // Giả định output đúng vì code đúng
-                passed: true, // Code đúng nên pass
-                executionTime: 0,
-                memoryUsed: 0,
-                errorMessage: 'Lỗi hệ thống Judge0, không thể chạy code. Code có vẻ đúng dựa trên so sánh với giải pháp.',
-                points: testCase.points || 10
-              });
-              score += (testCase.points || 10);
-            }
-            status = 'Accepted'; // Code đúng
-          } else {
-            // Code không khớp - không thể đánh giá
-            for (let i = 0; i < challenge.testCases.length; i++) {
-              const testCase = challenge.testCases[i];
-              executionResults.push({
-                testCaseIndex: i,
-                input: testCase.input || '',
-                expectedOutput: testCase.expectedOutput || '',
-                actualOutput: errorMessage || '',
-                passed: false,
-                executionTime: 0,
-                memoryUsed: 0,
-                errorMessage: errorMessage,
-                points: 0
-              });
-            }
-          }
-        } else {
-          // Không có correctCode để so sánh - fail tất cả
-          for (let i = 0; i < challenge.testCases.length; i++) {
-            const testCase = challenge.testCases[i];
-            executionResults.push({
-              testCaseIndex: i,
-              input: testCase.input || '',
-              expectedOutput: testCase.expectedOutput || '',
-              actualOutput: errorMessage || '',
-              passed: false,
-              executionTime: 0,
-              memoryUsed: 0,
-              errorMessage: errorMessage,
-              points: 0
-            });
-          }
+        // Fail tất cả test cases vì không thể chạy code để kiểm tra
+        for (let i = 0; i < challenge.testCases.length; i++) {
+          const testCase = challenge.testCases[i];
+          executionResults.push({
+            testCaseIndex: i,
+            input: testCase.input || '',
+            expectedOutput: testCase.expectedOutput || '',
+            actualOutput: errorMessage || '',
+            passed: false,
+            executionTime: 0,
+            memoryUsed: 0,
+            errorMessage: errorMessage,
+            points: 0
+          });
         }
+        
+        // Score = 0 vì không có test case nào pass
+        score = 0;
       } else {
         // Lỗi khác (không phải hệ thống)
         errorMessage = error.message;
@@ -338,6 +315,25 @@ export const submitSolution = async (req: AuthenticatedRequest, res: Response, n
       }
     }
 
+    // Tính tổng execution time từ tất cả test cases
+    const totalExecutionTime = executionResults.length > 0
+      ? executionResults.reduce((sum, r) => sum + (r.executionTime || 0), 0)
+      : 0;
+    
+    // Tính peak memory usage
+    const peakMemory = executionResults.length > 0
+      ? Math.max(...executionResults.map(r => r.memoryUsed || 0))
+      : 0;
+    
+    // Log tổng execution time và peak memory
+    console.log('📊 Final submission metrics:', {
+      totalExecutionTime,
+      peakMemory,
+      executionResultsCount: executionResults.length,
+      executionTimes: executionResults.map(r => r.executionTime),
+      memoryUsages: executionResults.map(r => r.memoryUsed)
+    });
+
     // Tạo submission
     const submission = new Submission({
       user: userId,
@@ -348,9 +344,10 @@ export const submitSolution = async (req: AuthenticatedRequest, res: Response, n
       score,
       totalPoints: challenge.points,
       executionResults,
-      executionTime: executionResults.reduce((sum, r) => sum + r.executionTime, 0),
-      memoryUsed: Math.max(...executionResults.map(r => r.memoryUsed)),
-      errorMessage
+      executionTime: totalExecutionTime,
+      memoryUsed: peakMemory,
+      errorMessage,
+      submittedAt: new Date() // Đảm bảo submittedAt được set đúng
     });
 
     // Phân tích với AI để cung cấp feedback chi tiết
@@ -359,8 +356,9 @@ export const submitSolution = async (req: AuthenticatedRequest, res: Response, n
     try {
       const aiAnalysis = await aiAnalysisService.analyzeWithAI({
         userCode: code,
-        correctCode: challenge.correctCode,
-        buggyCode: challenge.buggyCode,
+        // Không cần correctCode và buggyCode nữa - chỉ phân tích code user submit
+        correctCode: undefined,
+        buggyCode: undefined,
         language,
         problemStatement: challenge.problemStatement,
         executionResults: executionResults.map(r => ({
@@ -388,28 +386,63 @@ export const submitSolution = async (req: AuthenticatedRequest, res: Response, n
     console.log('✅ Submission saved:', submission._id);
 
     // Cập nhật XP nếu đạt điểm
+    // CHỈ tính XP nếu:
+    // 1. Score > 0 (có điểm)
+    // 2. Chưa từng đạt điểm tối đa trước đó, HOẶC đạt điểm cao hơn lần trước (cải thiện)
+    let xpEarned = 0;
+    let shouldAwardXP = false;
+    
     if (score > 0) {
-      const xpEarned = calculateXP(challenge, score, challenge.points);
-      const user = await User.findById(userId);
-      if (user) {
-        user.experience = (user.experience || 0) + xpEarned;
-        await user.save();
-        await updateUserRank(userId);
+      // Chỉ tính XP nếu:
+      // - Chưa từng submit trước đó, HOẶC
+      // - Chưa từng đạt điểm tối đa trước đó, HOẶC
+      // - Đạt điểm cao hơn lần trước (cải thiện)
+      const shouldAward = !hasPreviousAccepted || 
+                         (!hasReachedMaxBefore && score >= challenge.points) || 
+                         (hasPreviousAccepted && score > previousMaxScore);
+      
+      if (shouldAward) {
+        xpEarned = calculateXP(challenge, score, challenge.points);
+        shouldAwardXP = true;
         
-        // Populate user để trả về XP mới
-        await submission.populate('user', 'username experience rank');
-        await submission.populate('challenge', 'title difficulty');
-        
-        return res.json({
-          success: true,
-          message: 'Nộp bài thành công',
-          data: {
-            submission,
-            xpEarned,
-            newXP: user.experience,
-            newRank: user.rank
+        const user = await User.findById(userId);
+        if (user) {
+          user.experience = (user.experience || 0) + xpEarned;
+          await user.save();
+          await updateUserRank(userId);
+          
+          // Populate user để trả về XP mới
+          await submission.populate('user', 'username experience rank');
+          await submission.populate('challenge', 'title difficulty');
+          
+          // Tạo message phù hợp
+          let message = 'Nộp bài thành công';
+          if (hasPreviousAccepted && score > previousMaxScore) {
+            message = 'Nộp bài thành công! Bạn đã cải thiện điểm số.';
+          } else if (!hasPreviousAccepted && score >= challenge.points) {
+            message = 'Nộp bài thành công! Chúc mừng bạn đã giải được bài này.';
           }
-        });
+          
+          return res.json({
+            success: true,
+            message: message,
+            data: {
+              submission,
+              xpEarned,
+              newXP: user.experience,
+              newRank: user.rank,
+              previousSubmission: hasPreviousAccepted ? previousAcceptedSubmission : null,
+              isImprovement: hasPreviousAccepted && score > previousMaxScore,
+              hasReachedMaxBefore: hasReachedMaxBefore,
+              message: hasPreviousAccepted 
+                ? `Bạn đã submit bài này trước đó (${previousMaxScore}/${challenge.points} điểm). Lần này bạn đạt ${score}/${challenge.points} điểm.`
+                : undefined
+            }
+          });
+        }
+      } else {
+        // Đã đạt điểm tối đa trước đó và lần này không cải thiện
+        console.log('ℹ️ User đã đạt điểm tối đa trước đó hoặc không cải thiện, không tính XP lại');
       }
     }
 
@@ -422,12 +455,31 @@ export const submitSolution = async (req: AuthenticatedRequest, res: Response, n
     console.log('Score:', score, '/', challenge.points);
     console.log('=== 📝 SUBMISSION END ===\n');
 
+    // Tạo message phù hợp
+    let message = 'Nộp bài thành công';
+    if (hasPreviousAccepted) {
+      if (score >= challenge.points && hasReachedMaxBefore) {
+        message = 'Nộp bài thành công! Bạn đã giải được bài này trước đó.';
+      } else if (score < previousMaxScore) {
+        message = 'Nộp bài thành công. Bạn đã giải được bài này trước đó với điểm cao hơn.';
+      } else if (score === previousMaxScore) {
+        message = 'Nộp bài thành công. Điểm số giống với lần submit trước.';
+      }
+    }
+
     res.json({
       success: true,
-      message: 'Nộp bài thành công',
+      message: message,
       data: {
         submission,
-        xpEarned: 0
+        xpEarned: 0,
+        previousSubmission: hasPreviousAccepted ? previousAcceptedSubmission : null,
+        hasPreviousAccepted: hasPreviousAccepted,
+        hasReachedMaxBefore: hasReachedMaxBefore,
+        previousMaxScore: previousMaxScore,
+        message: hasPreviousAccepted 
+          ? `Bạn đã submit bài này trước đó (${previousMaxScore}/${challenge.points} điểm). Lần này bạn đạt ${score}/${challenge.points} điểm.`
+          : undefined
       }
     });
   } catch (error: any) {

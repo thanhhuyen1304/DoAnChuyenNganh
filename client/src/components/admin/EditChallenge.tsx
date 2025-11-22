@@ -31,8 +31,7 @@ interface Challenge {
   language: 'Python' | 'JavaScript' | 'Java' | 'C++' | 'C#' | 'C';
   category: 'Syntax' | 'Logic' | 'Performance' | 'Security';
   testCases: TestCase[];
-  buggyCode: string;
-  correctCode: string;
+  buggyCode?: string; // Optional - chỉ dùng làm starter code nếu admin muốn
   points: number;
   timeLimit: number;
   memoryLimit: number;
@@ -84,8 +83,9 @@ export const EditChallenge: React.FC<EditChallengeProps> = ({
       data.title = decodeHtml(data.title);
       data.description = decodeHtml(data.description);
       data.problemStatement = decodeHtml(data.problemStatement);
-      data.buggyCode = decodeHtml(data.buggyCode);
-      data.correctCode = decodeHtml(data.correctCode);
+      if (data.buggyCode) {
+        data.buggyCode = decodeHtml(data.buggyCode);
+      }
       data.testCases = data.testCases.map((tc: TestCase) => ({
         ...tc,
         input: decodeHtml(tc.input),
@@ -295,29 +295,20 @@ export const EditChallenge: React.FC<EditChallengeProps> = ({
           </Select.Root>
       </div>
 
-      {/* Code Sections */}
-      <div className="space-y-4">
+      {/* Starter Code (Optional) */}
+      <div className="space-y-2">
         <div>
-          <Label>Buggy Code</Label>
+          <Label htmlFor="starterCode">Starter Code (Tùy chọn)</Label>
+          <p className="text-sm text-muted-foreground mb-2">
+            Code mẫu để học sinh bắt đầu. Để trống nếu không cần.
+          </p>
           <div className="border rounded-md overflow-hidden">
             <CodePreview
-              code={challenge.buggyCode}
+              code={challenge.buggyCode || ''}
               language={challenge.language}
-              height="300px"
+              height="200px"
               readOnly={false}
               onChange={(value) => setChallenge({...challenge, buggyCode: value || ''})}
-            />
-          </div>
-        </div>
-        <div>
-          <Label>Correct Code</Label>
-          <div className="border rounded-md overflow-hidden">
-            <CodePreview
-              code={challenge.correctCode}
-              language={challenge.language}
-              height="300px"
-              readOnly={false}
-              onChange={(value) => setChallenge({...challenge, correctCode: value || ''})}
             />
           </div>
         </div>

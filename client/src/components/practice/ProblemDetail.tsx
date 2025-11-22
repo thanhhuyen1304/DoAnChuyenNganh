@@ -22,10 +22,30 @@ import { Badge } from "@/components/ui/badge"
 import { buildApi } from "@/lib/api"
 import { Skeleton } from "@/components/ui/skeleton"
 // Date formatting helper - không dùng date-fns để tránh dependency
-const formatDate = (date: Date | string) => {
+const formatDate = (date: Date | string | null | undefined) => {
+  if (!date) return 'Không xác định'
+  
   const d = typeof date === 'string' ? new Date(date) : date
+  
+  // Kiểm tra xem date có hợp lệ không
+  if (isNaN(d.getTime())) {
+    return 'Không xác định'
+  }
+  
   const now = new Date()
   const diffMs = now.getTime() - d.getTime()
+  
+  // Nếu thời gian trong tương lai (có thể do timezone issues), hiển thị date trực tiếp
+  if (diffMs < 0) {
+    return d.toLocaleDateString('vi-VN', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  }
+  
   const diffMins = Math.floor(diffMs / 60000)
   const diffHours = Math.floor(diffMs / 3600000)
   const diffDays = Math.floor(diffMs / 86400000)
@@ -34,7 +54,15 @@ const formatDate = (date: Date | string) => {
   if (diffMins < 60) return `${diffMins} phút trước`
   if (diffHours < 24) return `${diffHours} giờ trước`
   if (diffDays < 7) return `${diffDays} ngày trước`
-  return d.toLocaleDateString('vi-VN')
+  
+  // Hiển thị date với format đầy đủ hơn
+  return d.toLocaleDateString('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
 }
 
 interface ProblemDetailProps {
@@ -464,9 +492,8 @@ export function ProblemDetail({ problemId, onSubmissionSuccess }: ProblemDetailP
                         <th className="text-left px-4 py-2 font-semibold text-foreground">Trạng thái</th>
                         <th className="text-left px-4 py-2 font-semibold text-foreground">Ngôn ngữ</th>
                         <th className="text-left px-4 py-2 font-semibold text-foreground">Thời gian</th>
-                        <th className="text-left px-4 py-2 font-semibold text-foreground">Bộ nhớ</th>
                         <th className="text-left px-4 py-2 font-semibold text-foreground">Điểm</th>
-                        <th className="text-left px-4 py-2 font-semibold text-foreground">Thời gian</th>
+                        <th className="text-left px-4 py-2 font-semibold text-foreground">Thời gian nộp</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -482,13 +509,25 @@ export function ProblemDetail({ problemId, onSubmissionSuccess }: ProblemDetailP
                             </span>
                           </td>
                           <td className="px-4 py-3 text-foreground">{submission.language}</td>
-                          <td className="px-4 py-3 text-foreground flex items-center gap-1">
-                            <Clock className="w-4 h-4 text-muted-foreground" />
-                            {submission.executionTime?.toFixed(0) || 0} ms
-                          </td>
-                          <td className="px-4 py-3 text-foreground flex items-center gap-1">
-                            <HardDrive className="w-4 h-4 text-muted-foreground" />
-                            {(submission.memoryUsed / 1024).toFixed(2)} MB
+                          <td className="px-4 py-3 text-foreground">
+                            <div className="flex flex-col gap-1">
+                              <div className="flex items-center gap-1">
+                                <Clock className="w-4 h-4 text-muted-foreground" />
+                                <span>
+                                  {submission.executionTime && submission.executionTime > 0
+                                    ? `${submission.executionTime.toFixed(0)} ms`
+                                    : 'N/A'}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <HardDrive className="w-4 h-4 text-muted-foreground" />
+                                <span>
+                                  {submission.memoryUsed && submission.memoryUsed > 0
+                                    ? `${(submission.memoryUsed / 1024).toFixed(2)} MB`
+                                    : 'N/A'}
+                                </span>
+                              </div>
+                            </div>
                           </td>
                           <td className="px-4 py-3 text-foreground">
                             {submission.score} / {submission.totalPoints}
