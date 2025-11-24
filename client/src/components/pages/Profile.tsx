@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react'
 import { Award, Star, Clock, Code, Edit2, Save, X, Trophy, Zap, Target } from 'lucide-react'
 import Header from '../Header'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+import { getApiBase } from '../../lib/apiBase'
+const API_BASE_URL = getApiBase()
 
 interface ProgressData {
   completed: number
@@ -47,6 +48,40 @@ const Profile: React.FC = () => {
         setUser(null)
       }
     }
+  }, [])
+
+  // Refresh current user from server to pick up ban status changes
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      try {
+        const token = localStorage.getItem('token')
+        if (!token) return
+
+        const res = await fetch(`${API_BASE_URL}/auth/me`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+
+        if (res.status === 403) {
+          // Banned or forbidden
+          const json = await res.json().catch(() => null)
+          setError(json?.message || 'Tài khoản bị khóa')
+          // Clear local token to prevent further API calls if desired
+          // localStorage.removeItem('token')
+          return
+        }
+
+        if (!res.ok) return
+        const json = await res.json()
+        if (json?.success && json.data?.user) {
+          setUser(json.data.user)
+          // update local storage so UI across app sees the change
+          localStorage.setItem('user', JSON.stringify(json.data.user))
+        }
+      } catch (e) {
+        console.error('Error fetching current user', e)
+      }
+    }
+    fetchCurrentUser()
   }, [])
 
   useEffect(() => {
@@ -214,7 +249,18 @@ const Profile: React.FC = () => {
   return (
     <>
       <Header />
-      <div className="min-h-screen flex items-center py-8 md:py-12 overflow-hidden relative bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm">
+      <div className="min-h-screen flex items-center py-8 md:py-12 overflow-visible relative bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm">
+        {user?.isBanned && (
+          <div className="w-full max-w-4xl mx-auto p-4 mb-4 rounded border border-red-200 bg-red-50 dark:bg-red-900/30 dark:border-red-700 text-red-800 dark:text-red-200">
+            <div className="font-semibold">
+              Tài khoản của bạn đã bị khóa
+            </div>
+            {user.banReason && (
+              <div className="text-sm mt-1">Lý do: {user.banReason}</div>
+            )}
+            <div className="text-sm mt-1">{user.bannedUntil ? `Khóa đến: ${new Date(user.bannedUntil).toLocaleString()}` : 'Khóa vĩnh viễn'}</div>
+          </div>
+        )}
         {/* Background decorations */}
         <div className="absolute top-20 right-0 w-60 h-60 bg-yellow-400/20 rounded-full blur-3xl animate-pulse"></div>
         <div className="absolute bottom-4 left-6 w-60 h-60 bg-primary-400/20 rounded-full blur-3xl animate-pulse"></div>

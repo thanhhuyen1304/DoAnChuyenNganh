@@ -53,12 +53,23 @@ const normalizePhoneNumber = (phone: string): string => {
 };
 
 export const sendSMS = async (to: string, message: string): Promise<{ success: boolean; message: string }> => {
+    console.log('[SMS Service] ========================================');
+    console.log('[SMS Service] 📱 Bắt đầu gửi SMS');
+    console.log('[SMS Service] Số điện thoại gốc:', to);
+    
     // Normalize số điện thoại
     const normalizedTo = normalizePhoneNumber(to);
+    console.log('[SMS Service] Số điện thoại đã normalize:', normalizedTo);
     
     // Kiểm tra cấu hình Twilio
+    console.log('[SMS Service] Kiểm tra cấu hình Twilio:');
+    console.log('[SMS Service] - Client:', client ? '✅ Đã khởi tạo' : '❌ Chưa khởi tạo');
+    console.log('[SMS Service] - From Number:', fromNumber || '❌ CHƯA CẤU HÌNH');
+    console.log('[SMS Service] - Account SID:', process.env.TWILIO_ACCOUNT_SID ? '✅ Đã cấu hình' : '❌ CHƯA CẤU HÌNH');
+    console.log('[SMS Service] - Auth Token:', process.env.TWILIO_AUTH_TOKEN ? '✅ Đã cấu hình' : '❌ CHƯA CẤU HÌNH');
+    
     if (!client || !fromNumber) {
-        console.log('[SMS Service] ⚠️ Twilio chưa được cấu hình');
+        console.log('[SMS Service] ⚠️ Twilio chưa được cấu hình đầy đủ');
         console.log('[SMS Service] SMS sẽ được log ra console (development mode)');
         console.log('[SMS Service] 📱 SMS would be sent:', { 
             original: to,
@@ -66,6 +77,7 @@ export const sendSMS = async (to: string, message: string): Promise<{ success: b
             message,
             from: fromNumber || 'CHƯA CẤU HÌNH'
         });
+        console.log('[SMS Service] ========================================');
         return {
             success: true,
             message: 'SMS logged to console (development mode - Twilio not configured)'

@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
-import { User, Trophy, Target, Clock, ArrowRight, Home as HomeIcon, List, Star } from 'lucide-react';
+import { User, Trophy, Target, Clock, ArrowRight, Home as HomeIcon, List, Star, Code2 } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import ChallengeList from '@/components/challenges/ChallengeList';
 import Header from '../Header';
+import { getApiBase } from '@/lib/apiBase';
 
 const Dashboard = () => {
   const [user, setUser] = useState<any>(null);
@@ -68,7 +69,7 @@ const Dashboard = () => {
         }
 
         try {
-          const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+          const API_BASE = getApiBase();
           const response = await fetch(`${API_BASE}/favorites`, {
             headers: {
               'Authorization': `Bearer ${token}`,
@@ -136,18 +137,18 @@ const Dashboard = () => {
 
     if (loadingFavorites) {
       return (
-        <div className="p-6 bg-white dark:bg-gray-900 rounded-2xl text-center">
+        <div className="p-6 bg-white/60 dark:bg-gray-900/70 rounded-2xl text-center">
           {language === 'vi' ? 'Đang tải bài yêu thích...' : 'Loading favorites...'}
         </div>
       );
     }
 
     if (favIds.length === 0) {
-      return <div className="p-6 bg-white dark:bg-gray-900 rounded-2xl">{language === 'vi' ? 'Bạn chưa có bài yêu thích nào.' : 'You have no favorite challenges.'}</div>;
+      return <div className="p-6 bg-white/60 dark:bg-gray-900/70 rounded-2xl">{language === 'vi' ? 'Bạn chưa có bài yêu thích nào.' : 'You have no favorite challenges.'}</div>;
     }
 
     return (
-      <div>
+      <div className="p-6 bg-white/60 dark:bg-gray-900/70 rounded-2xl">
         <ChallengeList favoriteIds={favIds} />
       </div>
     );
@@ -155,7 +156,7 @@ const Dashboard = () => {
 
   const HomeInLibrary: React.FC = () => {
     return (
-      <div className="p-6 bg-white dark:bg-gray-900 rounded-2xl">
+      <div className="p-6 bg-white/60 dark:bg-gray-900/70 rounded-2xl">
         <h3 className="text-lg font-semibold mb-2">{language === 'vi' ? 'Trang chủ' : 'Home'}</h3>
         <p className="text-sm text-gray-600 dark:text-gray-300">{language === 'vi' ? 'Chào mừng bạn đến trang chủ — nội dung được hiển thị trong cột Kho của tôi.' : 'Welcome to the home view — content rendered inside the My Library column.'}</p>
         <div className="mt-4">
@@ -277,73 +278,59 @@ const Dashboard = () => {
   return (
     <>
       <Header />
-      <div className="min-h-screen">
-        {/* Additional overlay for ClientDashboard specific styling */}
-        <div className="absolute inset-0 pointer-events-none bg-white/30 dark:bg-black/30 z-10" />
+      <div className="min-h-screen flex items-start py-8 md:py-12 overflow-visible relative bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm">
 
-        {/* Main Content */}
-  <div className="ml-56 py-6 relative z-20 transition-all duration-500">
+          {/* Main Content */}
+        <div className={`py-6 pt-2 relative z-20 transition-all duration-500 font-sans text-gray-700 dark:text-gray-200 ${isVisible ? 'ml-60' : 'ml-16'}`}>
 
           {/* My Library / Favorites */}
-          <div className="mt-8 relative z-20">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 px-6">
-              {/* Left column - controls */}
-              <aside className="fixed top-16 left-0 h-screen z-30 w-56 !bg-white dark:!bg-gray-900 border-r border-gray-100/20 dark:border-gray-700/50 shadow-lg shadow-primary-500/5 transition-all duration-300">
-                <div className="w-full p-4 border-b border-gray-200/10 dark:border-gray-700/50">
-                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200">
-                    {language === 'vi' ? 'Kho của tôi' : 'My Library'}
-                  </h3>
-                </div>
-                
-                <nav className="p-4 space-y-6">
-                  <div className="space-y-2">
-                    <button
-                      className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-100/80 dark:hover:bg-gray-800/80 hover:shadow-md transition-all duration-300 transform hover:-translate-y-0.5"
-                      onClick={() => window.location.href = '/'}
-                    >
-                      <HomeIcon className="w-5 h-5 transition-all duration-200 text-gray-500 dark:text-gray-400" />
-                      <span>{language === 'vi' ? 'Trang chủ' : 'Home'}</span>
-                    </button>
+          <div className="mt-0 relative z-20">
+            <div className="w-full">
+              {/* Left column - controls (styled like Admin sidebar) */}
+              <aside className={`fixed top-0 left-0 h-full z-10 transition-all duration-300 ${isVisible ? 'w-60' : 'w-16'} bg-white dark:bg-gray-900/70 backdrop-blur-sm border-r border-gray-100/20 dark:border-gray-700/50 overflow-y-auto pb-6 pt-2`}>
+                {/* Sidebar toggle (matches AdminDashboard) */}
+                <button
+                  aria-label="Toggle sidebar"
+                  onClick={() => setIsVisible(!isVisible)}
+                  className="w-full py-6 px-4 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all flex items-center gap-3"
+                >
+                  <Code2 className="w-6 h-6 text-primary-500" />
+                  {isVisible && <div className="text-sm font-semibold text-gray-700 dark:text-gray-200">{language === 'vi' ? 'Kho của tôi' : 'My Library'}</div>}
+                </button>
 
+                <nav className="p-4 space-y-6 w-full">
+                  <div>
                     <button
+                      onClick={() => setView('library')}
                       className={`w-full flex items-center gap-3 p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 ${
                         view === 'library' ? 'bg-primary-50 dark:bg-primary-900/30' : ''
                       }`}
-                      onClick={() => setView('library')}
                     >
                       <List
-                        className={`w-5 h-5 transition-all duration-200 ${
-                          view === 'library'
-                            ? 'scale-110 text-primary-500'
-                            : 'text-gray-500 dark:text-gray-400'
-                        }`}
+                        className={`w-5 h-5 transition-all duration-200 ${view === 'library' ? 'scale-110 text-pink-400 dark:text-pink-200' : 'text-gray-500 dark:text-gray-400'}`}
                       />
-                      <span>{language === 'vi' ? 'Library' : 'Library'}</span>
+                      {isVisible && <span className={`truncate ${view === 'library' ? 'text-pink-400 dark:text-pink-200 font-medium' : 'text-gray-600 dark:text-gray-300'}`}>{language === 'vi' ? 'Thư viện' : 'Library'}</span>}
                     </button>
 
                     <button
+                      onClick={() => setView('favorites')}
                       className={`w-full flex items-center gap-3 p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 ${
                         view === 'favorites' ? 'bg-primary-50 dark:bg-primary-900/30' : ''
                       }`}
-                      onClick={() => setView('favorites')}
                     >
                       <Star
-                        className={`w-5 h-5 transition-all duration-200 ${
-                          view === 'favorites'
-                            ? 'scale-110 text-primary-500'
-                            : 'text-gray-500 dark:text-gray-400'
-                        }`}
+                        className={`w-5 h-5 transition-all duration-200 ${view === 'favorites' ? 'scale-110 text-purple-400 dark:text-purple-200' : 'text-gray-500 dark:text-gray-400'}`}
                       />
-                      <span>{language === 'vi' ? 'Yêu thích của tôi' : 'My Favorites'}</span>
+                      {isVisible && <span className={`truncate ${view === 'favorites' ? 'text-purple-400 dark:text-purple-200 font-medium' : 'text-gray-600 dark:text-gray-300'}`}>{language === 'vi' ? 'Yêu thích của tôi' : 'My Favorites'}</span>}
                     </button>
                   </div>
                 </nav>
               </aside>
 
               {/* Right column - content */}
-              <div className="top-16 col-span-1 md:col-span-3 transition-all duration-500 ease-in-out">
-                {/* Calendar - Absolute positioned */}
-                <div className="absolute right-4 top-0 w-[280px] transition-all duration-700 transform hover:scale-[1.02]">
+              <div className="top-16 w-full transition-all duration-500 ease-in-out px-6">
+                {/* Calendar - Fixed to right edge */}
+                <div className="fixed right-10 top-16 z-30 w-[280px] transition-all duration-700 transform hover:scale-[1.02]">
                   <Card className="!bg-white dark:!bg-gray-900 border border-gray-100/20 dark:border-gray-700/50 shadow-[0_0_25px_rgba(162,89,255,0.15)] hover:shadow-[0_0_35px_rgba(162,89,255,0.2)] transition-all duration-300">
                     <CardHeader className="p-3">
                       <div className="flex items-center justify-between">
@@ -480,7 +467,7 @@ const Dashboard = () => {
 
                 {/* Stats cards grid */}
                 <div className="mb-8 w-full">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-14 pr-20">
                     {/* Experience Card */}
                     <Card className="!bg-white dark:!bg-gray-900 border border-gray-100/20 dark:border-gray-700/50 hover:shadow-[0_0_25px_rgba(162,89,255,0.15)] transition-all duration-300 hover:scale-[1.02]">
                       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -551,7 +538,7 @@ const Dashboard = () => {
                 {view === 'library' && (
                   <div className="w-full">
                     <h2 className="text-xl font-bold mb-4">{language === 'vi' ? 'Danh sách bài tập' : 'All Challenges'}</h2>
-                    <div className="w-full">
+                    <div className="w-full pr-20">
                       <ChallengeList />
                     </div>
                   </div>
@@ -592,10 +579,10 @@ const Dashboard = () => {
             </div>
           )}
 
-          {/* Background decorations */}
-          <div className="absolute top-16 right-0 w-60 h-60 bg-yellow-400/5 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute bottom-4 left-6 w-60 h-60 bg-primary-400/5 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute top-1/2 right-1/4 w-72 h-72 bg-blue-400/5 rounded-full blur-3xl animate-pulse"></div>
+          {/* Background decorations (Profile-like: stronger opacity + larger blur) */}
+          <div className="absolute top-20 right-0 w-60 h-60 bg-yellow-400/20 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-4 left-6 w-60 h-60 bg-primary-400/20 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute top-1/3 right-1/4 w-72 h-72 bg-blue-400/20 rounded-full blur-3xl animate-pulse"></div>
         </div>
       </div>
     </>

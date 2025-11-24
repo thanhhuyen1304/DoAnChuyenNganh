@@ -7,7 +7,8 @@ import { Label } from '../ui/label';
 import { Alert, AlertDescription } from '../ui/alert';
 import { Mail, Phone, Loader2 } from 'lucide-react';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+import { getApiBase } from '../../lib/apiBase'
+const API_BASE_URL = getApiBase();
 
 interface ApiResponse {
   success: boolean;
@@ -16,7 +17,7 @@ interface ApiResponse {
 }
 
 export default function RequestResetForm() {
-  const [emailOrPhone, setEmailOrPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -27,39 +28,24 @@ export default function RequestResetForm() {
     e.preventDefault();
     setError('');
     setMessage('');
-    
-    // Validate input
-    const trimmedInput = emailOrPhone.trim();
+    const trimmedInput = email.trim();
     if (!trimmedInput) {
-      setError('Vui lòng nhập email hoặc số điện thoại');
+      setError('Vui lòng nhập email');
       return;
     }
-    
     setIsLoading(true);
-
     try {
-      console.log('[Password Reset] Sending request to:', `${API_BASE_URL}/auth/request-reset`);
-      console.log('[Password Reset] Input:', trimmedInput);
-      
       const res = await axios.post<ApiResponse>(
-        `${API_BASE_URL}/auth/request-reset`, 
+        `${API_BASE_URL}/auth/request-reset`,
         { emailOrPhone: trimmedInput },
         {
-          timeout: 30000, // 30 seconds timeout
-          headers: {
-            'Content-Type': 'application/json'
-          }
+          timeout: 30000,
+          headers: { 'Content-Type': 'application/json' }
         }
       );
-      
-      console.log('[Password Reset] Response:', res.data);
-      
       if (res.data.success) {
         setMessage(res.data.message || 'Mã xác thực đã được gửi!');
-        if (res.data.previewUrl) {
-          setPreviewUrl(res.data.previewUrl);
-        }
-        // Chờ user xem preview URL (nếu có) hoặc thông báo trước khi redirect
+        if (res.data.previewUrl) setPreviewUrl(res.data.previewUrl);
         setTimeout(() => {
           navigate(`/verify-reset?emailOrPhone=${encodeURIComponent(trimmedInput)}`);
         }, res.data.previewUrl ? 3000 : 1500);
@@ -67,43 +53,30 @@ export default function RequestResetForm() {
         setError(res.data.message || 'Đã xảy ra lỗi. Vui lòng thử lại!');
       }
     } catch (err) {
-      console.error('[Password Reset] Error details:', err);
-      
       let errorMessage = 'Đã xảy ra lỗi. Vui lòng thử lại!';
-      
       if (axios.isAxiosError(err)) {
         if (err.response) {
-          // Server responded with error status
           const status = err.response.status;
           const data = err.response.data;
-          
-          if (status === 429) {
-            errorMessage = data?.message || 'Bạn đã yêu cầu quá nhiều lần. Vui lòng đợi một chút rồi thử lại.';
-          } else if (status === 400) {
-            errorMessage = data?.message || 'Dữ liệu không hợp lệ. Vui lòng kiểm tra lại.';
-          } else if (status === 500) {
-            errorMessage = data?.message || 'Lỗi server. Vui lòng thử lại sau.';
-          } else {
-            errorMessage = data?.message || `Lỗi: ${status}`;
-          }
+          if (status === 429) errorMessage = data?.message || 'Bạn đã yêu cầu quá nhiều lần. Vui lòng đợi một chút rồi thử lại.';
+          else if (status === 400) errorMessage = data?.message || 'Dữ liệu không hợp lệ. Vui lòng kiểm tra lại.';
+          else if (status === 500) errorMessage = data?.message || 'Lỗi server. Vui lòng thử lại sau.';
+          else errorMessage = data?.message || `Lỗi: ${status}`;
         } else if (err.request) {
-          // Request was made but no response received
           errorMessage = 'Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.';
         } else {
-          // Error setting up request
           errorMessage = 'Lỗi khi gửi yêu cầu. Vui lòng thử lại.';
         }
       } else if (err instanceof Error) {
         errorMessage = err.message;
       }
-      
       setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const isEmail = emailOrPhone.includes('@');
+  // Chỉ nhận email, không còn số điện thoại
 
   return (
     <div className="space-y-4">
@@ -121,21 +94,17 @@ export default function RequestResetForm() {
         )}
 
         <div className="space-y-1">
-          <Label htmlFor="emailOrPhone" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            Email hoặc số điện thoại
+          <Label htmlFor="email" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            Email
           </Label>
           <div className="relative">
-            {isEmail ? (
-              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 size-4 text-gray-400 dark:text-gray-500" />
-            ) : (
-              <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 size-4 text-gray-400 dark:text-gray-500" />
-            )}
+            <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 size-4 text-gray-400 dark:text-gray-500" />
             <Input
-              type="text"
-              id="emailOrPhone"
-              value={emailOrPhone}
-              onChange={e => setEmailOrPhone(e.target.value)}
-              placeholder="Email hoặc số điện thoại"
+              type="email"
+              id="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              placeholder="Email"
               required
               className={`pl-9 text-sm bg-white/70 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 focus:ring-primary-500/50 focus:ring-2 placeholder:text-gray-400 dark:placeholder:text-gray-500`}
               disabled={isLoading}

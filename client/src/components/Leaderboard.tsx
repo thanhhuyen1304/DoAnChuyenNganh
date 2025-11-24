@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Trophy, Award, Medal } from "lucide-react";
 import { useLanguage } from "./contexts/LanguageContext";
+import { getApiBase } from '../lib/apiBase'
 
 type Learner = {
   rank: number;
@@ -18,8 +19,8 @@ const Leaderboard: React.FC = () => {
   const [learners, setLearners] = useState<Learner[]>([])
 
   useEffect(() => {
-    const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000'
-    fetch(`${API_BASE}/api/leaderboard/top?limit=5`)
+    const API_BASE = getApiBase()
+    fetch(`${API_BASE}/leaderboard/top?limit=5`)
       .then((r) => r.json())
       .then((json) => {
         if (json && json.success && Array.isArray(json.data)) {

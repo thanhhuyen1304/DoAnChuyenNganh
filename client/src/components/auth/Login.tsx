@@ -8,13 +8,14 @@ import { useLanguage } from '../contexts/LanguageContext';
 // Import các icon cần thiết, tương tự Register
 import { Bug, Lock, Mail, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import { useTheme } from 'next-themes';
+import { getApiBase } from '../../lib/apiBase';
 // import { Github } from 'lucide-react';
 
 // Sử dụng cùng ảnh nền như Register
 const decoImg = new URL('../images/1.jpg', import.meta.url).href;
 
 // API Base URL
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = getApiBase();
 
 const Login = () => {
     const [identifier, setIdentifier] = useState('');
@@ -51,7 +52,7 @@ const Login = () => {
                 const userRole = data.data.user.role;
                 if (userRole === 'admin') {
                     // Redirect admin to admin dashboard
-                    window.location.href = '/admin/dashboard';
+                    window.location.href = '/';
                 } else {
                     // Redirect regular users to homepage
                     window.location.href = '/';

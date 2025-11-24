@@ -13,6 +13,7 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 const translations: Record<Language, Record<string, string>> = {
   vi: {
     // Header
+    "nav.home": "Trang chủ",
     "nav.courses": "Khóa học",
     "nav.challenges": "Thử thách",
     "nav.leaderboard": "Bảng xếp hạng",
@@ -154,9 +155,30 @@ const translations: Record<Language, Record<string, string>> = {
     "settings.file.tooLarge": "File quá lớn. Vui lòng chọn file nhỏ hơn 5MB",
     "settings.file.invalid": "Vui lòng chọn file hình ảnh",
     "settings.file.readError": "Không thể đọc file. Vui lòng thử lại",
+    
+    // Notifications
+    "notifications.title": "Thông báo",
+    "notifications.markAllRead": "Đánh dấu tất cả đã đọc",
+    "notifications.noNotifications": "Không có thông báo nào",
+    "notifications.new": "Mới",
+    "notifications.justNow": "Vừa xong",
+    "notifications.completed": "Hoàn thành bài tập",
+    "notifications.completedMsg": "Bạn đã hoàn thành bài tập \"Debug Function\"",
+    "notifications.rankUp": "Bạn lên hạng",
+    "notifications.rankUpMsg": "Xin chúc mừng, bạn đã lên hạng Silver",
+    "notifications.viewAll": "Xem tất cả thông báo",
+    
+    // Chat
+    "chat.title": "BugHunter AI",
+    "chat.subtitle": "Trợ lý thông minh",
+    "chat.welcome": "Xin chào! 👋 Tôi là trợ lý AI của BugHunter. Tôi sẵn sàng giúp bạn học debug, trả lời các câu hỏi, và hỗ trợ bạn trên hành trình lập trình. Có gì tôi có thể giúp bạn không?",
+    "chat.placeholder": "Nhập câu hỏi của bạn...",
+    "chat.typing": "AI đang suy nghĩ...",
+    "chat.clear": "Xóa cuộc trò chuyện",
   },
   en: {
     // Header
+    "nav.home": "Home",
     "nav.courses": "Courses",
     "nav.challenges": "Challenges",
     "nav.leaderboard": "Leaderboard",
@@ -296,6 +318,26 @@ const translations: Record<Language, Record<string, string>> = {
     "settings.file.tooLarge": "File is too large. Please select a file smaller than 5MB",
     "settings.file.invalid": "Please select an image file",
     "settings.file.readError": "Unable to read file. Please try again",
+    
+    // Notifications
+    "notifications.title": "Notifications",
+    "notifications.markAllRead": "Mark all as read",
+    "notifications.noNotifications": "No notifications",
+    "notifications.new": "New",
+    "notifications.justNow": "Just now",
+    "notifications.completed": "Challenge Completed",
+    "notifications.completedMsg": "You completed \"Debug Function\" challenge",
+    "notifications.rankUp": "Rank Up",
+    "notifications.rankUpMsg": "Congratulations, you reached Silver rank",
+    "notifications.viewAll": "View all notifications",
+    
+    // Chat
+    "chat.title": "BugHunter AI",
+    "chat.subtitle": "Smart Assistant",
+    "chat.welcome": "Hello! 👋 I'm BugHunter's AI assistant. I'm ready to help you learn debugging, answer questions, and support you on your programming journey. How can I help you?",
+    "chat.placeholder": "Type your question...",
+    "chat.typing": "AI is thinking...",
+    "chat.clear": "Clear conversation",
   },
 };
 

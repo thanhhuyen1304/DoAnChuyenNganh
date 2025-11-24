@@ -6,8 +6,10 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useLanguage } from '@/components/contexts/LanguageContext';
 import { Search, Ban, Unlock, Shield, Trash2, Loader2 } from 'lucide-react';
+// import Header from '@/components/Header';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+import { getApiBase } from '../../lib/apiBase'
+const API_BASE_URL = getApiBase();
 
 interface User {
   _id: string;
@@ -61,7 +63,8 @@ const UserManagement: React.FC = () => {
 
       const params = new URLSearchParams({
         page: page.toString(),
-        limit: '20',
+        // Show 5 users per page
+        limit: '5',
       });
       if (search?.trim()) params.append('search', search.trim());
       if (roleFilter) params.append('role', roleFilter);
@@ -226,8 +229,23 @@ const UserManagement: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Stats */}
+    <>
+      <div className="min-h-screen flex items-center py-8 md:py-12 overflow-hidden relative bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm">
+        {/* Background decorations */}
+        <div className="absolute top-20 right-0 w-60 h-60 bg-yellow-400/20 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-4 left-6 w-60 h-60 bg-primary-400/20 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute top-1/3 right-1/4 w-72 h-72 bg-blue-400/20 rounded-full blur-3xl animate-pulse"></div>
+
+        <div className="container mx-auto px-4 relative z-20">
+          <div className="space-y-6">
+            {/* <div className="mb-6">
+              <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#FF007A] to-[#A259FF] mb-2 flex items-center gap-3">
+                <Shield size={24} className="text-primary-500" />
+                {language === 'vi' ? 'Quản lý người dùng' : 'User Management'}
+              </h2>
+            </div> */}
+
+            {/* Stats */}
       {stats && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
@@ -426,7 +444,10 @@ const UserManagement: React.FC = () => {
           </Button>
         </div>
       )}
-    </div>
+          </div>
+        </div>
+      </div>
+    </>
   );
 };
 

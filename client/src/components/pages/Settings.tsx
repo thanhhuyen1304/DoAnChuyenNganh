@@ -1,17 +1,20 @@
 import React, { useEffect, useState } from 'react'
-import { Settings as SettingsIcon, Key, Palette, Globe, Shield, Trash2, Save, Eye, EyeOff, Image } from 'lucide-react'
+import { Settings as SettingsIcon, Key, Palette, Globe, Shield, Trash2, Save, Eye, EyeOff, Image, ArrowLeft } from 'lucide-react'
 import { useTheme } from 'next-themes'
+import { useNavigate } from 'react-router-dom'
 import { useLanguage } from '../contexts/LanguageContext'
 import { useBackground } from '../contexts/BackgroundContext'
 import Header from '../Header'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+import { getApiBase } from '../../lib/apiBase'
+const API_BASE_URL = getApiBase()
 
 // Background options are defined at the top
 
 const Settings: React.FC = () => {
   const { theme, setTheme, resolvedTheme } = useTheme()
   const { language, setLanguage, t } = useLanguage()
+  const navigate = useNavigate()
   const [user, setUser] = useState<any | null>(null)
   const [isVisible, setIsVisible] = useState(false)
   const { background, setBackground } = useBackground()
@@ -51,6 +54,16 @@ const Settings: React.FC = () => {
         const imageUrl = reader.result as string
         setCustomImage(imageUrl)
         setBackground({ id: 'custom', url: imageUrl, label: t('settings.background.options.custom') })
+        // Clear file input so selecting the same file again will trigger onChange
+        try {
+          if (fileInputRef.current) {
+            fileInputRef.current.value = ''
+          }
+          // Also clear the native event target value to be safe
+          ;(event.target as HTMLInputElement).value = ''
+        } catch (e) {
+          // ignore
+        }
       }
 
       reader.readAsDataURL(file)
@@ -153,22 +166,20 @@ const Settings: React.FC = () => {
         <div className="absolute top-1/3 right-1/4 w-72 h-72 bg-blue-400/20 rounded-full blur-3xl animate-pulse"></div>
       
       <div className="container mx-auto px-4 relative z-20">
-        {/* Header */}
-        {/* <div className={`mb-8 transition-all duration-700 transform ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'} bg-white/40 dark:bg-gray-900/40 backdrop-blur-md p-8 rounded-2xl border border-gray-100/20 dark:border-gray-700/50 shadow-[0_0_25px_rgba(162,89,255,0.15)]`}>
-          <span className="inline-block py-1 px-3 mb-4 text-sm font-medium bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 rounded-full">
-            {t('settings.badge')}
-          </span>
-          <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 dark:text-white mb-4 flex items-center gap-3">
-            <SettingsIcon size={40} className="text-transparent bg-clip-text bg-gradient-to-r from-[#FF007A] to-[#A259FF]" />
-            {t('settings.title')}
-          </h1>
-          <p className="text-lg text-gray-600 dark:text-gray-300">{t('settings.subtitle')}</p>
-        </div> */}
-
         <div className="space-y-6">
           {/* Theme Settings */}
-          <div className={`mb-8 transition-all duration-700 transform ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'} bg-white/40 dark:bg-gray-900/40 backdrop-blur-md p-8 rounded-2xl border border-gray-100/20 dark:border-gray-700/50 shadow-[0_0_25px_rgba(162,89,255,0.15)]`}>
+          <div className={`mb-8 transition-all duration-700 transform ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'} bg-white/40 dark:bg-gray-900/40 backdrop-blur-md p-8 rounded-2xl border border-gray-100/20 dark:border-gray-700/50 shadow-[0_0_25px_rgba(162,89,255,0.15)] relative`}>
             <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#FF007A] to-[#A259FF] mb-4 flex items-center gap-3">
+              <button
+                onClick={() => navigate(-1)}
+                className="flex items-center justify-center w-8 h-8 rounded-full bg-white/30 hover:bg-white/50 dark:bg-gray-800/50 dark:hover:bg-white/30 transition-all duration-200 group"
+                aria-label="Go back"
+              >
+                <ArrowLeft
+                  size={18}
+                  className="text-gray-600 dark:text-gray-400 group-hover:text-gray-800 dark:group-hover:text-gray-600 transition-colors"
+                />
+              </button>
               <Palette size={24} className="text-primary-500" />
               {t('settings.theme.title')}
             </h2>
@@ -235,12 +246,12 @@ const Settings: React.FC = () => {
                       key={option.id}
                       onClick={() => {
                         if (option.id === 'custom') {
-                          // If custom image already exists, apply it
-                          if (customImage) {
-                            setBackground({ id: 'custom', url: customImage, label: t(option.labelKey) })
-                          } else {
-                            // Otherwise, trigger file input for custom background
-                            fileInputRef.current?.click()
+                          // Always open file picker to choose or replace the custom background
+                          if (fileInputRef.current) {
+                            try {
+                              fileInputRef.current.value = ''
+                            } catch (e) {}
+                            fileInputRef.current.click()
                           }
                         } else {
                           setBackground({ ...option, label: t(option.labelKey) })
@@ -270,7 +281,12 @@ const Settings: React.FC = () => {
                       </div>
                       {option.id === 'custom' && !customImage && (
                         <div className="absolute inset-0 flex items-center justify-center bg-gray-900/70 hover:bg-gray-900/80 cursor-pointer transition-all duration-300"
-                             onClick={() => fileInputRef.current?.click()}>
+                             onClick={() => {
+                               if (fileInputRef.current) {
+                                 try { fileInputRef.current.value = '' } catch (e) {}
+                                 fileInputRef.current.click()
+                               }
+                             }}>
                           <Image className="w-8 h-8 text-white opacity-60 hover:opacity-100 transition-opacity" />
                         </div>
                       )}
@@ -280,6 +296,10 @@ const Settings: React.FC = () => {
                             e.stopPropagation();
                             setCustomImage(null);
                             setBackground({ ...BACKGROUND_OPTIONS[0], label: t(BACKGROUND_OPTIONS[0].labelKey) });
+                            // Clear file input value so user can re-select same file
+                            try {
+                              if (fileInputRef.current) fileInputRef.current.value = ''
+                            } catch (e) {}
                           }}
                           className="absolute top-2 right-2 w-8 h-8 flex items-center justify-center bg-black/50 hover:bg-black/70 rounded-full transition-all duration-300 z-10"
                         >

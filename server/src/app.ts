@@ -26,6 +26,9 @@ import reportRoutes from './routes/report.routes';
 import feedbackRoutes from './routes/feedback.routes';
 import achievementRoutes from './routes/achievement.routes';
 import systemSettingsRoutes from './routes/systemSettings.routes';
+import chatRoutes from './routes/chat.routes';
+import leaderboardRoutes from './routes/leaderboard.routes';
+import trainingDataRoutes from './routes/trainingData.routes';
 
 // Passport strategies - must be imported AFTER dotenv config
 import './config/passport';
@@ -69,6 +72,20 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/achievements', achievementRoutes);
 app.use('/api/settings', systemSettingsRoutes);
+app.use('/api/chat', chatRoutes);
+app.use('/api/leaderboard', leaderboardRoutes);
+app.use('/api/training-data', trainingDataRoutes);
+
+// Catch-all redirect for legacy routes without /api prefix (helpful for debugging)
+app.get('/auth/:provider', (req: Request, res: Response) => {
+    const provider = req.params.provider;
+    res.redirect(`/api/auth/${provider}`);
+});
+
+app.get('/auth/:provider/callback', (req: Request, res: Response) => {
+    const provider = req.params.provider;
+    res.redirect(`/api/auth/${provider}/callback?${new URLSearchParams(req.query as any).toString()}`);
+});
 
 // Error handling middleware
 app.use((err: ErrorWithStack, req: Request, res: Response, _next: NextFunction) => {
@@ -82,9 +99,19 @@ app.use((err: ErrorWithStack, req: Request, res: Response, _next: NextFunction) 
 
 // Connect to MongoDB
 mongoose.connect(ENV.MONGODB_URI)
-    .then(() => {
+    .then(async () => {
         console.log('Kết nối MongoDB thành công');
         console.log(`Database: ${ENV.MONGODB_URI}`);
+        
+        // Sync training data từ MongoDB vào file JSON khi khởi động server
+        try {
+            const { syncTrainingDataService } = await import('./services/syncTrainingDataService');
+            await syncTrainingDataService.syncIfNeeded();
+        } catch (error) {
+            console.error('Lỗi khi sync training data khi khởi động:', error);
+            // Không dừng server nếu sync lỗi
+        }
+        
         // Start server sau khi kết nối DB thành công
         app.listen(PORT, () => {
             console.log(`Server đang chạy tại http://localhost:${PORT}`);

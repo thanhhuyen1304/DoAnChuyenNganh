@@ -54,7 +54,6 @@ const systemSettingsSchema = new Schema<ISystemSettings>(
 );
 
 // Indexes
-systemSettingsSchema.index({ key: 1 }, { unique: true });
 systemSettingsSchema.index({ category: 1 });
 systemSettingsSchema.index({ isPublic: 1 });
 

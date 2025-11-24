@@ -281,7 +281,23 @@ export class AuthController {
             }
 
             // Generate JWT token
-            const token = generateToken(user.id);
+                    // Check banned status before issuing token
+                    if (user.isBanned) {
+                        if (user.bannedUntil && new Date(user.bannedUntil) < new Date()) {
+                            // Ban expired, auto-unban
+                            user.isBanned = false;
+                            user.banReason = undefined;
+                            user.bannedUntil = undefined;
+                            await user.save();
+                        } else {
+                            const banMessage = user.bannedUntil
+                                ? `Tài khoản của bạn đã bị khóa đến ${new Date(user.bannedUntil).toLocaleString('vi-VN')}. ${user.banReason ? `Lý do: ${user.banReason}` : ''}`
+                                : `Tài khoản của bạn đã bị khóa. ${user.banReason ? `Lý do: ${user.banReason}` : ''}`;
+                            return res.redirect(`${CLIENT_URL}/auth/error?message=${encodeURIComponent(banMessage)}`);
+                        }
+                    }
+
+                    const token = generateToken(user.id);
 
             // Redirect to frontend with token
             res.redirect(`${CLIENT_URL}/auth/callback?token=${token}&user=${encodeURIComponent(JSON.stringify({
@@ -315,7 +331,21 @@ export class AuthController {
                 await user.save();
             }
 
-            // Generate JWT token
+            // Check banned status before issuing token
+            if (user.isBanned) {
+                if (user.bannedUntil && new Date(user.bannedUntil) < new Date()) {
+                    user.isBanned = false;
+                    user.banReason = undefined;
+                    user.bannedUntil = undefined;
+                    await user.save();
+                } else {
+                    const banMessage = user.bannedUntil
+                        ? `Tài khoản của bạn đã bị khóa đến ${new Date(user.bannedUntil).toLocaleString('vi-VN')}. ${user.banReason ? `Lý do: ${user.banReason}` : ''}`
+                        : `Tài khoản của bạn đã bị khóa. ${user.banReason ? `Lý do: ${user.banReason}` : ''}`;
+                    return res.redirect(`${CLIENT_URL}/auth/error?message=${encodeURIComponent(banMessage)}`);
+                }
+            }
+
             const token = generateToken(user.id);
 
             // Redirect to frontend with token
@@ -350,7 +380,21 @@ export class AuthController {
                 await user.save();
             }
 
-            // Generate JWT token
+            // Check banned status before issuing token
+            if (user.isBanned) {
+                if (user.bannedUntil && new Date(user.bannedUntil) < new Date()) {
+                    user.isBanned = false;
+                    user.banReason = undefined;
+                    user.bannedUntil = undefined;
+                    await user.save();
+                } else {
+                    const banMessage = user.bannedUntil
+                        ? `Tài khoản của bạn đã bị khóa đến ${new Date(user.bannedUntil).toLocaleString('vi-VN')}. ${user.banReason ? `Lý do: ${user.banReason}` : ''}`
+                        : `Tài khoản của bạn đã bị khóa. ${user.banReason ? `Lý do: ${user.banReason}` : ''}`;
+                    return res.redirect(`${CLIENT_URL}/auth/error?message=${encodeURIComponent(banMessage)}`);
+                }
+            }
+
             const token = generateToken(user.id);
 
             // Redirect to frontend with token
@@ -447,6 +491,15 @@ export class AuthController {
                 return res.status(400).json({ success: false, message: 'Vui lòng nhập email hoặc số điện thoại' });
             }
 
+            // Nếu là email thì kiểm tra định dạng hợp lệ
+            if (normalizedInput.includes('@')) {
+                // Regex kiểm tra email đơn giản
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(normalizedInput)) {
+                    return res.status(400).json({ success: false, message: 'Định dạng email không hợp lệ' });
+                }
+            }
+
             const query: any = {};
             if (normalizedInput.includes('@')) {
                 query.email = normalizedInput.toLowerCase();
@@ -457,7 +510,6 @@ export class AuthController {
 
             console.log(`[Password Reset] Searching for user with query:`, query);
             const user = await User.findOne(query);
-            
             // Không trả về 404 để tránh tiết lộ liệu tài khoản có tồn tại hay không.
             // Nếu user không tồn tại, chỉ trả về thông báo chung (privacy) và không tạo mã.
             if (!user) {
@@ -562,7 +614,7 @@ export class AuthController {
 
                         console.log(`[Password Reset] Đang gửi email đến: ${user.email}`);
                         const info = await transporter.sendMail({
-                            from: process.env.SMTP_FROM || 'no-reply@bughunter.com',
+                            from: process.env.SMTP_FROM || 'BugHunter Support <no-reply@bughunter.com>',
                             to: user.email,
                             subject: 'Mã xác thực đặt lại mật khẩu',
                             text: `Mã xác thực của bạn là: ${code} (hết hạn trong 10 phút)`,
@@ -644,7 +696,7 @@ export class AuthController {
                             });
 
                             const info = await transporter.sendMail({
-                                from: process.env.SMTP_FROM || 'no-reply@bughunter.com',
+                                from: process.env.SMTP_FROM || 'BugHunter <no-reply@bughunter.com>',
                                 to: user.email,
                                 subject: 'Mã xác thực đặt lại mật khẩu',
                                 text: `Mã xác thực của bạn là: ${code} (hết hạn trong 10 phút)`
