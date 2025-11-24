@@ -23,8 +23,7 @@ interface ChallengeData {
   language: 'Python' | 'JavaScript' | 'Java' | 'C++' | 'C#' | 'C';
   difficulty: 'Easy' | 'Medium' | 'Hard';
   category: 'Syntax' | 'Logic' | 'Performance' | 'Security';
-  buggyCode: string;
-  correctCode: string;
+  buggyCode?: string; // Optional - chỉ dùng làm starter code nếu admin muốn
   testCases: TestCase[];
   points: number;
   timeLimit: number;
@@ -41,8 +40,7 @@ export const CreateChallenge: React.FC = () => {
     language: 'Python',
     difficulty: 'Easy',
     category: 'Syntax',
-    buggyCode: '',
-    correctCode: '',
+    buggyCode: '', // Optional - starter code
     testCases: [{ input: '', expectedOutput: '', isHidden: false, points: 10 }],
     points: 10,
     timeLimit: 1,
@@ -108,8 +106,7 @@ export const CreateChallenge: React.FC = () => {
         language: 'Python',
         difficulty: 'Easy',
         category: 'Syntax',
-        buggyCode: '',
-        correctCode: '',
+        buggyCode: '', // Optional - starter code
         testCases: [{ input: '', expectedOutput: '', isHidden: false, points: 10 }],
         points: 10,
         timeLimit: 1,
@@ -264,29 +261,20 @@ export const CreateChallenge: React.FC = () => {
         </div>
       </div>
 
-      {/* Code Sections */}
-      <div className="space-y-4">
+      {/* Starter Code (Optional) */}
+      <div className="space-y-2">
         <div>
-          <Label>Code có lỗi</Label>
+          <Label htmlFor="starterCode">Starter Code (Tùy chọn)</Label>
+          <p className="text-sm text-muted-foreground mb-2">
+            Code mẫu để học sinh bắt đầu. Để trống nếu không cần.
+          </p>
           <div className="border rounded-md overflow-hidden">
             <CodePreview
-              code={challenge.buggyCode}
+              code={challenge.buggyCode || ''}
               language={challenge.language.toLowerCase()}
-              height="300px"
+              height="200px"
               readOnly={false}
               onChange={(value) => setChallenge({...challenge, buggyCode: value || ''})}
-            />
-          </div>
-        </div>
-        <div>
-          <Label>Code đúng</Label>
-          <div className="border rounded-md overflow-hidden">
-            <CodePreview
-              code={challenge.correctCode}
-              language={challenge.language.toLowerCase()}
-              height="300px"
-              readOnly={false}
-              onChange={(value) => setChallenge({...challenge, correctCode: value || ''})}
             />
           </div>
         </div>

@@ -85,10 +85,12 @@ const challengeSchema = new Schema<IChallenge>(
     }],
     buggyCode: {
       type: String,
-      required: [true, 'Code có lỗi là bắt buộc'],
+      // Optional - chỉ dùng làm starter code nếu admin muốn
+      default: '',
     },
     correctCode: {
       type: String,
+      // Optional - không cần thiết nữa vì tính điểm dựa trên test cases
     },
     testCases: [testCaseSchema],
     points: {

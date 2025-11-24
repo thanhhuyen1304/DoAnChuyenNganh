@@ -128,8 +128,9 @@ export class ProblemScraper {
           tags: problem.tags,
           createdBy: adminId,
           isActive: true,
-          buggyCode: this.generateBuggyCode(problem.language),
-          correctCode: this.generateCorrectCode(problem.language)
+          // Không tự động generate code - admin có thể thêm sau nếu cần
+          buggyCode: '',
+          correctCode: undefined
         });
 
         await challenge.save();
@@ -177,79 +178,5 @@ export class ProblemScraper {
         points: 10
       }
     ];
-  }
-
-  private static generateBuggyCode(language: string): string {
-    switch (language) {
-      case 'javascript':
-        return `function solution(input) {
-  // Bug: Missing return statement
-  let sum = 0;
-  for (let i = 0; i < input.length; i++) {
-    sum += input[i];
-  }
-  // Missing: return sum;
-}`;
-      case 'cpp':
-        return `#include <iostream>
-using namespace std;
-
-int main() {
-  int n;
-  cin >> n;
-  int sum = 0;
-  for (int i = 0; i < n; i++) {
-    int x;
-    cin >> x;
-    sum += x;
-  }
-  // Bug: Missing output
-  // cout << sum << endl;
-  return 0;
-}`;
-      default:
-        return `# Buggy code - fix the logic
-def solution(data):
-    result = 0
-    for item in data:
-        result += item
-    # Missing return statement
-    # return result`;
-    }
-  }
-
-  private static generateCorrectCode(language: string): string {
-    switch (language) {
-      case 'javascript':
-        return `function solution(input) {
-  let sum = 0;
-  for (let i = 0; i < input.length; i++) {
-    sum += input[i];
-  }
-  return sum;
-}`;
-      case 'cpp':
-        return `#include <iostream>
-using namespace std;
-
-int main() {
-  int n;
-  cin >> n;
-  int sum = 0;
-  for (int i = 0; i < n; i++) {
-    int x;
-    cin >> x;
-    sum += x;
-  }
-  cout << sum << endl;
-  return 0;
-}`;
-      default:
-        return `def solution(data):
-    result = 0
-    for item in data:
-        result += item
-    return result`;
-    }
   }
 }
