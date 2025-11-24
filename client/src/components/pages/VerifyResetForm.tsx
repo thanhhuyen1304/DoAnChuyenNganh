@@ -7,7 +7,8 @@ import { Label } from '../ui/label';
 import { Alert, AlertDescription } from '../ui/alert';
 import { Mail, Phone, Lock, Key, Eye, EyeOff, Loader2 } from 'lucide-react';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+import { getApiBase } from '../../lib/apiBase'
+const API_BASE_URL = getApiBase();
 
 export default function VerifyResetForm() {
   const [emailOrPhone, setEmailOrPhone] = useState('');

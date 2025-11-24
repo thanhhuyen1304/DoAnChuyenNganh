@@ -1,6 +1,7 @@
 import React from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useLanguage } from '@/components/contexts/LanguageContext';
+import Header from '@/components/Header';
 import ChallengeList from '@/components/challenges/ChallengeList';
 
 const Challenges: React.FC = () => {
@@ -9,7 +10,9 @@ const Challenges: React.FC = () => {
   const selectedLanguage = searchParams.get('lang') || undefined;
 
   return (
-    <section className="min-h-screen flex py-8 md:py-12 overflow-hidden relative">
+    <>
+      <Header />
+      <section className="min-h-screen flex pt-20 md:pt-24 pb-8 md:pb-12 overflow-visible relative">
       {/* Additional overlay for Challenges specific styling */}
       <div className="absolute inset-0 pointer-events-none bg-white/30 dark:bg-black/30 z-10" />
       <div className="absolute top-20 right-0 w-60 h-60 bg-yellow-400/5 rounded-full blur-3xl"></div>
@@ -35,7 +38,8 @@ const Challenges: React.FC = () => {
           <ChallengeList selectedLanguage={selectedLanguage} />
         </div>
       </div>
-    </section>
+      </section>
+    </>
   );
 };
 

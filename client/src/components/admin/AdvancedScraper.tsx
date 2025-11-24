@@ -8,7 +8,8 @@ import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Loader2, Download, Database, Globe, Code, Settings } from 'lucide-react';
 
-const API_BASE_URL = 'http://localhost:5000/api';
+import { getApiBase } from '../../lib/apiBase'
+const API_BASE_URL = getApiBase();
 
 interface ScrapeResult {
   success: boolean;

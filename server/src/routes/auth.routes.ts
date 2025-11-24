@@ -39,7 +39,9 @@ const loginValidation = [
 // Auth routes
 router.post('/register', registerValidation, authController.register);
 router.post('/login', loginValidation, authController.login);
-// Password reset: request code
+// Password reset: request code (chỉ dùng email)
+
+// Chấp nhận emailOrPhone (email hoặc số điện thoại)
 router.post('/request-reset', [
     body('emailOrPhone').not().isEmpty().withMessage('Email hoặc số điện thoại là bắt buộc')
 ], (req: Request, res: Response, next: NextFunction) => {
@@ -51,7 +53,7 @@ router.post('/request-reset', [
     next();
 }, otpRequestRateLimitIP, otpRequestRateLimitIdentifier, authController.requestPasswordReset);
 
-// Password reset: verify code and set new password
+// Password reset: verify code and set new password (chỉ dùng email)
 router.post('/verify-reset', [
     body('emailOrPhone').not().isEmpty().withMessage('Email hoặc số điện thoại là bắt buộc'),
     body('code').not().isEmpty().withMessage('Mã xác thực là bắt buộc'),
@@ -96,7 +98,11 @@ router.get('/google',
 );
 
 router.get('/google/callback',
-    passport.authenticate('google', { session: false }),
+    (req: Request, res: Response, next: NextFunction) => {
+        console.log('[OAuth] Google callback received');
+        next();
+    },
+    passport.authenticate('google', { session: false, failureRedirect: `${process.env.CLIENT_URL || 'http://localhost:5173'}/auth/error?message=Google authentication failed` }),
     authController.googleCallback
 );
 
@@ -117,7 +123,11 @@ if (process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET) {
     );
 
     router.get('/facebook/callback',
-        passport.authenticate('facebook', { session: false }),
+        (req: Request, res: Response, next: NextFunction) => {
+            console.log('[OAuth] Facebook callback received');
+            next();
+        },
+        passport.authenticate('facebook', { session: false, failureRedirect: `${process.env.CLIENT_URL || 'http://localhost:5173'}/auth/error?message=Facebook authentication failed` }),
         authController.facebookCallback
     );
 } else {

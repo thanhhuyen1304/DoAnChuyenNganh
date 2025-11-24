@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { getApiBase } from '../../lib/apiBase'
+import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Code2, Star, Users } from 'lucide-react';
@@ -33,6 +34,7 @@ const ChallengeList: React.FC<ChallengeListProps> = ({ selectedLanguage, favorit
   const { language } = useLanguage();
   const [myFavIds, setMyFavIds] = useState<string[]>([]);
   const [loadingFavorites, setLoadingFavorites] = useState(true);
+  
 
   // Load favorites from server on mount
   useEffect(() => {
@@ -52,7 +54,7 @@ const ChallengeList: React.FC<ChallengeListProps> = ({ selectedLanguage, favorit
       }
 
       try {
-        const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+        const API_BASE = getApiBase();
         const response = await fetch(`${API_BASE}/favorites`, {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -92,43 +94,66 @@ const ChallengeList: React.FC<ChallengeListProps> = ({ selectedLanguage, favorit
     loadFavorites();
   }, []);
 
-  useEffect(() => {
-    fetchChallenges();
-  }, [selectedLanguage]);
-  // refetch when favoriteIds changes (for filtered views)
-  useEffect(() => {
-    fetchChallenges();
-  }, [favoriteIds]);
-
-  const fetchChallenges = async () => {
+  const fetchChallenges = React.useCallback(async () => {
     try {
       setLoading(true);
-      const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+      const API_BASE = getApiBase();
       const base = API_BASE.replace(/\/$/, '');
-      const url = selectedLanguage
-        ? `${base}/challenges?language=${encodeURIComponent(selectedLanguage)}`
-        : `${base}/challenges`;
+      
+      // Fetch all challenges by using a large limit
+      // First, get total count to determine how many to fetch
+      let allChallenges: Challenge[] = [];
+      let page = 1;
+      const limit = 100; // Fetch 100 items per request
+      let hasMore = true;
+      
+      while (hasMore) {
+        const url = selectedLanguage
+          ? `${base}/challenges?language=${encodeURIComponent(selectedLanguage)}&page=${page}&limit=${limit}`
+          : `${base}/challenges?page=${page}&limit=${limit}`;
 
-      const response = await fetch(url);
-      const data = await response.json();
+        const response = await fetch(url);
+        const data = await response.json();
 
-      if (data.success) {
-        let list = data.data.challenges as Challenge[];
-        if (Array.isArray(favoriteIds) && favoriteIds.length > 0) {
-          const idSet = new Set(favoriteIds);
-          list = list.filter((c) => idSet.has(c._id));
+        if (data.success) {
+          const challenges = data.data.challenges as Challenge[];
+          if (challenges.length > 0) {
+            allChallenges = [...allChallenges, ...challenges];
+            // Check if there are more pages
+            const pagination = data.data.pagination;
+            if (pagination && page < pagination.pages) {
+              page++;
+            } else {
+              hasMore = false;
+            }
+          } else {
+            hasMore = false;
+          }
+        } else {
+          setError(data.message || 'Failed to fetch challenges');
+          hasMore = false;
         }
-        setChallenges(list);
-        setCurrentPage(1); // reset to first page on new data
-      } else {
-        setError(data.message || 'Failed to fetch challenges');
       }
+
+      // Filter by favoriteIds if provided
+      if (Array.isArray(favoriteIds) && favoriteIds.length > 0) {
+        const idSet = new Set(favoriteIds);
+        allChallenges = allChallenges.filter((c) => idSet.has(c._id));
+      }
+      
+      setChallenges(allChallenges);
+      setCurrentPage(1); // reset to first page on new data
     } catch (err) {
+      console.error('Error fetching challenges:', err);
       setError('Error connecting to server');
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedLanguage, favoriteIds]);
+
+  useEffect(() => {
+    fetchChallenges();
+  }, [fetchChallenges]);
 
   const toggleFavorite = async (id: string) => {
     const token = localStorage.getItem('token');
@@ -146,7 +171,7 @@ const ChallengeList: React.FC<ChallengeListProps> = ({ selectedLanguage, favorit
     // If user is logged in, sync with server
     if (token) {
       try {
-        const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+        const API_BASE = getApiBase();
         const response = await fetch(`${API_BASE}/favorites/toggle`, {
           method: 'POST',
           headers: {
@@ -248,7 +273,7 @@ const ChallengeList: React.FC<ChallengeListProps> = ({ selectedLanguage, favorit
     );
   }
 
-  const ITEMS_PER_PAGE = 10;
+  const ITEMS_PER_PAGE = 5;
   const totalPages = Math.max(1, Math.ceil(challenges.length / ITEMS_PER_PAGE));
   const paginated = challenges.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
@@ -256,10 +281,10 @@ const ChallengeList: React.FC<ChallengeListProps> = ({ selectedLanguage, favorit
     <div className="space-y-4">
       {paginated.map((challenge) => (
         <Card
-          key={challenge._id}
-          className="!bg-white dark:!bg-gray-900 hover:shadow-lg hover:scale-[1.02] transition-all cursor-pointer"
-          onClick={() => window.location.href = `/challenge/${challenge._id}`}
-        >
+            key={challenge._id}
+            className="!bg-white dark:!bg-gray-900 transform transition-all duration-300 cursor-pointer hover:scale-105 hover:-translate-y-1 hover:shadow-xl will-change-transform"
+            onClick={() => window.location.href = `/challenge/${challenge._id}`}
+          >
           <CardHeader>
             <div className="flex justify-between items-start">
               <div>
@@ -335,7 +360,7 @@ const ChallengeList: React.FC<ChallengeListProps> = ({ selectedLanguage, favorit
 
       {/* Pagination controls */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 mt-4">
+        <div className="flex items-center justify-center gap-2 mt-6 w-full py-4">
           <button
             onClick={(e) => { e.stopPropagation(); setCurrentPage((p) => Math.max(1, p - 1)); }}
             className="px-3 py-1 rounded-md bg-gray-100 dark:bg-gray-800 text-sm"
@@ -350,7 +375,7 @@ const ChallengeList: React.FC<ChallengeListProps> = ({ selectedLanguage, favorit
               <button
                 key={page}
                 onClick={(e) => { e.stopPropagation(); setCurrentPage(page); }}
-                className={`px-3 py-1 rounded-md text-sm ${currentPage === page ? 'bg-primary text-white' : 'bg-gray-100 dark:bg-gray-800'}`}
+                className={`px-3 py-1 rounded-md text-sm ${currentPage === page ? 'bg-gradient-to-r from-[#FF007A] via-[#C77DFF] to-[#A259FF] text-white' : 'bg-gradient-to-r from-[#FF007A] via-[#C77DFF] to-[#A259FF] dark:bg-gray-800'}`}
               >
                 {page}
               </button>

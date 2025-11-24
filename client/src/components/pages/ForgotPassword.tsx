@@ -47,7 +47,7 @@ export default function ForgotPassword() {
               Quên mật khẩu
             </h2>
             <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-              Nhập email hoặc số điện thoại để nhận mã xác thực đặt lại mật khẩu
+              Nhập email để nhận mã xác thực đặt lại mật khẩu
             </p>
           </div>
 

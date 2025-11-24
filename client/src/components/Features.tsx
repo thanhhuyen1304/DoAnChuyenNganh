@@ -9,6 +9,7 @@ import {
   Trophy,
 } from 'lucide-react'
 import { useLanguage } from './contexts/LanguageContext'
+import { getApiBase } from '../lib/apiBase'
 
 const Features: React.FC = () => {
   const { language, t } = useLanguage()
@@ -30,11 +31,11 @@ const Features: React.FC = () => {
     const token = localStorage.getItem('token')
     if (!token) return
 
-    const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000'
+    const API_BASE = getApiBase()
 
     const abortController = new AbortController()
 
-    fetch(`${API_BASE}/api/users/me/progress`, {
+    fetch(`${API_BASE}/users/me/progress`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',

@@ -8,6 +8,7 @@ import { BackgroundWrapper } from "./components/BackgroundWrapper";
 import { TooltipProvider } from "./components/ui/tooltip";
 import { Toaster } from "./components/ui/toaster";
 import { Toaster as Sonner } from "./components/ui/sonner";
+import ChatBox from "./components/ChatBox";
 import AuthLayout from './components/auth/AuthLayout';
 import Login from './components/auth/Login';
 import Register from './components/auth/Register';
@@ -25,6 +26,7 @@ import Settings from "./components/pages/Settings";
 import Challenges from "./components/pages/Challenges";
 import ForgotPassword from "./components/pages/ForgotPassword";
 import VerifyReset from "./components/pages/VerifyReset";
+import EnvDebug from "./components/pages/EnvDebug";
 
 // Create a client
 const queryClient = new QueryClient();
@@ -38,6 +40,7 @@ const App = () => {
             <TooltipProvider>
               <Toaster />
               <Sonner />
+              <ChatBox />
               <BackgroundWrapper>
                 <BrowserRouter>
                   <Routes>
@@ -54,6 +57,7 @@ const App = () => {
                   <Route path="/forgot-password" element={<ForgotPassword />} />
                   <Route path="/verify-reset" element={<VerifyReset />} />
                   <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                  <Route path="/env-debug" element={<EnvDebug />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </BrowserRouter>
