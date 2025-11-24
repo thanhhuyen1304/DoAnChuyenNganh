@@ -37,8 +37,9 @@ export function CodeEditor({ problemId, challenge, onSubmissionSuccess }: CodeEd
 
   useEffect(() => {
     // Chỉ reset code khi chuyển sang bài khác (problemId thay đổi), không reset khi submit
-    if (challenge?.buggyCode && challenge?._id === problemId && lastProblemId !== problemId) {
-      setCode(challenge.buggyCode)
+    // Nếu có buggyCode thì dùng làm starter code, nếu không thì để trống
+    if (challenge?._id === problemId && lastProblemId !== problemId) {
+      setCode(challenge.buggyCode || "")
       setLanguage(challenge.language)
       setLastProblemId(problemId)
       // Reset các state khác khi chuyển bài
@@ -235,9 +236,8 @@ export function CodeEditor({ problemId, challenge, onSubmissionSuccess }: CodeEd
   }
 
   const handleReset = () => {
-    if (challenge?.buggyCode) {
-      setCode(challenge.buggyCode)
-    }
+    // Reset về buggyCode nếu có, nếu không thì reset về empty
+    setCode(challenge?.buggyCode || "")
   }
 
   const handleCopy = () => {
