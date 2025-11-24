@@ -20,6 +20,8 @@ import OAuthError from "./components/pages/OAuthError";
 import OAuthDebug from "./components/pages/OAuthDebug";
 import Profile from "./components/pages/Profile";
 import Settings from "./components/pages/Settings";
+import Practice from "./components/pages/Practice";
+import AchievementsPage from "./components/pages/AchievementsPage";
 
 // Create a client
 const queryClient = new QueryClient();
@@ -43,6 +45,8 @@ const App = () => {
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/settings" element={<Settings />} />
+                <Route path="/practice" element={<Practice />} />
+                <Route path="/achievements" element={<AchievementsPage />} />
                 <Route path="/admin/dashboard" element={<AdminDashboard />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>

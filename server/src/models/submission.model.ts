@@ -12,6 +12,49 @@ export interface IExecutionResult {
   points: number;
 }
 
+export interface IErrorAnalysis {
+  errorType: 'syntax' | 'logic' | 'runtime' | 'performance' | 'timeout' | 'memory' | 'other';
+  errorMessage: string;
+  errorLocation?: {
+    line: number;
+    column?: number;
+    codeSnippet?: string;
+  };
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  description: string;
+}
+
+export interface ICodeSuggestion {
+  line: number;
+  currentCode: string;
+  suggestedCode: string;
+  explanation: string;
+  confidence: number;
+}
+
+export interface ITestCaseAnalysis {
+  testCaseIndex: number;
+  passed: boolean;
+  input: string;
+  expectedOutput: string;
+  actualOutput: string;
+  errorMessage?: string;
+  analysis: string;
+  hints?: string[];
+}
+
+export interface ISubmissionAnalysis {
+  overallStatus: 'correct' | 'partial' | 'incorrect';
+  score: number;
+  totalPoints: number;
+  summary: string;
+  recommendations: string[];
+  learningPoints: string[];
+  errorAnalyses: IErrorAnalysis[];
+  codeSuggestions: ICodeSuggestion[];
+  testCaseAnalyses: ITestCaseAnalysis[];
+}
+
 export interface ISubmission extends Document {
   user: mongoose.Types.ObjectId;
   challenge: mongoose.Types.ObjectId;
@@ -24,6 +67,7 @@ export interface ISubmission extends Document {
   executionTime: number; // total execution time in milliseconds
   memoryUsed: number; // peak memory usage in KB
   errorMessage?: string;
+  aiAnalysis?: ISubmissionAnalysis; // Phân tích AI
   submittedAt: Date;
 }
 
@@ -114,6 +158,54 @@ const submissionSchema = new Schema<ISubmission>(
     },
     errorMessage: {
       type: String,
+    },
+    aiAnalysis: {
+      type: {
+        overallStatus: {
+          type: String,
+          enum: ['correct', 'partial', 'incorrect'],
+        },
+        score: Number,
+        totalPoints: Number,
+        summary: String,
+        recommendations: [String],
+        learningPoints: [String],
+        errorAnalyses: [{
+          errorType: {
+            type: String,
+            enum: ['syntax', 'logic', 'runtime', 'performance', 'timeout', 'memory', 'other'],
+          },
+          errorMessage: String,
+          errorLocation: {
+            line: Number,
+            column: Number,
+            codeSnippet: String,
+          },
+          severity: {
+            type: String,
+            enum: ['low', 'medium', 'high', 'critical'],
+          },
+          description: String,
+        }],
+        codeSuggestions: [{
+          line: Number,
+          currentCode: String,
+          suggestedCode: String,
+          explanation: String,
+          confidence: Number,
+        }],
+        testCaseAnalyses: [{
+          testCaseIndex: Number,
+          passed: Boolean,
+          input: String,
+          expectedOutput: String,
+          actualOutput: String,
+          errorMessage: String,
+          analysis: String,
+          hints: [String],
+        }],
+      },
+      required: false,
     },
     submittedAt: {
       type: Date,

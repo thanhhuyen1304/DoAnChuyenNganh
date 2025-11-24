@@ -1,0 +1,86 @@
+version: '3.8'
+
+services:
+  # Redis - Judge0 cần Redis để queue
+  redis:
+    image: redis:7-alpine
+    container_name: judge0-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - judge0-network
+    restart: unless-stopped
+
+  # Judge0 API
+  judge0:
+    image: judge0/judge0:1.13.0
+    container_name: judge0
+    ports:
+      - "2358:2358"
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - MAX_QUEUE_SIZE=200
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=judge0
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=judge0
+      # Thêm các biến môi trường để fix lỗi script creation
+      - ENABLE_WORKER=true
+      - ENABLE_CE=true
+      - DISABLE_WORKER=false
+      # Cấu hình timeout và limits
+      - CPU_TIME_LIMIT=5
+      # Disable memory limit trên Windows để tránh lỗi cgroup
+      - MEMORY_LIMIT=0
+      - MAX_PROCESSES_AND_OR_THREADS=60
+      # Disable cgroup trên Windows - thử nhiều cách
+      - ENABLE_CGROUP=false
+      - CGROUP_DISABLED=true
+      - USE_CGROUP=false
+    depends_on:
+      - redis
+      - postgres
+    networks:
+      - judge0-network
+    restart: unless-stopped
+    # Thêm privileged mode để có quyền tạo file trong container
+    privileged: true
+    # Thêm tmpfs cho /tmp và /sys/fs/cgroup để tránh lỗi cgroup trên Windows
+    # Lưu ý: Chỉ dùng trong development, không dùng trong production
+    tmpfs:
+      - /tmp
+      - /sys/fs/cgroup:rw,nosuid,nodev,noexec,relatime,mode=755
+    # Thêm security_opt để disable seccomp trên Windows
+    security_opt:
+      - seccomp:unconfined
+    # Mount volume cho /box để đảm bảo thư mục tồn tại và có quyền ghi
+    volumes:
+      - judge0-box:/box
+
+  # PostgreSQL - Judge0 cần database
+  postgres:
+    image: postgres:15-alpine
+    container_name: judge0-postgres
+    environment:
+      - POSTGRES_USER=judge0
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=judge0
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - judge0-network
+    restart: unless-stopped
+
+volumes:
+  redis-data:
+  postgres-data:
+  judge0-box:
+
+networks:
+  judge0-network:
+    driver: bridge
+

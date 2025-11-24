@@ -14,6 +14,7 @@
     "test-real-scraper": "ts-node scripts/test-real-scraper.ts"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@types/express-session": "^1.18.2",
     "accepts": "^2.0.0",
     "acorn": "^8.15.0",
