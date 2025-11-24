@@ -18,14 +18,13 @@ const Footer: React.FC = () => {
   const { language } = useLanguage()
 
   return (
-  <footer className="relative overflow-hidden text-black dark:text-white pt-16 pb-12">
+  <footer className="relative overflow-hidden text-black dark:text-white pt-16 pb-12 bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm">
 
-      {/* Background: dark purple foundation with brand-colored radial accents to match site theme */}
-      <div className="absolute inset-0 -z-10 bg-gradient-to-br from-[#0b0716] via-[#140623] to-[#190a2a]" aria-hidden />
+      {/* Background is handled by BackgroundWrapper - only keep decorative elements */}
 
       {/* Brand radial accents (primary purple + pink) */}
-      <div className="absolute -left-24 -top-12 w-96 h-96 bg-[rgba(162,89,255,0.12)] rounded-full blur-3xl pointer-events-none -z-10" aria-hidden />
-      <div className="absolute right-0 -bottom-8 w-80 h-80 bg-[rgba(255,0,122,0.06)] rounded-full blur-3xl pointer-events-none -z-10" aria-hidden />
+      <div className="absolute -left-24 -top-12 w-96 h-96 bg-[rgba(162,89,255,0.15)] rounded-full blur-3xl pointer-events-none -z-10" aria-hidden />
+      <div className="absolute right-0 -bottom-8 w-80 h-80 bg-[rgba(255,0,122,0.1)] rounded-full blur-3xl pointer-events-none -z-10" aria-hidden />
 
       {/* Soft decorative texture (very low opacity) to avoid harsh noise */}
       <svg className="absolute inset-0 -z-20 w-full h-full opacity-3 pointer-events-none" aria-hidden preserveAspectRatio="none" viewBox="0 0 800 600">

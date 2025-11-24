@@ -10,11 +10,11 @@ import {
   ChevronDown,
   Bug,
   Search,
-  Bell,
   ClipboardList,
   Settings,
 } from 'lucide-react'
 import { useLanguage } from './contexts/LanguageContext'
+import NotificationBox from './NotificationBox'
 interface HeaderProps {
   // Props không còn cần thiết cho toggle theme; giữ để tương thích nếu nơi khác có truyền
   darkMode?: boolean
@@ -78,9 +78,9 @@ const Header: React.FC<HeaderProps> = () => {
   }
   return (
     <header
-      className={`sticky top-0 w-full z-[10000] transition-all duration-300 ${isScrolled ? 'bg-white/95 dark:bg-gray-900/95 backdrop-blur-lg shadow-md' : 'bg-white dark:bg-gray-900'}`}
+      className={`sticky top-0 w-full z-[99999] transition-all duration-300 ${isScrolled ? 'bg-white/95 dark:bg-gray-900/95 backdrop-blur-lg shadow-md' : 'bg-white dark:bg-gray-900'}`}
     >
-      <div className="container mx-auto px-4 py-4 flex justify-between items-center relative z-[10001]">
+      <div className="container mx-auto px-4 py-4 flex justify-between items-center relative z-[100000]">
         {/* Logo */}
         <div className="flex items-center">
           <div className="relative group">
@@ -98,6 +98,12 @@ const Header: React.FC<HeaderProps> = () => {
         </div>
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center space-x-8">
+          <a
+            href="/"
+            className="text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200 font-medium relative after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary-500 after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:duration-300"
+          >
+            {t('nav.home')}
+          </a>
           <a
             href="#"
             className="text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200 font-medium relative after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary-500 after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:duration-300"
@@ -138,7 +144,7 @@ const Header: React.FC<HeaderProps> = () => {
                 className="ml-1 group-hover:rotate-180 transition-transform duration-300"
               />
             </button>
-            <div className="absolute right-0 mt-2 w-24 bg-white dark:bg-gray-800 rounded-xl shadow-lg py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform group-hover:translate-y-0 translate-y-2 z-[10002]">
+            <div className="absolute right-0 mt-2 w-24 bg-white dark:bg-gray-800 rounded-xl shadow-lg py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform group-hover:translate-y-0 translate-y-2 z-[100001]">
               <button
                 onClick={() => handleLanguageChange('vi')}
                 className={`flex items-center w-full text-left px-4 py-2 text-sm ${language === 'vi' ? 'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20' : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
@@ -172,12 +178,7 @@ const Header: React.FC<HeaderProps> = () => {
           {user ? (
             <div className="flex items-center space-x-3">
               {/* Notification bell */}
-              <div className="relative">
-                <button className="p-2 text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200">
-                  <Bell size={20} />
-                  <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
-                </button>
-              </div>
+              <NotificationBox />
               {/* User dropdown */}
               <div className="relative group">
                 <button className="flex items-center">
@@ -191,7 +192,7 @@ const Header: React.FC<HeaderProps> = () => {
                   </div>
                   <span className="ml-3 hidden md:inline-block text-sm font-medium text-gray-700 dark:text-white">{user?.username}</span>
                 </button>
-                <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-xl shadow-xl py-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform group-hover:translate-y-0 translate-y-2 z-[10002]">
+                <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-xl shadow-xl py-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform group-hover:translate-y-0 translate-y-2 z-[100001]">
                   <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
                     <p className="text-sm font-medium text-gray-900 dark:text-white">
                       {user?.username || user?.email || 'User'}
@@ -201,14 +202,22 @@ const Header: React.FC<HeaderProps> = () => {
                     </p>
                   </div>
                   <div className="py-3 border-b border-gray-100 dark:border-gray-700">
-                    {user?.role === 'admin' && (
+                    {user?.role === 'admin' ? (
                       <Link
-                          to="/admin/dashboard"
-                          className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                        >
-                          <ClipboardList size={16} className="mr-2 text-gray-500 dark:text-gray-300" />
-                          Kho bài tập
-                        </Link>
+                        to="/admin/dashboard"
+                        className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                      >
+                        <ClipboardList size={16} className="mr-2 text-gray-500 dark:text-gray-300" />
+                        Quản lý
+                      </Link>
+                    ) : (
+                      <Link
+                        to="/clientdashboard"
+                        className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                      >
+                        <ClipboardList size={16} className="mr-2 text-gray-500 dark:text-gray-300" />
+                        Kho của tôi
+                      </Link>
                     )}
                   </div>
                   <div className="py-3 border-b border-gray-100 dark:border-gray-700">
@@ -274,7 +283,7 @@ const Header: React.FC<HeaderProps> = () => {
       </div>
       {/* Mobile Menu */}
   {isMenuOpen && (
-  <div className="md:hidden bg-white dark:bg-gray-900 px-4 py-4 shadow-lg border-t border-gray-100 dark:border-gray-800 animate-fadeIn z-[10001]">
+  <div className="md:hidden bg-white dark:bg-gray-900 px-4 py-4 shadow-lg border-t border-gray-100 dark:border-gray-800 animate-fadeIn z-[100000]">
           <nav className="flex flex-col space-y-4 pb-6">
             <a
               href="#"

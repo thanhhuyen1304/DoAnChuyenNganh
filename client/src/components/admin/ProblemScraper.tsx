@@ -4,7 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Alert, AlertDescription } from '../ui/alert';
 import { Loader2, Download, Database, Globe } from 'lucide-react';
 
-const API_BASE_URL = 'http://localhost:5000/api';
+import { getApiBase } from '../../lib/apiBase'
+const API_BASE_URL = getApiBase();
 
 interface ScrapeResult {
   success: boolean;

@@ -2,7 +2,7 @@ import React from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useLanguage } from '@/components/contexts/LanguageContext';
 import Header from '@/components/Header';
-//import ChallengeList from '@/components/challenges/ChallengeList';
+import ChallengeList from '@/components/challenges/ChallengeList';
 
 const Challenges: React.FC = () => {
   const { language } = useLanguage();
@@ -35,7 +35,7 @@ const Challenges: React.FC = () => {
         </div>
 
         <div className="bg-white/80 dark:bg-gray-900/70 backdrop-blur-xl rounded-2xl p-6 shadow-[0_0_25px_rgba(162,89,255,0.15)] border border-gray-100/20 dark:border-gray-700/50">
-         {/* <ChallengeList selectedLanguage={selectedLanguage} /> */}
+          <ChallengeList selectedLanguage={selectedLanguage} />
         </div>
       </div>
       </section>

@@ -3,7 +3,8 @@ import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Alert, AlertDescription } from '../ui/alert';
 
-const API_BASE_URL = 'http://localhost:5000/api';
+import { getApiBase } from '../../lib/apiBase'
+const API_BASE_URL = getApiBase();
 
 const SimpleScraper = () => {
   const [isLoading, setIsLoading] = useState(false);

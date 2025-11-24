@@ -1,8 +1,6 @@
 import React, { useEffect, useState } from 'react'
-import { Code, Bug, Play, ArrowRight, CheckCircle } from 'lucide-react'
+import { Bug, Play, ArrowRight, CheckCircle } from 'lucide-react'
 import { useLanguage } from './contexts/LanguageContext'
-
-const decoImg = new URL('./images/1.jpg', import.meta.url).href
 
 const Hero: React.FC = () => {
   const { language, t } = useLanguage()
@@ -21,15 +19,16 @@ const Hero: React.FC = () => {
   }, [])
 
   return (
-    <section className="min-h-screen flex items-center py-8 md:py-12 bg-gradient-to-br from-slate-300 via-slate-50 to-slate-100 dark:from-gray-900 dark:via-gray-850 dark:to-gray-800 overflow-hidden relative">
-      {/* Background */}
-      <div
-        className="fixed inset-0 z-0 bg-cover bg-center opacity-40 dark:opacity-30 filter blur-sm"
-        style={{ backgroundImage: `url(${decoImg})` }}
-      />
-      <div className="absolute inset-0 pointer-events-none bg-white/30 dark:bg-black/30 z-10" />
-      <div className="absolute top-20 right-0 w-60 h-60 bg-yellow-400/5 rounded-full blur-3xl"></div>
-      <div className="absolute bottom-4 left-6 w-60 h-60 bg-primary-400/5 rounded-full blur-3xl"></div>
+    <section className="min-h-screen flex items-center py-8 md:py-12 overflow-hidden relative">
+      {/* Decorative background elements */}
+      <div className="absolute inset-0 z-0">
+        <div className="absolute top-20 right-0 w-60 h-60 bg-yellow-400/5 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-4 left-6 w-60 h-60 bg-primary-400/5 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute top-1/3 left-1/4 w-72 h-72 bg-blue-400/5 rounded-full blur-3xl animate-pulse"></div>
+      </div>
+
+      {/* White/Dark translucent overlay */}
+      <div className="absolute inset-0 bg-white/20 dark:bg-gray-900/20 backdrop-blur-sm z-10"></div>
 
       {/* Main content */}
       <div className="container mx-auto px-4 flex flex-col md:flex-row items-center relative z-20">
