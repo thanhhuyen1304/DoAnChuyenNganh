@@ -4,6 +4,7 @@ import Hero from "../Hero";
 import Features from "../Features";
 import LanguageCards from "../LanguageCards";
 import Leaderboard from "../Leaderboard";
+import { PvPSection } from "../PvPSection";
 import Footer from "../Footer";
 
 const Index = () => {
@@ -14,6 +15,7 @@ const Index = () => {
         <Hero />
         <Features />
         <LanguageCards />
+        <PvPSection />
         <Leaderboard />
       </main>
       <Footer />

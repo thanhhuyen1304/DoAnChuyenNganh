@@ -1,6 +1,16 @@
 import express from 'express';
 import judge0Service from '../services/judge0Service';
-import { ENV } from '../../config/environment';
+import { config } from 'dotenv';
+
+// Load environment variables
+config();
+
+const ENV = {
+  JUDGE0_API_URL: process.env.JUDGE0_API_URL,
+  JUDGE0_API_KEY: process.env.JUDGE0_API_KEY,
+  GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+  MONGODB_URI: process.env.MONGODB_URI
+};
 
 const router = express.Router();
 

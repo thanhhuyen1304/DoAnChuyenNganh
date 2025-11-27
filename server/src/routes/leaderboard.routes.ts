@@ -1,9 +1,10 @@
-import express from 'express'
-import { getTopLearners } from '../controllers/leaderboard.controller'
+import { Router } from 'express';
+import { getTopLearners } from '../controllers/leaderboard.controller';
+import { authenticateToken } from '../middleware/auth';
 
-const router = express.Router()
+const router = Router();
 
-// Public leaderboard
-router.get('/top', getTopLearners)
+// GET /api/leaderboard/top?limit=5
+router.get('/top', getTopLearners);
 
-export default router
+export default router;

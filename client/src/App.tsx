@@ -4,8 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
 import { LanguageProvider } from "./components/contexts/LanguageContext";
 import { TooltipProvider } from "./components/ui/tooltip";
-import { Toaster } from "./components/ui/toaster";
-import { Toaster as Sonner } from "./components/ui/sonner";
+import { Toaster } from "./components/ui/toast";
 import AuthLayout from './components/auth/AuthLayout';
 import Login from './components/auth/Login';
 import Register from './components/auth/Register';
@@ -22,6 +21,8 @@ import Profile from "./components/pages/Profile";
 import Settings from "./components/pages/Settings";
 import Practice from "./components/pages/Practice";
 import AchievementsPage from "./components/pages/AchievementsPage";
+import PvPPage from "./components/pages/PvPPage";
+import { ToastProvider } from './components/ui/toast';
 
 // Create a client
 const queryClient = new QueryClient();
@@ -32,9 +33,9 @@ const App = () => {
       <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
         <LanguageProvider>
           <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
+            <ToastProvider>
+              <Toaster />
+              <BrowserRouter>
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/login" element={<LoginPage />} />
@@ -46,11 +47,13 @@ const App = () => {
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/practice" element={<Practice />} />
+                <Route path="/pvp" element={<PvPPage />} />
                 <Route path="/achievements" element={<AchievementsPage />} />
                 <Route path="/admin/dashboard" element={<AdminDashboard />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
-            </BrowserRouter>
+              </BrowserRouter>
+            </ToastProvider>
           </TooltipProvider>
         </LanguageProvider>
       </ThemeProvider>

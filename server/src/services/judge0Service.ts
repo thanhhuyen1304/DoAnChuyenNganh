@@ -3,7 +3,15 @@
  * Tích hợp Judge0 API để chạy code trong sandbox an toàn
  */
 
-import { ENV } from '../../config/environment';
+import { config } from 'dotenv';
+
+// Load environment variables
+config();
+
+const ENV = {
+  JUDGE0_API_URL: process.env.JUDGE0_API_URL,
+  JUDGE0_API_KEY: process.env.JUDGE0_API_KEY
+};
 import { spawn } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';

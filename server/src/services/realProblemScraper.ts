@@ -283,9 +283,9 @@ export class RealProblemScraper {
         // Kiểm tra duplicate dựa trên title + language + source (chỉ exact match)
         // Chỉ check exact match để tránh false positive
         const existingChallenge = await Challenge.findOne({
-          title: normalizedTitle,
-          language: normalizedFinalLang,
-          tags: { $in: [sourceIdentifier] }
+              title: normalizedTitle,
+              language: normalizedFinalLang,
+              tags: { $in: [sourceIdentifier] }
         });
         
         // Không tự động generate code nữa - chỉ scrape test cases và metadata
@@ -326,8 +326,8 @@ export class RealProblemScraper {
             console.log(`   ✅ No duplicate found - creating new`);
             challenge = new Challenge(challengeData);
             challenge = await challenge.save();
-            savedCount++;
-            console.log(`✅ Saved: ${problem.title}`);
+          savedCount++;
+          console.log(`✅ Saved: ${problem.title}`);
           }
           
           console.log(`   - Language: ${challenge.language} (normalized from ${problem.language})`);
