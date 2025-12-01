@@ -1,10 +1,17 @@
 import { Router } from 'express';
-import controller from '../controllers/import-export.controller';
-import { authenticateToken } from '../middleware/auth';
+import { importChallenges, exportChallenges } from '../controllers/import-export.controller';
+import { authenticateToken, isAdmin } from '../middleware/auth';
 
 const router = Router();
 
-router.post('/import', authenticateToken, controller.importChallenges);
-router.get('/export', authenticateToken, controller.exportChallenges);
+// All routes require admin authentication
+router.use(authenticateToken);
+router.use(isAdmin);
+
+// POST /api/import-export/challenges
+router.post('/challenges', importChallenges);
+
+// GET /api/import-export/challenges
+router.get('/challenges', exportChallenges);
 
 export default router;

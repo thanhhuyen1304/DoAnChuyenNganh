@@ -53,4 +53,3 @@ router.get('/:id', [
 ], getSubmissionById);
 
 export default router;
-

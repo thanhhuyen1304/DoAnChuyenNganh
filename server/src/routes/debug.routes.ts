@@ -1,6 +1,16 @@
 import express from 'express';
 import judge0Service from '../services/judge0Service';
-import { ENV } from '../../config/environment';
+import { config } from 'dotenv';
+
+// Load environment variables
+config();
+
+const ENV = {
+  JUDGE0_API_URL: process.env.JUDGE0_API_URL,
+  JUDGE0_API_KEY: process.env.JUDGE0_API_KEY,
+  GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+  MONGODB_URI: process.env.MONGODB_URI
+};
 
 const router = express.Router();
 
@@ -23,14 +33,14 @@ router.get('/test/judge0', async (req, res) => {
 
     // Test simple submission
     try {
-      const result = await judge0Service.submitCode(
-        'print("Hello World")',
-        'Python',
-        '',
-        undefined,
-        2,
-        128
-      );
+      const result = await judge0Service.submitCode({
+        code: 'print("Hello World")',
+        language: 'Python',
+        input: '',
+        expectedOutput: undefined,
+        timeLimit: 2,
+        memoryLimit: 128
+      });
 
       return res.json({
         success: true,

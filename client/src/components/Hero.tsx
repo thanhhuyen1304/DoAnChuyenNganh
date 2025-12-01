@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
-import { Code, Bug, Play, ArrowRight, CheckCircle } from 'lucide-react'
+import { Code, Bug, Play, ArrowRight, CheckCircle, Trophy } from 'lucide-react'
 import { useLanguage } from './contexts/LanguageContext'
+import { CombinedLeaderboardModal } from './CombinedLeaderboardModal'
 
 const decoImg = new URL('./images/1.jpg', import.meta.url).href
 
@@ -9,6 +10,7 @@ const Hero: React.FC = () => {
   const [isVisible, setIsVisible] = useState(false)
   const [animateCode, setAnimateCode] = useState(false)
   const [showBugFixed, setShowBugFixed] = useState(false)
+  const [showLeaderboard, setShowLeaderboard] = useState(false)
 
   useEffect(() => {
     setIsVisible(true)
@@ -71,9 +73,12 @@ const Hero: React.FC = () => {
                 <Play size={18} className="mr-2 group-hover:animate-pulse" />
                 <span>{t('hero.cta')}</span>
               </button>
-              <button className="px-8 py-4 border-2 border-gray-300 dark:border-gray-600 hover:border-primary-600 dark:hover:border-primary-400 text-gray-700 dark:text-gray-200 font-medium rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-300 group">
-                <span>{language === 'vi' ? 'Xem khóa học' : 'View courses'}</span>
-                <ArrowRight size={18} className="ml-2 inline-block group-hover:translate-x-1 transition-transform" />
+              <button
+                onClick={() => setShowLeaderboard(true)}
+                className="px-8 py-4 border-2 border-gray-300 dark:border-gray-600 hover:border-primary-600 dark:hover:border-primary-400 text-gray-700 dark:text-gray-200 font-medium rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-300 group flex items-center gap-2"
+              >
+                <Trophy size={18} className="group-hover:text-yellow-500 transition-colors" />
+                <span>{language === 'vi' ? 'Xếp hạng' : 'Leaderboard'}</span>
               </button>
             </div>
 
@@ -179,6 +184,12 @@ const Hero: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Leaderboard Modal */}
+      <CombinedLeaderboardModal
+        open={showLeaderboard}
+        onClose={() => setShowLeaderboard(false)}
+      />
     </section>
   )
 }
