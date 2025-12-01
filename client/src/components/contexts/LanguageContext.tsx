@@ -18,6 +18,7 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.challenges": "Thử thách",
     "nav.leaderboard": "Bảng xếp hạng",
     "nav.blog": "Blog",
+    "nav.pvp": "Thi Đấu",
     "auth.login": "Đăng nhập",
     "auth.signup": "Đăng ký",
     
@@ -183,6 +184,7 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.challenges": "Challenges",
     "nav.leaderboard": "Leaderboard",
     "nav.blog": "Blog",
+    "nav.pvp": "PvP Battle",
     "auth.login": "Login",
     "auth.signup": "Sign Up",
     

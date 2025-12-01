@@ -26,67 +26,69 @@ export const authenticateToken = async (
     next: NextFunction
 ): Promise<any> => {
     try {
-        // Lấy token từ header
-        const token = req.header('Authorization')?.replace('Bearer ', '');
+        // Lấy token từ nhiều nguồn khác nhau
+        let token = null;
+        
+        // 1. Từ header Authorization
+        const authHeader = req.header('Authorization');
+        console.log('Auth middleware - Request URL:', req.url);
+        console.log('Auth middleware - Auth header:', authHeader);
+        console.log('Auth middleware - All headers:', req.headers);
+        
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            token = authHeader.replace('Bearer ', '');
+            console.log('Auth middleware - Token extracted from header:', token.substring(0, 20) + '...');
+        }
+        
+        // 2. Từ query parameter (cho WebSocket connections)
+        if (!token && req.query.token) {
+            token = req.query.token as string;
+        }
+        
+        // 3. Từ request body (cho API calls)
+        if (!token && req.body && req.body.token) {
+            token = req.body.token;
+        }
 
         if (!token) {
+            console.log('No token found in request - Auth header:', authHeader, 'Query:', req.query.token, 'Body:', req.body.token);
             return res.status(401).json({ 
                 success: false,
                 message: 'Không có token xác thực' 
             });
         }
 
+        console.log('Token found, verifying...');
+        
         // Verify token
         const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
 
         // Tìm user từ token
         const user = await User.findById(decoded.userId);
         if (!user) {
+            console.log('User not found for token:', decoded.userId);
             return res.status(401).json({ 
                 success: false,
-                message: 'Token không hợp lệ' 
+                message: 'Token không hợp lệ - User không tồn tại' 
             });
         }
 
-        // Kiểm tra trạng thái banned
-        if (user.isBanned) {
-            // Kiểm tra nếu có thời hạn ban và đã hết hạn
-            if (user.bannedUntil && new Date(user.bannedUntil) < new Date()) {
-                // Hết hạn ban, tự động unban
-                user.isBanned = false;
-                user.banReason = undefined;
-                user.bannedUntil = undefined;
-                await user.save();
-            } else {
-                // Vẫn còn bị ban
-                return res.status(403).json({ 
-                    success: false,
-                    message: user.bannedUntil 
-                        ? `Tài khoản của bạn đã bị khóa đến ${new Date(user.bannedUntil).toLocaleString('vi-VN')}. ${user.banReason ? `Lý do: ${user.banReason}` : ''}`
-                        : `Tài khoản của bạn đã bị khóa. ${user.banReason ? `Lý do: ${user.banReason}` : ''}`
-                });
-            }
-        }
-
-        // Xác định role: ưu tiên role từ database, nếu không có thì kiểm tra email admin
-        let userRole = user.role || 'user';
-        if (!user.role && user.email === (process.env.ADMIN_EMAIL || 'admin@bughunter.com')) {
-            userRole = 'admin';
-        }
+        console.log('User authenticated:', user.username);
 
         // Thêm user vào request
         req.user = {
             ...user.toObject(),
             id: (user._id as any).toString(),
             email: user.email,
-            role: userRole
+            role: user.email === (process.env.ADMIN_EMAIL || 'admin@bughunter.com') ? 'admin' : 'user'
         } as any;
         next();
 
     } catch (error) {
+        console.error('Authentication error:', error);
         res.status(401).json({ 
             success: false,
-            message: 'Token không hợp lệ' 
+            message: 'Token không hợp lệ hoặc hết hạn' 
         });
     }
 };
@@ -114,6 +116,62 @@ export const isAdmin = (
     }
 
     next();
+};
+
+// Middleware cho phép token tùy chọn (cho các route không bắt buộc đăng nhập)
+export const optionalAuth = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<any> => {
+    try {
+        // Lấy token từ nhiều nguồn khác nhau
+        let token = null;
+        
+        // 1. Từ header Authorization
+        const authHeader = req.header('Authorization');
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            token = authHeader.replace('Bearer ', '');
+        }
+        
+        // 2. Từ query parameter (cho WebSocket connections)
+        if (!token && req.query.token) {
+            token = req.query.token as string;
+        }
+        
+        // 3. Từ request body (cho API calls)
+        if (!token && req.body && req.body.token) {
+            token = req.body.token;
+        }
+
+        if (token) {
+            try {
+                // Verify token
+                const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
+
+                // Tìm user từ token
+                const user = await User.findById(decoded.userId);
+                if (user) {
+                    // Thêm user vào request
+                    req.user = {
+                        ...user.toObject(),
+                        id: (user._id as any).toString(),
+                        email: user.email,
+                        role: user.email === (process.env.ADMIN_EMAIL || 'admin@bughunter.com') ? 'admin' : 'user'
+                    } as any;
+                }
+            } catch (error) {
+                // Token không hợp lệ, nhưng không reject request
+                console.log('Optional auth: Invalid token ignored');
+            }
+        }
+        
+        next();
+
+    } catch (error) {
+        // Không reject request cho optional auth
+        next();
+    }
 };
 
 // Legacy function for backward compatibility

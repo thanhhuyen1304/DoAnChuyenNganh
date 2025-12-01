@@ -1,12 +1,16 @@
 import React, { useEffect, useState } from 'react'
-import { Bug, Play, ArrowRight, CheckCircle } from 'lucide-react'
+import { Code, Bug, Play, ArrowRight, CheckCircle, Trophy } from 'lucide-react'
 import { useLanguage } from './contexts/LanguageContext'
+import { CombinedLeaderboardModal } from './CombinedLeaderboardModal'
+
+const decoImg = new URL('./images/1.jpg', import.meta.url).href
 
 const Hero: React.FC = () => {
   const { language, t } = useLanguage()
   const [isVisible, setIsVisible] = useState(false)
   const [animateCode, setAnimateCode] = useState(false)
   const [showBugFixed, setShowBugFixed] = useState(false)
+  const [showLeaderboard, setShowLeaderboard] = useState(false)
 
   useEffect(() => {
     setIsVisible(true)
@@ -19,16 +23,15 @@ const Hero: React.FC = () => {
   }, [])
 
   return (
-    <section className="min-h-screen flex items-center py-8 md:py-12 overflow-hidden relative">
-      {/* Decorative background elements */}
-      <div className="absolute inset-0 z-0">
-        <div className="absolute top-20 right-0 w-60 h-60 bg-yellow-400/5 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-4 left-6 w-60 h-60 bg-primary-400/5 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute top-1/3 left-1/4 w-72 h-72 bg-blue-400/5 rounded-full blur-3xl animate-pulse"></div>
-      </div>
-
-      {/* White/Dark translucent overlay */}
-      <div className="absolute inset-0 bg-white/20 dark:bg-gray-900/20 backdrop-blur-sm z-10"></div>
+    <section className="min-h-screen flex items-center py-8 md:py-12 bg-gradient-to-br from-slate-300 via-slate-50 to-slate-100 dark:from-gray-900 dark:via-gray-850 dark:to-gray-800 overflow-hidden relative">
+      {/* Background */}
+      <div
+        className="fixed inset-0 z-0 bg-cover bg-center opacity-40 dark:opacity-30 filter blur-sm"
+        style={{ backgroundImage: `url(${decoImg})` }}
+      />
+      <div className="absolute inset-0 pointer-events-none bg-white/30 dark:bg-black/30 z-10" />
+      <div className="absolute top-20 right-0 w-60 h-60 bg-yellow-400/5 rounded-full blur-3xl"></div>
+      <div className="absolute bottom-4 left-6 w-60 h-60 bg-primary-400/5 rounded-full blur-3xl"></div>
 
       {/* Main content */}
       <div className="container mx-auto px-4 flex flex-col md:flex-row items-center relative z-20">
@@ -70,9 +73,12 @@ const Hero: React.FC = () => {
                 <Play size={18} className="mr-2 group-hover:animate-pulse" />
                 <span>{t('hero.cta')}</span>
               </button>
-              <button className="px-8 py-4 border-2 border-gray-300 dark:border-gray-600 hover:border-primary-600 dark:hover:border-primary-400 text-gray-700 dark:text-gray-200 font-medium rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-300 group">
-                <span>{language === 'vi' ? 'Xem khóa học' : 'View courses'}</span>
-                <ArrowRight size={18} className="ml-2 inline-block group-hover:translate-x-1 transition-transform" />
+              <button
+                onClick={() => setShowLeaderboard(true)}
+                className="px-8 py-4 border-2 border-gray-300 dark:border-gray-600 hover:border-primary-600 dark:hover:border-primary-400 text-gray-700 dark:text-gray-200 font-medium rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-300 group flex items-center gap-2"
+              >
+                <Trophy size={18} className="group-hover:text-yellow-500 transition-colors" />
+                <span>{language === 'vi' ? 'Xếp hạng' : 'Leaderboard'}</span>
               </button>
             </div>
 
@@ -178,6 +184,12 @@ const Hero: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Leaderboard Modal */}
+      <CombinedLeaderboardModal
+        open={showLeaderboard}
+        onClose={() => setShowLeaderboard(false)}
+      />
     </section>
   )
 }

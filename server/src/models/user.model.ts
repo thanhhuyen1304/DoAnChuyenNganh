@@ -23,6 +23,21 @@ export interface IUser extends Document {
     github?: string;
     facebook?: string;
   };
+  // PvP specific fields
+  rating?: number; // Elo rating for PvP matchmaking
+  level?: number; // User level based on experience
+  role?: string; // User role (user, admin, moderator)
+  // PvP statistics
+  pvpStats?: {
+    wins: number;
+    losses: number;
+    draws: number;
+    totalMatches: number;
+    winRate: number;
+    currentStreak: number;
+    bestStreak: number;
+    averageCompletionTime: number;
+  };
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -102,6 +117,33 @@ const userSchema = new Schema<IUser>(
       google: String,
       github: String,
       facebook: String,
+    },
+    // PvP specific fields
+    rating: {
+      type: Number,
+      default: 1200, // Default Elo rating
+      min: 0,
+    },
+    level: {
+      type: Number,
+      default: 1,
+      min: 1,
+    },
+    role: {
+      type: String,
+      enum: ['user', 'admin', 'moderator'],
+      default: 'user',
+    },
+    // PvP statistics
+    pvpStats: {
+      wins: { type: Number, default: 0 },
+      losses: { type: Number, default: 0 },
+      draws: { type: Number, default: 0 },
+      totalMatches: { type: Number, default: 0 },
+      winRate: { type: Number, default: 0 },
+      currentStreak: { type: Number, default: 0 },
+      bestStreak: { type: Number, default: 0 },
+      averageCompletionTime: { type: Number, default: 0 },
     }
     ,
     resetCode: {

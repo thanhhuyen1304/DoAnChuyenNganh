@@ -3,7 +3,15 @@
  * Tích hợp Judge0 API để chạy code trong sandbox an toàn
  */
 
-import { ENV } from '../../config/environment';
+import { config } from 'dotenv';
+
+// Load environment variables
+config();
+
+const ENV = {
+  JUDGE0_API_URL: process.env.JUDGE0_API_URL,
+  JUDGE0_API_KEY: process.env.JUDGE0_API_KEY
+};
 import { spawn } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -29,6 +37,16 @@ interface Judge0Response {
   };
   time: string | null;
   memory: number | null;
+  testCases?: Array<{
+    input: string;
+    expectedOutput: string;
+    actualOutput: string;
+    passed: boolean;
+    executionTime: number;
+    memoryUsed: number;
+    errorMessage?: string;
+    status: string;
+  }>;
 }
 
 // Language ID mapping cho Judge0
@@ -58,13 +76,36 @@ class Judge0Service {
    * Submit code để chạy
    */
   async submitCode(
-    code: string,
-    language: string,
-    input: string = '',
-    expectedOutput?: string,
-    timeLimit?: number,
-    memoryLimit?: number
+    params: {
+      code: string;
+      language: string;
+      input?: string;
+      expectedOutput?: string;
+      timeLimit?: number;
+      memoryLimit?: number;
+      testCases?: Array<{ input: string; expectedOutput: string }>;
+    }
   ): Promise<Judge0Response> {
+    const { code, language, input = '', expectedOutput, timeLimit, memoryLimit, testCases } = params;
+    
+    // If testCases are provided, use runTestCases instead
+    if (testCases && testCases.length > 0) {
+      const testResults = await this.runTestCases(code, language, testCases, timeLimit, memoryLimit);
+      // Return a mock Judge0Response with testCases
+      return {
+        stdout: null,
+        stderr: null,
+        compile_output: null,
+        message: null,
+        status: {
+          id: 3, // Accepted
+          description: 'Accepted'
+        },
+        time: null,
+        memory: null,
+        testCases: testResults
+      };
+    }
     const languageId = LANGUAGE_IDS[language];
     
     if (!languageId) {
@@ -182,14 +223,14 @@ class Judge0Service {
       const testCase = testCases[i];
       
       try {
-        let result = await this.submitCode(
+        let result = await this.submitCode({
           code,
           language,
-          testCase.input,
-          testCase.expectedOutput,
+          input: testCase.input,
+          expectedOutput: testCase.expectedOutput,
           timeLimit,
           memoryLimit
-        );
+        });
 
         let status = this.mapStatus(result.status.id);
         

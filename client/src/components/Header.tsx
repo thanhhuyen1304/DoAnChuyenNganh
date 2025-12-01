@@ -10,16 +10,21 @@ import {
   ChevronDown,
   Bug,
   Search,
+  Bell,
   ClipboardList,
   Settings,
+  Swords,
+  Trophy,
 } from 'lucide-react'
 import { useLanguage } from './contexts/LanguageContext'
-import NotificationBox from './NotificationBox'
+import { CombinedLeaderboardModal } from './CombinedLeaderboardModal'
+
 interface HeaderProps {
   // Props không còn cần thiết cho toggle theme; giữ để tương thích nếu nơi khác có truyền
   darkMode?: boolean
   toggleDarkMode?: () => void
 }
+
 const Header: React.FC<HeaderProps> = () => {
   const { resolvedTheme, setTheme } = useTheme()
   const darkMode = resolvedTheme === 'dark'
@@ -27,7 +32,9 @@ const Header: React.FC<HeaderProps> = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [user, setUser] = useState<any | null>(null)
   const [isScrolled, setIsScrolled] = useState(false)
+  const [showLeaderboard, setShowLeaderboard] = useState(false)
   const { language, setLanguage, t } = useLanguage()
+
   useEffect(() => {
     const handleScroll = () => {
       if (window.scrollY > 10) {
@@ -41,9 +48,11 @@ const Header: React.FC<HeaderProps> = () => {
       window.removeEventListener('scroll', handleScroll)
     }
   }, [])
+
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen)
   }
+
   const logout = () => {
     // Clear auth and reload UI
     localStorage.removeItem('token')
@@ -73,14 +82,16 @@ const Header: React.FC<HeaderProps> = () => {
     window.addEventListener('storage', onStorage)
     return () => window.removeEventListener('storage', onStorage)
   }, [])
+
   const handleLanguageChange = (lang: "vi" | "en") => {
     setLanguage(lang)
   }
+
   return (
     <header
-      className={`sticky top-0 w-full z-[99999] transition-all duration-300 ${isScrolled ? 'bg-white/95 dark:bg-gray-900/95 backdrop-blur-lg shadow-md' : 'bg-white dark:bg-gray-900'}`}
+      className={`sticky top-0 w-full z-[10000] transition-all duration-300 ${isScrolled ? 'bg-white/95 dark:bg-gray-900/95 backdrop-blur-lg shadow-md' : 'bg-white dark:bg-gray-900'}`}
     >
-      <div className="container mx-auto px-4 py-4 flex justify-between items-center relative z-[100000]">
+      <div className="container mx-auto px-4 py-4 flex justify-between items-center relative z-[10001]">
         {/* Logo */}
         <div className="flex items-center">
           <div className="relative group">
@@ -96,45 +107,46 @@ const Header: React.FC<HeaderProps> = () => {
             </span>
           </div>
         </div>
+
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center space-x-8">
-          <a
-            href="/"
-            className="text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200 font-medium relative after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary-500 after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:duration-300"
-          >
-            {t('nav.home')}
-          </a>
-          <a
-            href="#"
+          <Link
+            to="/practice"
             className="text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200 font-medium relative after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary-500 after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:duration-300"
           >
             {t("nav.courses")}
-          </a>
-          <a
-            href="#"
+          </Link>
+          <Link
+            to="/practice"
             className="text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200 font-medium relative after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary-500 after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:duration-300"
           >
             {t("nav.challenges")}
-          </a>
-          <a
-            href="#"
+          </Link>
+          <Link
+            to="/pvp"
             className="text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200 font-medium relative after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary-500 after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:duration-300"
           >
+            <div className="flex items-center gap-2">
+              <Swords className="w-4 h-4" />
+              {t("nav.pvp")}
+            </div>
+          </Link>
+          <button
+            onClick={() => setShowLeaderboard(true)}
+            className="text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200 font-medium relative after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary-500 after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:duration-300 flex items-center gap-2"
+          >
+            <Trophy className="w-4 h-4" />
             {t("nav.leaderboard")}
-          </a>
-          <a
-            href="#"
-            className="text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200 font-medium relative after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary-500 after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:duration-300"
-          >
-            {t("nav.blog")}
-          </a>
+          </button>
         </nav>
+
         {/* Right side controls */}
         <div className="hidden md:flex items-center space-x-4">
           {/* Search button */}
           <button className="p-2 text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200">
             <Search size={20} />
           </button>
+
           {/* Language Switcher */}
           <div className="relative group">
             <button className="flex items-center text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-400 bg-gray-100 dark:bg-gray-800 px-3 py-1.5 rounded-full">
@@ -144,7 +156,7 @@ const Header: React.FC<HeaderProps> = () => {
                 className="ml-1 group-hover:rotate-180 transition-transform duration-300"
               />
             </button>
-            <div className="absolute right-0 mt-2 w-24 bg-white dark:bg-gray-800 rounded-xl shadow-lg py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform group-hover:translate-y-0 translate-y-2 z-[100001]">
+            <div className="absolute right-0 mt-2 w-24 bg-white dark:bg-gray-800 rounded-xl shadow-lg py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform group-hover:translate-y-0 translate-y-2 z-[10002]">
               <button
                 onClick={() => handleLanguageChange('vi')}
                 className={`flex items-center w-full text-left px-4 py-2 text-sm ${language === 'vi' ? 'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20' : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
@@ -161,6 +173,7 @@ const Header: React.FC<HeaderProps> = () => {
               </button>
             </div>
           </div>
+
           {/* Theme Toggle */}
           <button
             onClick={toggleDarkMode}
@@ -174,11 +187,18 @@ const Header: React.FC<HeaderProps> = () => {
               <Moon size={20} className="text-gray-700" />
             )}
           </button>
+
           {/* Auth */}
           {user ? (
             <div className="flex items-center space-x-3">
               {/* Notification bell */}
-              <NotificationBox />
+              <div className="relative">
+                <button className="p-2 text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200">
+                  <Bell size={20} />
+                  <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
+                </button>
+              </div>
+
               {/* User dropdown */}
               <div className="relative group">
                 <button className="flex items-center">
@@ -192,7 +212,7 @@ const Header: React.FC<HeaderProps> = () => {
                   </div>
                   <span className="ml-3 hidden md:inline-block text-sm font-medium text-gray-700 dark:text-white">{user?.username}</span>
                 </button>
-                <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-xl shadow-xl py-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform group-hover:translate-y-0 translate-y-2 z-[100001]">
+                <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-xl shadow-xl py-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform group-hover:translate-y-0 translate-y-2 z-[10002]">
                   <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
                     <p className="text-sm font-medium text-gray-900 dark:text-white">
                       {user?.username || user?.email || 'User'}
@@ -202,22 +222,14 @@ const Header: React.FC<HeaderProps> = () => {
                     </p>
                   </div>
                   <div className="py-3 border-b border-gray-100 dark:border-gray-700">
-                    {user?.role === 'admin' ? (
+                    {user?.role === 'admin' && (
                       <Link
-                        to="/admin/dashboard"
-                        className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                      >
-                        <ClipboardList size={16} className="mr-2 text-gray-500 dark:text-gray-300" />
-                        Quản lý
-                      </Link>
-                    ) : (
-                      <Link
-                        to="/clientdashboard"
-                        className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                      >
-                        <ClipboardList size={16} className="mr-2 text-gray-500 dark:text-gray-300" />
-                        Kho của tôi
-                      </Link>
+                            to="/admin/dashboard"
+                            className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                          >
+                            <ClipboardList size={16} className="mr-2 text-gray-500 dark:text-gray-300" />
+                            Kho bài tập
+                          </Link>
                     )}
                   </div>
                   <div className="py-3 border-b border-gray-100 dark:border-gray-700">
@@ -257,6 +269,7 @@ const Header: React.FC<HeaderProps> = () => {
             </div>
           )}
         </div>
+
         {/* Mobile Menu Button */}
         <div className="flex items-center space-x-3 md:hidden">
           <button className="p-2 text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200">
@@ -281,84 +294,97 @@ const Header: React.FC<HeaderProps> = () => {
           </button>
         </div>
       </div>
+
       {/* Mobile Menu */}
-  {isMenuOpen && (
-  <div className="md:hidden bg-white dark:bg-gray-900 px-4 py-4 shadow-lg border-t border-gray-100 dark:border-gray-800 animate-fadeIn z-[100000]">
+      {isMenuOpen && (
+        <div className="md:hidden bg-white dark:bg-gray-900 px-4 py-4 shadow-lg border-t border-gray-100 dark:border-gray-800 animate-fadeIn z-[10001]">
           <nav className="flex flex-col space-y-4 pb-6">
-            <a
-              href="#"
+            <Link
+              to="/practice"
               className="text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-400 font-medium py-2 border-b border-gray-100 dark:border-gray-800"
             >
               {t("nav.courses")}
-            </a>
-            <a
-              href="#"
+            </Link>
+            <Link
+              to="/practice"
               className="text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-400 font-medium py-2 border-b border-gray-100 dark:border-gray-800"
             >
               {t("nav.challenges")}
-            </a>
-            <a
-              href="#"
+            </Link>
+            <Link
+              to="/pvp"
               className="text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-400 font-medium py-2 border-b border-gray-100 dark:border-gray-800"
             >
+              <div className="flex items-center gap-2">
+                <Swords className="w-4 h-4" />
+                {t("nav.pvp")}
+              </div>
+            </Link>
+            <button
+              onClick={() => setShowLeaderboard(true)}
+              className="text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-400 font-medium py-2 border-b border-gray-100 dark:border-gray-800 flex items-center gap-2 w-full"
+            >
+              <Trophy className="w-4 h-4" />
               {t("nav.leaderboard")}
-            </a>
-            <a
-              href="#"
-              className="text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-400 font-medium py-2 border-b border-gray-100 dark:border-gray-800"
-            >
-              {t("nav.blog")}
-            </a>
-            <div className="flex items-center justify-between pt-4">
-              <div className="flex items-center space-x-4">
-                {/* Language Switcher */}
-                <div className="relative">
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => handleLanguageChange('vi')}
-                      className={`px-3 py-1.5 text-sm rounded-full flex items-center ${language === 'vi' ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 font-medium' : 'text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800'}`}
-                    >
-                      <span className="w-2 h-2 rounded-full mr-2 bg-blue-500"></span>
-                      VI
-                    </button>
-                    <button
-                      onClick={() => handleLanguageChange('en')}
-                      className={`px-3 py-1.5 text-sm rounded-full flex items-center ${language === 'en' ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 font-medium' : 'text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800'}`}
-                    >
-                      <span className="w-2 h-2 rounded-full mr-2 bg-red-500"></span>
-                      EN
-                    </button>
-                  </div>
+            </button>
+          </nav>
+          <div className="flex items-center justify-between pt-4">
+            <div className="flex items-center space-x-4">
+              {/* Language Switcher */}
+              <div className="relative">
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => handleLanguageChange('vi')}
+                    className={`px-3 py-1.5 text-sm rounded-full flex items-center ${language === 'vi' ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 font-medium' : 'text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800'}`}
+                  >
+                    <span className="w-2 h-2 rounded-full mr-2 bg-blue-500"></span>
+                    VI
+                  </button>
+                  <button
+                    onClick={() => handleLanguageChange('en')}
+                    className={`px-3 py-1.5 text-sm rounded-full flex items-center ${language === 'en' ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 font-medium' : 'text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800'}`}
+                  >
+                    <span className="w-2 h-2 rounded-full mr-2 bg-red-500"></span>
+                    EN
+                  </button>
                 </div>
               </div>
-              {/* Auth */}
-              {user ? (
-                <div className="flex items-center">
-                  <img
-                    src={user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.username || user?.email || 'User')}&background=7c3aed&color=fff`}
-                    alt="User avatar"
-                    className="w-9 h-9 rounded-full border-2 border-primary-400"
-                  />
-                  <User
-                    size={20}
-                    className="ml-2 text-gray-700 dark:text-gray-200"
-                  />
-                </div>
-              ) : (
-                  <div className="flex items-center space-x-2">
-                    <Link to="/login" className="px-4 py-2 text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200">
-                      {t("auth.login")}
-                    </Link>
-                    <Link to="/register" className="px-4 py-2 bg-gradient-to-r from-[#FF007A] via-[#C77DFF] to-[#A259FF] text-white rounded-full shadow-md">
-                      {t("auth.signup")}
-                    </Link>
-                  </div>
-              )}
             </div>
-          </nav>
+
+            {/* Auth */}
+            {user ? (
+              <div className="flex items-center">
+                <img
+                  src={user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.username || user?.email || 'User')}&background=7c3aed&color=fff`}
+                  alt="User avatar"
+                  className="w-9 h-9 rounded-full border-2 border-primary-400"
+                />
+                <User
+                  size={20}
+                  className="ml-2 text-gray-700 dark:text-gray-200"
+                />
+              </div>
+            ) : (
+              <div className="flex items-center space-x-2">
+                <Link to="/login" className="px-4 py-2 text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200">
+                  {t("auth.login")}
+                </Link>
+                <Link to="/register" className="px-4 py-2 bg-gradient-to-r from-[#FF007A] via-[#C77DFF] to-[#A259FF] text-white rounded-full shadow-md">
+                  {t("auth.signup")}
+                </Link>
+              </div>
+            )}
+          </div>
         </div>
       )}
+
+      {/* Leaderboard Modal */}
+      <CombinedLeaderboardModal
+        open={showLeaderboard}
+        onClose={() => setShowLeaderboard(false)}
+      />
     </header>
   )
 }
+
 export default Header
