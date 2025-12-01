@@ -33,14 +33,14 @@ router.get('/test/judge0', async (req, res) => {
 
     // Test simple submission
     try {
-      const result = await judge0Service.submitCode(
-        'print("Hello World")',
-        'Python',
-        '',
-        undefined,
-        2,
-        128
-      );
+      const result = await judge0Service.submitCode({
+        code: 'print("Hello World")',
+        language: 'Python',
+        input: '',
+        expectedOutput: undefined,
+        timeLimit: 2,
+        memoryLimit: 128
+      });
 
       return res.json({
         success: true,

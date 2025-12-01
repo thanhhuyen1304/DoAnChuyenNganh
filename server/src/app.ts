@@ -19,9 +19,10 @@ import scraperRoutes from './routes/scraper.routes';
 import userRoutes from './routes/user.routes';
 import submissionRoutes from './routes/submission.routes';
 import debugRoutes from './routes/debug.routes';
-import pvpRoutes from './routes/pvp.routes';
+import pvpRoutes from './routes/simplePvp.routes';
 import leaderboardRoutes from './routes/leaderboard.routes';
 import importExportRoutes from './routes/import-export.routes';
+import friendRoutes from './routes/friend.routes';
 
 // WebSocket Service
 import { WebSocketService } from './services/websocket.service';
@@ -48,15 +49,32 @@ const app = express();
 const server = createServer(app);
 const PORT = ENV.PORT;
 
+// Initialize WebSocket Service BEFORE middleware
+const wsService = new WebSocketService(server);
+
 // Middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-// Enable CORS for all origins in development
-app.use(cors());
+// Enable CORS for development
+app.use(cors({
+  origin: [
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:3000"
+  ],
+  credentials: true
+}));
 app.use(morgan('dev'));
 app.use(helmet());
 app.use(compression());
 app.use(passport.initialize());
+
+// Inject WebSocket service into requests
+app.use((req, res, next) => {
+  (req as any).wsService = wsService;
+  next();
+});
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -68,6 +86,7 @@ app.use('/api/debug', debugRoutes); // Debug routes - không cần auth
 app.use('/api/pvp', pvpRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/import-export', importExportRoutes);
+app.use('/api/friends', friendRoutes);
 
 // Error handling middleware
 app.use((err: ErrorWithStack, req: Request, res: Response, _next: NextFunction) => {
@@ -78,9 +97,6 @@ app.use((err: ErrorWithStack, req: Request, res: Response, _next: NextFunction) 
         stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
     });
 });
-
-// Initialize WebSocket Service
-const wsService = new WebSocketService(server);
 
 // Connect to MongoDB
 mongoose.connect(ENV.MONGODB_URI)

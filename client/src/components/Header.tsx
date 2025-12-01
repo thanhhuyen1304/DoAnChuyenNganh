@@ -14,8 +14,10 @@ import {
   ClipboardList,
   Settings,
   Swords,
+  Trophy,
 } from 'lucide-react'
 import { useLanguage } from './contexts/LanguageContext'
+import { CombinedLeaderboardModal } from './CombinedLeaderboardModal'
 
 interface HeaderProps {
   // Props không còn cần thiết cho toggle theme; giữ để tương thích nếu nơi khác có truyền
@@ -30,6 +32,7 @@ const Header: React.FC<HeaderProps> = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [user, setUser] = useState<any | null>(null)
   const [isScrolled, setIsScrolled] = useState(false)
+  const [showLeaderboard, setShowLeaderboard] = useState(false)
   const { language, setLanguage, t } = useLanguage()
 
   useEffect(() => {
@@ -128,12 +131,13 @@ const Header: React.FC<HeaderProps> = () => {
               {t("nav.pvp")}
             </div>
           </Link>
-          <Link
-            to="/practice"
-            className="text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200 font-medium relative after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary-500 after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:duration-300"
+          <button
+            onClick={() => setShowLeaderboard(true)}
+            className="text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200 font-medium relative after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary-500 after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:duration-300 flex items-center gap-2"
           >
+            <Trophy className="w-4 h-4" />
             {t("nav.leaderboard")}
-          </Link>
+          </button>
         </nav>
 
         {/* Right side controls */}
@@ -316,12 +320,13 @@ const Header: React.FC<HeaderProps> = () => {
                 {t("nav.pvp")}
               </div>
             </Link>
-            <Link
-              to="/practice"
-              className="text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-400 font-medium py-2 border-b border-gray-100 dark:border-gray-800"
+            <button
+              onClick={() => setShowLeaderboard(true)}
+              className="text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-400 font-medium py-2 border-b border-gray-100 dark:border-gray-800 flex items-center gap-2 w-full"
             >
+              <Trophy className="w-4 h-4" />
               {t("nav.leaderboard")}
-            </Link>
+            </button>
           </nav>
           <div className="flex items-center justify-between pt-4">
             <div className="flex items-center space-x-4">
@@ -372,6 +377,12 @@ const Header: React.FC<HeaderProps> = () => {
           </div>
         </div>
       )}
+
+      {/* Leaderboard Modal */}
+      <CombinedLeaderboardModal
+        open={showLeaderboard}
+        onClose={() => setShowLeaderboard(false)}
+      />
     </header>
   )
 }

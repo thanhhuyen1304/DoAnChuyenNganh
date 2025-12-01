@@ -110,7 +110,12 @@ export class WebSocketService {
     
     this.io = new SocketIOServer(server, {
       cors: {
-        origin: process.env.CLIENT_URL || "http://localhost:5173",
+        origin: [
+          "http://localhost:5173",
+          "http://localhost:3000",
+          "http://127.0.0.1:5173",
+          "http://127.0.0.1:3000"
+        ],
         methods: ["GET", "POST"],
         credentials: true
       },
@@ -221,7 +226,11 @@ export class WebSocketService {
           message: 'New session detected',
           timestamp: new Date().toISOString()
         });
-        (this.io as any).to(existingUser.socketId).disconnect();
+        // Get the socket of the previous session and disconnect it
+        const previousSocket = this.io.sockets.sockets.get(existingUser.socketId);
+        if (previousSocket) {
+          previousSocket.disconnect(true);
+        }
       }
 
       // Add user to online users
@@ -424,25 +433,24 @@ export class WebSocketService {
   }
 
   private handleCreateRoom(socket: AuthenticatedSocket, onlineUser: OnlineUser, roomData: any): void {
-    const room: Room = {
-      id: `room_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    const room: any = {
       name: roomData.name?.trim() || `${onlineUser.username}'s Room`,
       hostId: onlineUser.id,
-      hostName: onlineUser.username,
-      hostEmail: onlineUser.email,
-      players: [onlineUser],
-      maxPlayers: Math.min(Math.max(roomData.maxPlayers || 2, 2), 8), // Validate max players
-      mode: roomData.mode || '1vs1',
-      difficulty: roomData.difficulty || 'medium',
-      isPrivate: Boolean(roomData.isPrivate),
-      password: roomData.password,
+      hostUsername: onlineUser.username,
+      roomCode: this.generateRoomCode(),
+      participants: [{
+        userId: onlineUser.id,
+        username: onlineUser.username,
+        joinedAt: new Date(),
+        isReady: false
+      }],
+      settings: {
+        timeLimit: Math.max(5, Math.min(60, parseInt(roomData.timeLimit) || 15)),
+        difficulty: roomData.difficulty || 'Medium',
+        maxParticipants: Math.max(2, Math.min(8, parseInt(roomData.maxParticipants || 2)))
+      },
       status: 'waiting',
-      createdAt: new Date().toISOString(),
-      allowSpectators: Boolean(roomData.allowSpectators),
-      autoStart: Boolean(roomData.autoStart),
-      ratingRange: roomData.ratingRange || [1000, 3000],
-      timeLimit: roomData.timeLimit || 30,
-      problemCount: roomData.problemCount || 3
+      createdAt: new Date()
     };
 
     // Validate room data
@@ -462,6 +470,12 @@ export class WebSocketService {
     (socket as any).emit('room_joined', {
       room: this.sanitizeRoom(room),
       isHost: true,
+      timestamp: new Date().toISOString()
+    });
+    
+    // Broadcast to all clients that a new room was created
+    (this.io as any).emit('room_created', {
+      room: this.sanitizeRoom(room),
       timestamp: new Date().toISOString()
     });
   }
@@ -516,6 +530,12 @@ export class WebSocketService {
       isHost: false,
       timestamp: new Date().toISOString()
     });
+    
+    // Also broadcast room update to all clients
+    (this.io as any).emit('room_updated', {
+      room: this.sanitizeRoom(room),
+      timestamp: new Date().toISOString()
+    });
   }
 
   private handleLeaveRoom(socket: AuthenticatedSocket, onlineUser: OnlineUser, roomId: string): void {
@@ -550,6 +570,12 @@ export class WebSocketService {
 
     (socket as any).emit('room_left', {
       roomId,
+      timestamp: new Date().toISOString()
+    });
+    
+    // Also broadcast room update to all clients
+    (this.io as any).emit('room_updated', {
+      room: this.sanitizeRoom(room),
       timestamp: new Date().toISOString()
     });
   }
@@ -968,25 +994,27 @@ export class WebSocketService {
     };
   }
 
-  private sanitizeRoom(room: Room): any {
+  private sanitizeRoom(room: any): any {
     return {
-      id: room.id,
+      id: room._id || room.id,
       name: room.name,
-      hostId: room.hostId,
-      hostName: room.hostName,
-      hostEmail: room.hostEmail,
-      players: room.players.map(p => this.sanitizeUser(p)),
-      maxPlayers: room.maxPlayers,
-      mode: room.mode,
-      difficulty: room.difficulty,
-      isPrivate: room.isPrivate,
-      status: room.status,
-      createdAt: room.createdAt,
-      allowSpectators: room.allowSpectators,
-      autoStart: room.autoStart,
-      ratingRange: room.ratingRange,
-      timeLimit: room.timeLimit,
-      problemCount: room.problemCount
+      hostId: room.hostId?.toString() || room.hostId,
+      hostUsername: room.hostUsername,
+      participants: (room.participants || []).map((p: any) => ({
+        userId: p.userId?.toString() || p.userId,
+        username: p.username,
+        joinedAt: p.joinedAt,
+        isReady: p.isReady || false
+      })),
+      settings: room.settings || {
+        timeLimit: 15,
+        difficulty: 'Medium',
+        maxParticipants: 2
+      },
+      status: room.status || 'waiting',
+      roomCode: room.roomCode,
+      createdAt: room.createdAt || new Date(),
+      updatedAt: room.updatedAt || new Date()
     };
   }
 
@@ -1060,6 +1088,15 @@ export class WebSocketService {
     return this.onlineUsers.size;
   }
 
+  private generateRoomCode(): string {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let roomCode = '';
+    for (let i = 0; i < 6; i++) {
+      roomCode += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return roomCode;
+  }
+
   public getActiveRoomsCount(): number {
     return this.rooms.size;
   }
@@ -1119,13 +1156,46 @@ export class WebSocketService {
     });
   }
 
-  public getOnlineUsers(): any[] {
+  public getOnlineUsers(): string[] {
+    return Array.from(this.onlineUsers.keys());
+  }
+
+  public getOnlineUsersDetails(): any[] {
     return Array.from(this.onlineUsers.values()).map(user => this.sanitizeUser(user));
   }
 
+  public broadcastToUser(userId: string, event: string, data: any): void {
+    this.io.to(`user_${userId}`).emit(event, {
+      ...data,
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  public isConnected(): boolean {
+    return this.io !== null && this.io !== undefined;
+  }
+
   public broadcastRoomUpdate(room: any): void {
+    console.log('📢 Broadcasting room update for room:', room.name || room._id);
     this.io.emit('room_updated', {
       room: this.sanitizeRoom(room),
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  public broadcastToAll(event: string, data: any): void {
+    this.io.emit(event, {
+      ...data,
+      timestamp: new Date().toISOString()
+    });
+  }
+  
+  // Broadcast room timer sync
+  public broadcastRoomTimerSync(roomId: string, startTime: number): void {
+    this.io.emit('room_timer_sync', {
+      roomId,
+      startTime,
+      currentTime: Date.now(),
       timestamp: new Date().toISOString()
     });
   }
