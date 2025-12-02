@@ -3,6 +3,7 @@ import mongoose from 'mongoose'
 import Submission from '../models/submission.model'
 import Challenge from '../models/challenge.model'
 import User from '../models/user.model'
+import bcrypt from 'bcryptjs'
 
 // GET /api/users/me/progress
 export const getMyProgress = async (req: Request, res: Response) => {
@@ -93,7 +94,7 @@ export const getProgressByUsername = async (req: Request, res: Response) => {
     ])
 
     const totalUsersWithCompletions = perUser.length
-    const currentUserEntry = perUser.find((p: any) => p._id.toString() === userId)
+    const currentUserEntry = perUser.find((p: any) => p._1.d && p._id.toString() === userId)
     const currentCompleted = currentUserEntry ? currentUserEntry.completedCount : 0
     const higherCount = perUser.filter((p: any) => p.completedCount > currentCompleted).length
     const rankingPercent = totalUsersWithCompletions === 0 ? 100 : Math.max(1, Math.round(((totalUsersWithCompletions - higherCount) / Math.max(1, totalUsersWithCompletions)) * 100))
@@ -200,21 +201,61 @@ export const updateMe = async (req: Request, res: Response) => {
     if (!userId) return res.status(401).json({ success: false, message: 'Chưa xác thực' })
 
     const allowed: any = {}
-    const { username, avatar, favoriteLanguages } = req.body || {}
-    if (typeof username === 'string' && username.trim().length >= 3) allowed.username = username.trim()
+    const { avatar, email, phone, password } = req.body || {}
     if (typeof avatar === 'string') allowed.avatar = avatar.trim()
-    if (Array.isArray(favoriteLanguages)) allowed.favoriteLanguages = favoriteLanguages
+    if (typeof email === 'string' && email.trim().length > 3) allowed.email = email.trim()
+    if (typeof phone === 'string' && phone.trim().length > 0) allowed.phone = phone.trim()
 
-    if (Object.keys(allowed).length === 0) {
+    // Password handled separately (hashed)
+
+    if (Object.keys(allowed).length === 0 && typeof password !== 'string') {
       return res.status(400).json({ success: false, message: 'Không có trường nào để cập nhật' })
     }
 
-    if (allowed.username) {
-      const exists = await User.findOne({ username: allowed.username, _id: { $ne: req.user?.id } })
-      if (exists) return res.status(400).json({ success: false, message: 'Tên người dùng đã được sử dụng' })
+    // Validate email uniqueness
+    if (allowed.email) {
+      const existsEmail = await User.findOne({ email: allowed.email, _id: { $ne: req.user?.id } })
+      if (existsEmail) return res.status(400).json({ success: false, message: 'Email đã được sử dụng' })
     }
 
-    const updated = await User.findByIdAndUpdate(userId, { $set: allowed }, { new: true })
+    // Validate phone uniqueness
+    if (allowed.phone) {
+      const existsPhone = await User.findOne({ phone: allowed.phone, _id: { $ne: req.user?.id } })
+      if (existsPhone) return res.status(400).json({ success: false, message: 'Số điện thoại đã được sử dụng' })
+    }
+
+    // Prepare update object
+    const updateObj: any = { ...allowed }
+
+    // Handle password change
+    if (typeof password === 'string' && password.length > 0) {
+      const { oldPassword } = req.body
+      if (!oldPassword) {
+        return res.status(400).json({ success: false, message: 'Vui lòng nhập mật khẩu cũ' })
+      }
+
+      // Get user with password (need to explicitly select password field)
+      const user = await User.findById(userId).select('+password')
+      if (!user) {
+        return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng' })
+      }
+
+      // Verify old password
+      const isMatch = await user.comparePassword(oldPassword)
+      if (!isMatch) {
+        return res.status(400).json({ success: false, message: 'Mật khẩu cũ không chính xác' })
+      }
+
+      // Validate and hash new password
+      if (password.length < 6) {
+        return res.status(400).json({ success: false, message: 'Mật khẩu mới phải có ít nhất 6 ký tự' })
+      }
+      const salt = await bcrypt.genSalt(10)
+      const hashed = await bcrypt.hash(password, salt)
+      updateObj.password = hashed
+    }
+
+    const updated = await User.findByIdAndUpdate(userId, { $set: updateObj }, { new: true })
     if (!updated) return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng' })
 
     return res.json({
@@ -222,9 +263,9 @@ export const updateMe = async (req: Request, res: Response) => {
       data: {
         id: (updated._id as any).toString(),
         email: updated.email,
-        username: updated.username,
+        username: updated.username, // Include username in response but don't allow updates
         avatar: updated.avatar,
-        favoriteLanguages: updated.favoriteLanguages,
+        phone: updated.phone,
       }
     })
   } catch (err) {

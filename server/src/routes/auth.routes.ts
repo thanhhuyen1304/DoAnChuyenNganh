@@ -3,6 +3,7 @@ import { AuthController } from '../controllers/auth.controller';
 import { body, validationResult } from 'express-validator';
 import { authenticate } from '../middleware/auth';
 import passport from 'passport';
+import { otpRequestRateLimitIP, otpRequestRateLimitIdentifier, otpVerifyRateLimitIP, otpVerifyRateLimitIdentifier } from '../middleware/rateLimit';
 
 const router = Router();
 const authController = new AuthController();
@@ -38,6 +39,33 @@ const loginValidation = [
 // Auth routes
 router.post('/register', registerValidation, authController.register);
 router.post('/login', loginValidation, authController.login);
+// Password reset: request code (chỉ dùng email)
+
+// Chấp nhận emailOrPhone (email hoặc số điện thoại)
+router.post('/request-reset', [
+    body('emailOrPhone').not().isEmpty().withMessage('Email hoặc số điện thoại là bắt buộc')
+], (req: Request, res: Response, next: NextFunction) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        res.status(400).json({ success: false, message: 'Dữ liệu không hợp lệ', errors: errors.array() });
+        return;
+    }
+    next();
+}, otpRequestRateLimitIP, otpRequestRateLimitIdentifier, authController.requestPasswordReset);
+
+// Password reset: verify code and set new password (chỉ dùng email)
+router.post('/verify-reset', [
+    body('emailOrPhone').not().isEmpty().withMessage('Email hoặc số điện thoại là bắt buộc'),
+    body('code').not().isEmpty().withMessage('Mã xác thực là bắt buộc'),
+    body('newPassword').isLength({ min: 6 }).withMessage('Mật khẩu mới phải có ít nhất 6 ký tự')
+], (req: Request, res: Response, next: NextFunction) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        res.status(400).json({ success: false, message: 'Dữ liệu không hợp lệ', errors: errors.array() });
+        return;
+    }
+    next();
+}, otpVerifyRateLimitIP, otpVerifyRateLimitIdentifier, authController.verifyPasswordReset);
 router.get('/me', authenticate, authController.getCurrentUser);
 
 // Change password validation
@@ -70,7 +98,11 @@ router.get('/google',
 );
 
 router.get('/google/callback',
-    passport.authenticate('google', { session: false }),
+    (req: Request, res: Response, next: NextFunction) => {
+        console.log('[OAuth] Google callback received');
+        next();
+    },
+    passport.authenticate('google', { session: false, failureRedirect: `${process.env.CLIENT_URL || 'http://localhost:5173'}/auth/error?message=Google authentication failed` }),
     authController.googleCallback
 );
 
@@ -91,7 +123,11 @@ if (process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET) {
     );
 
     router.get('/facebook/callback',
-        passport.authenticate('facebook', { session: false }),
+        (req: Request, res: Response, next: NextFunction) => {
+            console.log('[OAuth] Facebook callback received');
+            next();
+        },
+        passport.authenticate('facebook', { session: false, failureRedirect: `${process.env.CLIENT_URL || 'http://localhost:5173'}/auth/error?message=Facebook authentication failed` }),
         authController.facebookCallback
     );
 } else {

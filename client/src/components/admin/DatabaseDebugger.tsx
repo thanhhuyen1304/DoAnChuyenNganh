@@ -5,7 +5,8 @@ import { Alert, AlertDescription } from '../ui/alert';
 import { Badge } from '../ui/badge';
 import { Database, RefreshCw, Eye, Trash2 } from 'lucide-react';
 
-const API_BASE_URL = 'http://localhost:5000/api';
+import { getApiBase } from '../../lib/apiBase'
+const API_BASE_URL = getApiBase();
 
 interface Challenge {
   _id: string;

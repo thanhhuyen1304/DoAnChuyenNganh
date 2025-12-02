@@ -10,7 +10,8 @@ import { useTheme } from 'next-themes';
 
 const decoImg = new URL('../images/1.jpg', import.meta.url).href;
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+import { getApiBase } from '../../lib/apiBase';
+const API_BASE_URL = getApiBase();
 
 const Register = () => {
     const [formData, setFormData] = useState({

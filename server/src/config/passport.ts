@@ -46,6 +46,13 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && process.
             },
             async (_accessToken: string, _refreshToken: string, profile: GoogleProfile, done: any) => {
                 try {
+                    console.log('Google OAuth callback - Profile:', {
+                        id: profile.id,
+                        displayName: profile.displayName,
+                        hasEmails: !!profile.emails,
+                        hasPhotos: !!profile.photos
+                    });
+                    
                     let user = await User.findOne({ 'oauth.google': profile.id });
 
                     if (!user && profile.emails && profile.photos) {
@@ -60,6 +67,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && process.
                                 existingUser.avatar = profile.photos[0].value;
                             }
                             await existingUser.save();
+                            console.log('Google OAuth - User found/updated:', existingUser.email);
                             return done(null, existingUser);
                         } else {
                             // Create new user
@@ -71,11 +79,15 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && process.
                                 password: Math.random().toString(36).slice(-8),
                                 loginMethod: 'google'
                             });
+                            console.log('Google OAuth - User created:', user.email);
                         }
+                    } else if (user) {
+                        console.log('Google OAuth - User found:', user.email);
                     }
 
                     return done(null, user);
                 } catch (error) {
+                    console.error('Google OAuth Strategy Error:', error);
                     return done(error as Error, undefined);
                 }
             }
@@ -158,6 +170,12 @@ if (process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET && process.en
     const SERVER_URL = process.env.SERVER_URL || 'http://localhost:5000';
     const FACEBOOK_CALLBACK_URL = process.env.FACEBOOK_CALLBACK_URL || `${SERVER_URL}/api/auth/facebook/callback`;
     
+    console.log('✅ Facebook OAuth Strategy initialized');
+    console.log('Facebook Config:', {
+        appID: process.env.FACEBOOK_APP_ID?.substring(0, 10) + '...',
+        callbackURL: FACEBOOK_CALLBACK_URL
+    });
+    
     passport.use(
         new FacebookStrategy(
             {
@@ -168,6 +186,13 @@ if (process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET && process.en
             },
             async (_accessToken: string, _refreshToken: string, profile: FacebookProfile, done: any) => {
                 try {
+                    console.log('Facebook OAuth callback - Profile:', {
+                        id: profile.id,
+                        displayName: profile.displayName,
+                        hasEmails: !!profile.emails,
+                        hasPhotos: !!profile.photos
+                    });
+                    
                     // Facebook thường không trả email nếu app chưa live hoặc user ẩn email
                     const email = (profile.emails && profile.emails[0] && profile.emails[0].value)
                         ? profile.emails[0].value
@@ -194,6 +219,7 @@ if (process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET && process.en
                             user.avatar = avatarUrl;
                         }
                         await user.save();
+                        console.log('Facebook OAuth - User found/updated:', user.email);
                         return done(null, user);
                     }
 
@@ -207,8 +233,10 @@ if (process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET && process.en
                         loginMethod: 'facebook'
                     });
 
+                    console.log('Facebook OAuth - User created:', created.email);
                     return done(null, created);
                 } catch (error) {
+                    console.error('Facebook OAuth Strategy Error:', error);
                     return done(error as Error, undefined);
                 }
             }

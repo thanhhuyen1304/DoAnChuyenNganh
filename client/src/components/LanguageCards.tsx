@@ -2,7 +2,11 @@ import React, { useState } from 'react'
 import { useLanguage } from './contexts/LanguageContext'
 import { ArrowRight, Star } from 'lucide-react'
 
-const LanguageCards: React.FC = () => {
+type LanguageCardsProps = {
+  onSelectLanguage?: (language: string) => void
+}
+
+const LanguageCards: React.FC<LanguageCardsProps> = ({ onSelectLanguage }) => {
   const { language } = useLanguage()
   const [hoveredCard, setHoveredCard] = useState<number | null>(null)
 
@@ -72,15 +76,15 @@ const LanguageCards: React.FC = () => {
   ]
 
   return (
-    <section className="py-20 relative overflow-hidden">
+    <section className="py-20 relative overflow-hidden bg-gradient-to-b from-white/40 to-transparent dark:from-gray-800/40 dark:to-transparent backdrop-blur-sm">
       {/* Background elements (match TopLearners) */}
-      <div className="absolute top-0 left-1/3 w-1/3 h-64 to-transparent blur-3xl z-[-20]"></div>
-      <div className="absolute bottom-0 right-1/4 w-1/4 h-64 to-transparent blur-3xl z-[-20]"></div>
+      <div className="absolute top-0 left-1/3 w-1/3 h-64 bg-gradient-to-r from-purple-500/20 to-pink-500/20 blur-3xl z-[-20]"></div>
+      <div className="absolute bottom-0 right-1/4 w-1/4 h-64 bg-gradient-to-r from-blue-500/20 to-purple-500/20 blur-3xl z-[-20]"></div>
 
       {/* Main content (nổi bật hơn mọi layer) */}
       <div className="container mx-auto px-4 relative z-[9999]">
         {/* wrap with leaderboard-style background */}
-        <div className="dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden border border-gray-100 dark:border-gray-700 p-8">
+        <div className="relative bg-white/20 dark:bg-gray-800/80 backdrop-blur-md rounded-2xl shadow-xl overflow-hidden border border-gray-100 dark:border-gray-700 p-8">
           {/* Header */}
           <div className="text-center mb-16 relative z-[9999]">
           {/* 🔹 Badge */}
@@ -110,7 +114,10 @@ const LanguageCards: React.FC = () => {
           {languages.map((lang, index) => (
             <div
               key={index}
-              className={`relative ${lang.color} border ${lang.borderColor} rounded-2xl p-6 flex flex-col backdrop-blur-md group overflow-hidden transition-all duration-500 hover:scale-[1.05] hover:shadow-[0_0_35px_rgba(162,89,255,0.3)]`}
+              role="button"
+              tabIndex={0}
+              aria-label={`Language ${lang.name}`}
+              className={`relative ${lang.color} border ${lang.borderColor} rounded-2xl p-6 flex flex-col backdrop-blur-md group overflow-hidden transition-all duration-500 hover:scale-[1.05] hover:shadow-[0_0_35px_rgba(162,89,255,0.3)] cursor-default`}
               onMouseEnter={() => setHoveredCard(index)}
               onMouseLeave={() => setHoveredCard(null)}
             >
@@ -177,20 +184,31 @@ const LanguageCards: React.FC = () => {
                   >
                     {lang.difficulty}
                   </span>
-                  <button
-                    className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      hoveredCard === index
-                        ? 'bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400'
-                        : 'bg-white/70 dark:bg-gray-700/70 text-gray-500 dark:text-gray-400'
-                    } transition-all duration-300`}
-                  >
-                    <ArrowRight
-                      size={16}
-                      className={`transform ${
-                        hoveredCard === index ? 'translate-x-0.5' : ''
-                      } transition-transform duration-300`}
-                    />
-                  </button>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      aria-label={language === 'vi' ? `Xem bài tập ${lang.name}` : `View ${lang.name} exercises`}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        if (onSelectLanguage) {
+                          onSelectLanguage(lang.name)
+                        } else {
+                          const target = `/challenges?lang=${encodeURIComponent(lang.name)}`
+                          window.location.href = target
+                        }
+                      }}
+                      className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                        hoveredCard === index
+                          ? 'bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400'
+                          : 'bg-white/70 dark:bg-gray-700/70 text-gray-500 dark:text-gray-400'
+                      } transition-all duration-300`}
+                    >
+                      <ArrowRight
+                        size={16}
+                        className={`transform ${hoveredCard === index ? 'translate-x-0.5' : ''} transition-transform duration-300`}
+                      />
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -198,7 +216,7 @@ const LanguageCards: React.FC = () => {
         </div>
 
           {/* CTA */}
-          <div className="mt-16 text-center relative z-50">
+          {/* <div className="mt-16 text-center relative z-50">
           <a
             href="#"
             className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-[#FF007A] to-[#A259FF] text-white font-semibold rounded-xl shadow-lg hover:shadow-[0_0_25px_rgba(162,89,255,0.5)] transition-all duration-300 group"
@@ -209,7 +227,7 @@ const LanguageCards: React.FC = () => {
               className="ml-2 group-hover:translate-x-1 transition-transform duration-300"
             />
           </a>
-        </div>
+        </div> */}
         </div>
       </div>
     </section>

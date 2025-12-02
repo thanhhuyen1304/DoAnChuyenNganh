@@ -8,13 +8,14 @@ import { useLanguage } from '../contexts/LanguageContext';
 // Import các icon cần thiết, tương tự Register
 import { Bug, Lock, Mail, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import { useTheme } from 'next-themes';
+import { getApiBase } from '../../lib/apiBase';
 // import { Github } from 'lucide-react';
 
 // Sử dụng cùng ảnh nền như Register
 const decoImg = new URL('../images/1.jpg', import.meta.url).href;
 
 // API Base URL
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = getApiBase();
 
 const Login = () => {
     const [identifier, setIdentifier] = useState('');
@@ -46,11 +47,14 @@ const Login = () => {
             if (data.success) {
                 localStorage.setItem('token', data.data.token);
                 localStorage.setItem('user', JSON.stringify(data.data.user));
-                if (data.data.user.role === 'admin') {
-                    // keep admin landing page
-                    window.location.href = '/admin/dashboard';
+                
+                // Check role and redirect accordingly
+                const userRole = data.data.user.role;
+                if (userRole === 'admin') {
+                    // Redirect admin to admin dashboard
+                    window.location.href = '/';
                 } else {
-                    // after login, redirect regular users to the homepage
+                    // Redirect regular users to homepage
                     window.location.href = '/';
                 }
             }
@@ -165,6 +169,12 @@ const Login = () => {
                                 >
                                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                                 </button>
+                            </div>
+                            {/* Link Quên mật khẩu */}
+                            <div className="pt-2 text-right">
+                                <a href="/forgot-password" className="text-xs text-pink-600 hover:underline font-bold">
+                                    Quên mật khẩu?
+                                </a>
                             </div>
                              {/* Không cần hiển thị lỗi password riêng ở đây nếu chỉ có lỗi chung */}
                         </div>

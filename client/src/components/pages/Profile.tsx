@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react'
 import { Award, Star, Clock, Code, Edit2, Save, X, Trophy, Zap, Target } from 'lucide-react'
+import Header from '../Header'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+import { getApiBase } from '../../lib/apiBase'
+const API_BASE_URL = getApiBase()
 
 interface ProgressData {
   completed: number
@@ -25,7 +27,13 @@ const Profile: React.FC = () => {
   const [error, setError] = useState<string>('')
   const [saving, setSaving] = useState<boolean>(false)
   const [isEditing, setIsEditing] = useState<boolean>(false)
-  const [form, setForm] = useState<{ username: string; avatar: string; favoriteLanguages: string[] }>({ username: '', avatar: '', favoriteLanguages: [] })
+  const [form, setForm] = useState<{ avatar: string, favoriteLanguages: string[] }>({ avatar: '', favoriteLanguages: [] })
+  const [email, setEmail] = useState<string>('')
+  const [oldPassword, setOldPassword] = useState<string>('')
+  const [newPassword, setNewPassword] = useState<string>('')
+  const [confirmPassword, setConfirmPassword] = useState<string>('')
+  const [avatarFileName, setAvatarFileName] = useState<string>('')
+  const [phone, setPhone] = useState<string>('')
 
   useEffect(() => {
     const raw = localStorage.getItem('user')
@@ -33,11 +41,47 @@ const Profile: React.FC = () => {
       try {
         const u = JSON.parse(raw)
         setUser(u)
-        setForm({ username: u?.username || '', avatar: u?.avatar || '', favoriteLanguages: u?.favoriteLanguages || [] })
+        setForm({ avatar: u?.avatar || '', favoriteLanguages: u?.favoriteLanguages || [] })
+        setEmail(u?.email || '')
+        setPhone(u?.phone || '')
       } catch {
         setUser(null)
       }
     }
+  }, [])
+
+  // Refresh current user from server to pick up ban status changes
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      try {
+        const token = localStorage.getItem('token')
+        if (!token) return
+
+        const res = await fetch(`${API_BASE_URL}/auth/me`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+
+        if (res.status === 403) {
+          // Banned or forbidden
+          const json = await res.json().catch(() => null)
+          setError(json?.message || 'Tài khoản bị khóa')
+          // Clear local token to prevent further API calls if desired
+          // localStorage.removeItem('token')
+          return
+        }
+
+        if (!res.ok) return
+        const json = await res.json()
+        if (json?.success && json.data?.user) {
+          setUser(json.data.user)
+          // update local storage so UI across app sees the change
+          localStorage.setItem('user', JSON.stringify(json.data.user))
+        }
+      } catch (e) {
+        console.error('Error fetching current user', e)
+      }
+    }
+    fetchCurrentUser()
   }, [])
 
   useEffect(() => {
@@ -109,24 +153,73 @@ const Profile: React.FC = () => {
   const handleSave = async () => {
     setSaving(true)
     setError('')
+    // validate passwords
+    if (newPassword || oldPassword || confirmPassword) {
+      if (!oldPassword) {
+        setError('Vui lòng nhập mật khẩu hiện tại')
+        setSaving(false)
+        return
+      }
+      if (!newPassword) {
+        setError('Vui lòng nhập mật khẩu mới')
+        setSaving(false)
+        return
+      }
+      if (newPassword !== confirmPassword) {
+        setError('Mật khẩu mới không khớp')
+        setSaving(false)
+        return
+      }
+    }
     try {
       const token = localStorage.getItem('token')
+      const payload: any = { avatar: form.avatar }
+      if (email) payload.email = email
+      if (phone) payload.phone = phone
+      if (form.favoriteLanguages) payload.favoriteLanguages = form.favoriteLanguages
+      if (newPassword && oldPassword) {
+        payload.oldPassword = oldPassword
+        payload.newPassword = newPassword
+      }
+
       const res = await fetch(`${API_BASE_URL}/users/me`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ username: form.username, avatar: form.avatar, favoriteLanguages: form.favoriteLanguages })
+        body: JSON.stringify(payload)
       })
       const json = await res.json()
       if (json?.success) {
-        const updated = { ...user, ...json.data }
+        // Tạo object updated với dữ liệu mới từ server
+        const updated = {
+          ...user,
+          ...json.data,
+          favoriteLanguages: form.favoriteLanguages // Đảm bảo favoriteLanguages được cập nhật từ form
+        }
+        
+        // Cập nhật state và localStorage
         setUser(updated)
+        setForm({ 
+          avatar: updated.avatar || '', 
+          favoriteLanguages: form.favoriteLanguages 
+        })
+        setEmail(updated.email || '')
+        setPhone(updated.phone || '')
+        
+        // Lưu vào localStorage và trigger event cho multi-tab sync
         localStorage.setItem('user', JSON.stringify(updated))
-        setIsEditing(false)
-        // Trigger storage event for multi-tab sync
         window.dispatchEvent(new StorageEvent('storage', { key: 'user', newValue: JSON.stringify(updated) }))
+        
+        // Reset form editing state
+        setIsEditing(false)
+        
+        // Clear sensitive fields
+        setOldPassword('')
+        setNewPassword('')
+        setConfirmPassword('')
+        setAvatarFileName('')
       } else {
         setError(json?.message || 'Cập nhật thất bại')
       }
@@ -138,9 +231,15 @@ const Profile: React.FC = () => {
   }
 
   const handleCancel = () => {
-    setForm({ username: user?.username || '', avatar: user?.avatar || '', favoriteLanguages: user?.favoriteLanguages || [] })
+    setForm({ avatar: user?.avatar || '', favoriteLanguages: user?.favoriteLanguages || [] })
     setIsEditing(false)
     setError('')
+    setEmail(user?.email || '')
+    setPhone(user?.phone || '')
+    setOldPassword('')
+    setNewPassword('')
+    setConfirmPassword('')
+    setAvatarFileName('')
   }
 
   const completionPercent = progress ? Math.min(100, Math.round(((progress.completed || 0) / Math.max(1, progress.total || 0)) * 100)) : 0
@@ -148,8 +247,26 @@ const Profile: React.FC = () => {
   const rankInfo = getRankInfo(user?.rank || 'Newbie')
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-gray-900 dark:via-gray-850 dark:to-gray-800 py-8 px-4">
-      <div className="max-w-6xl mx-auto">
+    <>
+      <Header />
+      <div className="min-h-screen flex items-center py-8 md:py-12 overflow-visible relative bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm">
+        {user?.isBanned && (
+          <div className="w-full max-w-4xl mx-auto p-4 mb-4 rounded border border-red-200 bg-red-50 dark:bg-red-900/30 dark:border-red-700 text-red-800 dark:text-red-200">
+            <div className="font-semibold">
+              Tài khoản của bạn đã bị khóa
+            </div>
+            {user.banReason && (
+              <div className="text-sm mt-1">Lý do: {user.banReason}</div>
+            )}
+            <div className="text-sm mt-1">{user.bannedUntil ? `Khóa đến: ${new Date(user.bannedUntil).toLocaleString()}` : 'Khóa vĩnh viễn'}</div>
+          </div>
+        )}
+        {/* Background decorations */}
+        <div className="absolute top-20 right-0 w-60 h-60 bg-yellow-400/20 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-4 left-6 w-60 h-60 bg-primary-400/20 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute top-1/3 right-1/4 w-72 h-72 bg-blue-400/20 rounded-full blur-3xl animate-pulse"></div>
+        
+        <div className="container mx-auto px-4 relative z-20">
         {/* Header Section */}
         <div className="relative overflow-hidden bg-gradient-to-r from-[#FF007A] via-[#C77DFF] to-[#A259FF] rounded-3xl shadow-2xl mb-6">
           <div className="absolute inset-0 bg-black/10"></div>
@@ -209,7 +326,7 @@ const Profile: React.FC = () => {
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl rounded-2xl p-6 shadow-lg border border-gray-100/50 dark:border-gray-700/50">
+          <div className="bg-white/40 dark:bg-gray-900/40 backdrop-blur-md rounded-2xl p-6 shadow-lg border border-gray-100/20 dark:border-gray-700/50">
             <div className="flex items-center gap-3 mb-2">
               <div className="p-3 bg-gradient-to-br from-blue-400 to-blue-600 rounded-xl">
                 <Target size={24} className="text-white" />
@@ -221,7 +338,7 @@ const Profile: React.FC = () => {
             </div>
           </div>
 
-          <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl rounded-2xl p-6 shadow-lg border border-gray-100/50 dark:border-gray-700/50">
+          <div className="bg-white/40 dark:bg-gray-900 rounded-2xl p-6 shadow-lg border border-gray-100/50 dark:border-gray-700/50">
             <div className="flex items-center gap-3 mb-2">
               <div className="p-3 bg-gradient-to-br from-purple-400 to-purple-600 rounded-xl">
                 <Trophy size={24} className="text-white" />
@@ -233,7 +350,7 @@ const Profile: React.FC = () => {
             </div>
           </div>
 
-          <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl rounded-2xl p-6 shadow-lg border border-gray-100/50 dark:border-gray-700/50">
+          <div className="bg-white/40 dark:bg-gray-900 rounded-2xl p-6 shadow-lg border border-gray-100/50 dark:border-gray-700/50">
             <div className="flex items-center gap-3 mb-2">
               <div className="p-3 bg-gradient-to-br from-orange-400 to-orange-600 rounded-xl">
                 <Clock size={24} className="text-white" />
@@ -246,7 +363,7 @@ const Profile: React.FC = () => {
             </div>
           </div>
 
-          <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl rounded-2xl p-6 shadow-lg border border-gray-100/50 dark:border-gray-700/50">
+          <div className="bg-white/40 dark:bg-gray-900 rounded-2xl p-6 shadow-lg border border-gray-100/50 dark:border-gray-700/50">
             <div className="flex items-center gap-3 mb-2">
               <div className="p-3 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-xl">
                 <Zap size={24} className="text-white" />
@@ -264,7 +381,7 @@ const Profile: React.FC = () => {
           {/* Edit Profile Section */}
           <div className="lg:col-span-2 space-y-6">
             {isEditing ? (
-              <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl rounded-2xl p-6 shadow-lg border border-gray-100/50 dark:border-gray-700/50">
+              <div className="bg-white/40 dark:bg-gray-900/40 backdrop-blur-md rounded-2xl p-6 shadow-lg border border-gray-100/20 dark:border-gray-700/50">
                 <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-6 flex items-center gap-2">
                   <Edit2 size={20} />
                   Chỉnh sửa hồ sơ
@@ -278,42 +395,166 @@ const Profile: React.FC = () => {
 
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Tên người dùng
-                    </label>
-                    <input
-                      value={form.username}
-                      onChange={(e) => setForm((s) => ({ ...s, username: e.target.value }))}
-                      className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-                      placeholder="Tên người dùng"
-                    />
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Ảnh đại diện</label>
+                    <div className="mt-1 flex flex-col items-center space-y-4">
+                      {/* Preview circle */}
+                      <div className="relative w-32 h-32 group">
+                        <div className="absolute -inset-2 bg-gradient-to-r from-[#FF007A] via-[#C77DFF] to-[#A259FF] rounded-full opacity-25 blur-lg group-hover:opacity-75 transition duration-200"></div>
+                        <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-white dark:border-gray-800 shadow-xl">
+                          <img
+                            src={form.avatar || user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.username || 'User')}&background=7c3aed&color=fff`}
+                            alt="Preview"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      </div>
+                      
+                      {/* Upload area */}
+                      <div 
+                        className="w-full max-w-md p-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl text-center cursor-pointer hover:border-primary-500 dark:hover:border-primary-400 transition-colors"
+                        onDragOver={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                        }}
+                        onDrop={async (e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          const file = e.dataTransfer.files[0]
+                          if (file && file.type.startsWith('image/')) {
+                            setAvatarFileName(file.name)
+                            const reader = new FileReader()
+                            reader.onload = () => {
+                              const result = reader.result as string
+                              setForm((s) => ({ ...s, avatar: result }))
+                            }
+                            reader.readAsDataURL(file)
+                          }
+                        }}
+                        onClick={() => document.getElementById('avatar-input')?.click()}
+                      >
+                        <input
+                          id="avatar-input"
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={async (e) => {
+                            const f = e.target.files?.[0]
+                            if (!f) return
+                            setAvatarFileName(f.name)
+                            const reader = new FileReader()
+                            reader.onload = () => {
+                              const result = reader.result as string
+                              setForm((s) => ({ ...s, avatar: result }))
+                            }
+                            reader.readAsDataURL(f)
+                          }}
+                        />
+                        <div className="space-y-2">
+                          <div className="flex justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                          </div>
+                          <div className="text-sm text-gray-600 dark:text-gray-400">
+                            <span className="font-medium text-primary-600 dark:text-primary-400">Chọn ảnh</span> hoặc kéo thả vào đây
+                          </div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">PNG, JPG (tối đa 2MB)</p>
+                          {avatarFileName && (
+                            <p className="text-xs text-primary-600 dark:text-primary-400 font-medium mt-2">
+                              Đã chọn: {avatarFileName}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  
+
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Ảnh đại diện (URL)
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Email</label>
                     <input
-                      value={form.avatar}
-                      onChange={(e) => setForm((s) => ({ ...s, avatar: e.target.value }))}
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
                       className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-                      placeholder="https://..."
+                      placeholder="you@example.com"
                     />
                   </div>
-                  
+
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Ngôn ngữ yêu thích (phân tách bằng dấu phẩy)
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Số điện thoại</label>
                     <input
-                      value={form.favoriteLanguages.join(', ')}
-                      onChange={(e) => setForm((s) => ({ ...s, favoriteLanguages: e.target.value.split(',').map(v => v.trim()).filter(Boolean) }))}
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
                       className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-                      placeholder="Python, JavaScript, C++"
+                      placeholder="0123456789"
                     />
                   </div>
-                  
-                  <div className="flex gap-3">
+
+                  <div className="space-y-4 border border-gray-200 dark:border-gray-700 rounded-xl p-4 bg-gray-50 dark:bg-gray-800/50">
+                    <h3 className="font-medium text-gray-900 dark:text-white">Đổi mật khẩu</h3>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Mật khẩu hiện tại</label>
+                      <input
+                        type="password"
+                        value={oldPassword}
+                        onChange={(e) => setOldPassword(e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+                        placeholder="Nhập mật khẩu hiện tại"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Mật khẩu mới</label>
+                      <input
+                        type="password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+                        placeholder="Nhập mật khẩu mới"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Xác nhận mật khẩu mới</label>
+                      <input
+                        type="password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+                        placeholder="Nhập lại mật khẩu mới"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 border border-gray-200 dark:border-gray-700 rounded-xl p-4 bg-gray-50 dark:bg-gray-800/50">
+                    <h3 className="font-medium text-gray-900 dark:text-white">Ngôn ngữ yêu thích</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {['JavaScript', 'Python', 'Java', 'C++', 'Ruby', 'PHP', 'C#', 'Go'].map((lang) => (
+                        <button
+                          key={lang}
+                          onClick={() => {
+                            const current = form.favoriteLanguages || []
+                            if (current.includes(lang)) {
+                              setForm(f => ({ ...f, favoriteLanguages: current.filter(l => l !== lang) }))
+                            } else {
+                              setForm(f => ({ ...f, favoriteLanguages: [...current, lang] }))
+                            }
+                          }}
+                          className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                            form.favoriteLanguages?.includes(lang)
+                              ? 'bg-gradient-to-r from-[#FF007A] via-[#C77DFF] to-[#A259FF] text-white'
+                              : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                          }`}
+                        >
+                          {lang}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Chọn các ngôn ngữ lập trình mà bạn yêu thích</p>
+                  </div>
+                </div>
+                
+                  <div className="flex gap-3 mt-6">
                     <button
                       onClick={handleSave}
                       disabled={saving}
@@ -328,11 +569,10 @@ const Profile: React.FC = () => {
                     >
                       Hủy
                     </button>
-                  </div>
                 </div>
               </div>
             ) : (
-              <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl rounded-2xl p-6 shadow-lg border border-gray-100/50 dark:border-gray-700/50">
+              <div className="bg-white/40 dark:bg-gray-900/40 backdrop-blur-md rounded-2xl p-6 shadow-lg border border-gray-100/20 dark:border-gray-700/50">
                 <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">Thông tin cá nhân</h2>
                 <div className="space-y-3">
                   <div className="flex items-center gap-3">
@@ -342,6 +582,10 @@ const Profile: React.FC = () => {
                   <div className="flex items-center gap-3">
                     <span className="text-gray-500 dark:text-gray-400 font-medium min-w-[120px]">Email:</span>
                     <span className="text-gray-800 dark:text-white">{user?.email}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-gray-500 dark:text-gray-400 font-medium min-w-[120px]">Số điện thoại:</span>
+                    <span className="text-gray-800 dark:text-white">{user?.phone || 'Chưa cập nhật'}</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="text-gray-500 dark:text-gray-400 font-medium min-w-[120px]">Hạng:</span>
@@ -354,7 +598,7 @@ const Profile: React.FC = () => {
             )}
 
             {/* Progress Section */}
-            <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl rounded-2xl p-6 shadow-lg border border-gray-100/50 dark:border-gray-700/50">
+            <div className="bg-white/40 dark:bg-gray-900/40 backdrop-blur-md rounded-2xl p-6 shadow-lg border border-gray-100/20 dark:border-gray-700/50">
               <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">Tiến độ học tập</h2>
               
               {loading ? (
@@ -418,17 +662,17 @@ const Profile: React.FC = () => {
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Favorite Languages */}
-            <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl rounded-2xl p-6 shadow-lg border border-gray-100/50 dark:border-gray-700/50">
+            <div className="bg-white/40 dark:bg-gray-900/40 backdrop-blur-md rounded-2xl p-6 shadow-lg border border-gray-100/20 dark:border-gray-700/50">
               <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
                 <Code size={20} />
                 Ngôn ngữ yêu thích
               </h2>
-              {user?.favoriteLanguages && user.favoriteLanguages.length > 0 ? (
+              {user?.favoriteLanguages?.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
                   {user.favoriteLanguages.map((lang: string, idx: number) => (
                     <span
                       key={idx}
-                      className="px-3 py-1.5 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-full text-sm font-medium"
+                      className="px-3 py-1.5 bg-gradient-to-r from-[#FF007A] via-[#C77DFF] to-[#A259FF] text-white rounded-full text-sm font-medium"
                     >
                       {lang}
                     </span>
@@ -440,7 +684,7 @@ const Profile: React.FC = () => {
             </div>
 
             {/* Badges */}
-            <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl rounded-2xl p-6 shadow-lg border border-gray-100/50 dark:border-gray-700/50">
+            <div className="bg-white/40 dark:bg-gray-900/40 backdrop-blur-md rounded-2xl p-6 shadow-lg border border-gray-100/20 dark:border-gray-700/50">
               <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
                 <Award size={20} />
                 Huy hiệu
@@ -462,11 +706,10 @@ const Profile: React.FC = () => {
             </div>
           </div>
         </div>
+        </div>
       </div>
-    </div>
-  )
-}
+    </>
+  );
+};
 
-export default Profile
-
-
+export default Profile;

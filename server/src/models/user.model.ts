@@ -5,12 +5,19 @@ export interface IUser extends Document {
   email: string;
   username: string;
   password: string;
+  resetCode?: string;
+  resetCodeExpires?: Date;
   avatar?: string;
+  phone?: string;
   favoriteLanguages: string[];
   experience: number;
   rank: string;
   badges: string[];
   loginMethod?: string; // 'local', 'google', 'github', 'facebook'
+  role?: string; // 'user', 'moderator', 'admin'
+  isBanned?: boolean;
+  banReason?: string;
+  bannedUntil?: Date;
   oauth: {
     google?: string;
     github?: string;
@@ -62,6 +69,13 @@ const userSchema = new Schema<IUser>(
       type: String,
       default: '',
     },
+    phone: {
+      type: String,
+      trim: true,
+      unique: true,
+      sparse: true,
+      index: true,
+    },
     favoriteLanguages: [{
       type: String,
       enum: ['Python', 'JavaScript', 'Java', 'C++', 'C#', 'C'],
@@ -82,6 +96,22 @@ const userSchema = new Schema<IUser>(
       type: String,
       enum: ['local', 'google', 'github', 'facebook'],
       default: 'local'
+    },
+    role: {
+      type: String,
+      enum: ['user', 'moderator', 'admin'],
+      default: 'user'
+    },
+    isBanned: {
+      type: Boolean,
+      default: false,
+    },
+    banReason: {
+      type: String,
+      trim: true,
+    },
+    bannedUntil: {
+      type: Date,
     },
     oauth: {
       google: String,
@@ -114,6 +144,16 @@ const userSchema = new Schema<IUser>(
       currentStreak: { type: Number, default: 0 },
       bestStreak: { type: Number, default: 0 },
       averageCompletionTime: { type: Number, default: 0 },
+    }
+    ,
+    resetCode: {
+      type: String,
+      default: undefined,
+      select: false,
+    },
+    resetCodeExpires: {
+      type: Date,
+      default: undefined,
     }
   },
   {

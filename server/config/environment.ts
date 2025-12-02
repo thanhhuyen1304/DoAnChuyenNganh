@@ -31,10 +31,12 @@ export const ENV = {
   // Judge0 API
   JUDGE0_API_URL: process.env.JUDGE0_API_URL || 'https://judge0-ce.p.rapidapi.com',
   JUDGE0_API_KEY: process.env.JUDGE0_API_KEY || '',
-
-  // Gemini Pro API
+  
+  // AI Provider Configuration
+  AI_PROVIDER: process.env.AI_PROVIDER || 'gemini', // 'gemini' | 'openai'
   GEMINI_API_KEY: process.env.GEMINI_API_KEY || '',
-
+  OPENAI_API_KEY: process.env.OPENAI_API_KEY || '',
+  
   // Admin Configuration
   ADMIN_EMAIL: process.env.ADMIN_EMAIL || 'admin@bughunter.com',
 };

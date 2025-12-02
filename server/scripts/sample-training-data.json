@@ -1,0 +1,73 @@
+[
+  {
+    "question": "Làm sao debug lỗi JavaScript?",
+    "answer": "Để debug lỗi JavaScript, bạn có thể:\n\n1. **Sử dụng console.log()**: In giá trị biến để kiểm tra\n   ```javascript\n   console.log('Variable:', myVariable);\n   ```\n\n2. **Sử dụng debugger statement**: Dừng code tại điểm cụ thể\n   ```javascript\n   debugger; // Code sẽ dừng ở đây khi mở DevTools\n   ```\n\n3. **Sử dụng DevTools**: Nhấn F12 để mở Developer Tools\n   - Console tab: Xem logs và errors\n   - Sources tab: Đặt breakpoints\n   - Network tab: Kiểm tra API calls\n\n4. **Kiểm tra lỗi syntax**: Sử dụng linter hoặc IDE\n\n5. **Sử dụng try-catch**: Bắt và xử lý lỗi\n   ```javascript\n   try {\n     // Code có thể lỗi\n   } catch (error) {\n     console.error('Error:', error);\n   }\n   ```",
+    "category": "debugging",
+    "tags": ["javascript", "debug", "error", "console", "devtools"],
+    "priority": 9
+  },
+  {
+    "question": "React hooks là gì?",
+    "answer": "React Hooks là các functions cho phép bạn sử dụng state và các tính năng React khác trong functional components.\n\n**Các hooks phổ biến:**\n\n1. **useState**: Quản lý state\n   ```javascript\n   const [count, setCount] = useState(0);\n   ```\n\n2. **useEffect**: Side effects (API calls, subscriptions)\n   ```javascript\n   useEffect(() => {\n     // Code chạy sau mỗi render\n   }, [dependencies]);\n   ```\n\n3. **useContext**: Truy cập context\n4. **useReducer**: Quản lý state phức tạp\n5. **useMemo**: Memoize giá trị\n6. **useCallback**: Memoize function\n\n**Ví dụ đầy đủ:**\n```javascript\nimport { useState, useEffect } from 'react';\n\nfunction MyComponent() {\n  const [count, setCount] = useState(0);\n  \n  useEffect(() => {\n    document.title = `Count: ${count}`;\n  }, [count]);\n  \n  return (\n    <button onClick={() => setCount(count + 1)}>\n      Count: {count}\n    </button>\n  );\n}\n```",
+    "category": "react",
+    "tags": ["react", "hooks", "useState", "useEffect", "frontend"],
+    "priority": 8
+  },
+  {
+    "question": "Cách sử dụng useState trong React?",
+    "answer": "useState là một React Hook để quản lý state trong functional components.\n\n**Cú pháp:**\n```javascript\nconst [state, setState] = useState(initialValue);\n```\n\n**Ví dụ cơ bản:**\n```javascript\nimport { useState } from 'react';\n\nfunction Counter() {\n  const [count, setCount] = useState(0);\n  \n  return (\n    <div>\n      <p>Count: {count}</p>\n      <button onClick={() => setCount(count + 1)}>+</button>\n      <button onClick={() => setCount(count - 1)}>-</button>\n    </div>\n  );\n}\n```\n\n**Lưu ý:**\n- useState trả về một array với 2 phần tử: [value, setter]\n- Không được gọi useState trong loops, conditions, hoặc nested functions\n- setState có thể nhận giá trị mới hoặc function\n- State updates là asynchronous",
+    "category": "react",
+    "tags": ["react", "useState", "hooks", "state"],
+    "priority": 7
+  },
+  {
+    "question": "Lỗi 'Cannot read property of undefined' trong JavaScript",
+    "answer": "Lỗi này xảy ra khi bạn cố gắng truy cập property của một object undefined hoặc null.\n\n**Nguyên nhân:**\n- Object chưa được khởi tạo\n- Object là null hoặc undefined\n- Truy cập property không tồn tại\n\n**Cách fix:**\n\n1. **Kiểm tra trước khi truy cập:**\n   ```javascript\n   if (obj && obj.property) {\n     // Safe to access\n   }\n   ```\n\n2. **Sử dụng optional chaining (ES2020):**\n   ```javascript\n   const value = obj?.property?.subProperty;\n   ```\n\n3. **Sử dụng default value:**\n   ```javascript\n   const value = obj?.property ?? 'default';\n   ```\n\n4. **Kiểm tra với typeof:**\n   ```javascript\n   if (typeof obj !== 'undefined' && obj !== null) {\n     // Safe\n   }\n   ```\n\n**Ví dụ:**\n```javascript\n// ❌ Lỗi\nconst user = null;\nconsole.log(user.name); // Error!\n\n// ✅ Đúng\nconst user = null;\nconsole.log(user?.name); // undefined\nconsole.log(user?.name ?? 'Guest'); // 'Guest'\n```",
+    "category": "javascript",
+    "tags": ["javascript", "error", "undefined", "null", "debug"],
+    "priority": 8
+  },
+  {
+    "question": "Cách xử lý async/await trong JavaScript?",
+    "answer": "async/await là cách hiện đại để xử lý asynchronous code trong JavaScript.\n\n**Cú pháp:**\n```javascript\nasync function myFunction() {\n  try {\n    const result = await someAsyncOperation();\n    return result;\n  } catch (error) {\n    console.error('Error:', error);\n  }\n}\n```\n\n**Ví dụ với fetch API:**\n```javascript\nasync function fetchData() {\n  try {\n    const response = await fetch('https://api.example.com/data');\n    const data = await response.json();\n    return data;\n  } catch (error) {\n    console.error('Fetch error:', error);\n    throw error;\n  }\n}\n\n// Sử dụng\nfetchData().then(data => console.log(data));\n```\n\n**Xử lý nhiều promises:**\n```javascript\n// Song song\nconst [data1, data2] = await Promise.all([\n  fetchData1(),\n  fetchData2()\n]);\n\n// Tuần tự\nconst data1 = await fetchData1();\nconst data2 = await fetchData2();\n```\n\n**Lưu ý:**\n- async function luôn trả về Promise\n- await chỉ hoạt động trong async function\n- Sử dụng try-catch để xử lý lỗi",
+    "category": "javascript",
+    "tags": ["javascript", "async", "await", "promise", "fetch"],
+    "priority": 7
+  },
+  {
+    "question": "BugHunter là gì?",
+    "answer": "BugHunter là một nền tảng học lập trình thông qua việc sửa lỗi code thực tế.\n\n**Tính năng chính:**\n- Học lập trình bằng cách debug và sửa lỗi\n- Nhiều challenges với các mức độ khó khác nhau\n- Hỗ trợ nhiều ngôn ngữ lập trình\n- Leaderboard để theo dõi tiến độ\n- Hệ thống achievements và badges\n- ChatBox AI để hỗ trợ học tập\n\n**Cách sử dụng:**\n1. Đăng ký tài khoản\n2. Chọn challenge phù hợp với level\n3. Đọc code và tìm lỗi\n4. Sửa lỗi và submit\n5. Nhận điểm và unlock achievements\n\n**Lợi ích:**\n- Học cách debug thực tế\n- Cải thiện kỹ năng đọc code\n- Hiểu sâu hơn về các ngôn ngữ lập trình\n- Rèn luyện tư duy logic",
+    "category": "general",
+    "tags": ["bughunter", "platform", "learning", "programming"],
+    "priority": 10
+  },
+  {
+    "question": "Cách submit code trong BugHunter?",
+    "answer": "Để submit code trong BugHunter:\n\n1. **Chọn challenge**: Vào trang Challenges và chọn một challenge\n2. **Đọc code**: Đọc và hiểu code có lỗi\n3. **Tìm lỗi**: Xác định lỗi trong code\n4. **Sửa lỗi**: Sửa code để fix lỗi\n5. **Test**: Kiểm tra code đã chạy đúng chưa\n6. **Submit**: Click nút Submit và chờ kết quả\n\n**Lưu ý:**\n- Code phải pass tất cả test cases\n- Không được thay đổi input/output format\n- Chỉ sửa phần code có lỗi\n- Đọc kỹ yêu cầu của challenge",
+    "category": "bughunter",
+    "tags": ["bughunter", "submit", "challenge", "code"],
+    "priority": 8
+  },
+  {
+    "question": "Cách sử dụng useEffect trong React?",
+    "answer": "useEffect là một React Hook để thực hiện side effects trong functional components.\n\n**Cú pháp:**\n```javascript\nuseEffect(() => {\n  // Side effect code\n  return () => {\n    // Cleanup (optional)\n  };\n}, [dependencies]);\n```\n\n**Các trường hợp sử dụng:**\n\n1. **Chạy sau mỗi render:**\n   ```javascript\n   useEffect(() => {\n     console.log('Component rendered');\n   });\n   ```\n\n2. **Chạy một lần (componentDidMount):**\n   ```javascript\n   useEffect(() => {\n     // Fetch data\n   }, []); // Empty dependencies\n   ```\n\n3. **Chạy khi dependency thay đổi:**\n   ```javascript\n   useEffect(() => {\n     // Update when count changes\n   }, [count]);\n   ```\n\n4. **Cleanup (componentWillUnmount):**\n   ```javascript\n   useEffect(() => {\n     const subscription = subscribe();\n     return () => {\n       subscription.unsubscribe();\n     };\n   }, []);\n   ```\n\n**Ví dụ fetch data:**\n```javascript\nuseEffect(() => {\n  async function fetchData() {\n    const response = await fetch('/api/data');\n    const data = await response.json();\n    setData(data);\n  }\n  fetchData();\n}, []);\n```",
+    "category": "react",
+    "tags": ["react", "useEffect", "hooks", "side-effects"],
+    "priority": 7
+  },
+  {
+    "question": "Cách xử lý form trong React?",
+    "answer": "Có nhiều cách để xử lý form trong React:\n\n**1. Controlled Components (Khuyến nghị):**\n```javascript\nfunction MyForm() {\n  const [formData, setFormData] = useState({\n    name: '',\n    email: ''\n  });\n  \n  const handleChange = (e) => {\n    setFormData({\n      ...formData,\n      [e.target.name]: e.target.value\n    });\n  };\n  \n  const handleSubmit = (e) => {\n    e.preventDefault();\n    // Submit form\n  };\n  \n  return (\n    <form onSubmit={handleSubmit}>\n      <input\n        name=\"name\"\n        value={formData.name}\n        onChange={handleChange}\n      />\n      <input\n        name=\"email\"\n        value={formData.email}\n        onChange={handleChange}\n      />\n      <button type=\"submit\">Submit</button>\n    </form>\n  );\n}\n```\n\n**2. Uncontrolled Components:**\n```javascript\nfunction MyForm() {\n  const nameRef = useRef();\n  \n  const handleSubmit = (e) => {\n    e.preventDefault();\n    console.log(nameRef.current.value);\n  };\n  \n  return (\n    <form onSubmit={handleSubmit}>\n      <input ref={nameRef} />\n      <button type=\"submit\">Submit</button>\n    </form>\n  );\n}\n```\n\n**3. Sử dụng thư viện (react-hook-form):**\n```javascript\nimport { useForm } from 'react-hook-form';\n\nfunction MyForm() {\n  const { register, handleSubmit } = useForm();\n  \n  const onSubmit = (data) => {\n    console.log(data);\n  };\n  \n  return (\n    <form onSubmit={handleSubmit(onSubmit)}>\n      <input {...register('name')} />\n      <button type=\"submit\">Submit</button>\n    </form>\n  );\n}\n```",
+    "category": "react",
+    "tags": ["react", "form", "controlled", "uncontrolled", "input"],
+    "priority": 6
+  },
+  {
+    "question": "Cách sử dụng map trong JavaScript?",
+    "answer": "Array.map() là method để tạo array mới từ array cũ bằng cách transform mỗi phần tử.\n\n**Cú pháp:**\n```javascript\nconst newArray = array.map((element, index, array) => {\n  // Return transformed element\n  return transformedElement;\n});\n```\n\n**Ví dụ cơ bản:**\n```javascript\nconst numbers = [1, 2, 3, 4];\nconst doubled = numbers.map(num => num * 2);\n// [2, 4, 6, 8]\n```\n\n**Ví dụ với objects:**\n```javascript\nconst users = [\n  { name: 'John', age: 25 },\n  { name: 'Jane', age: 30 }\n];\n\nconst names = users.map(user => user.name);\n// ['John', 'Jane']\n\nconst ages = users.map(user => user.age * 2);\n// [50, 60]\n```\n\n**Ví dụ trong React (render list):**\n```javascript\nfunction UserList({ users }) {\n  return (\n    <ul>\n      {users.map(user => (\n        <li key={user.id}>{user.name}</li>\n      ))}\n    </ul>\n  );\n}\n```\n\n**Lưu ý:**\n- map() không thay đổi array gốc\n- map() luôn trả về array mới\n- Sử dụng key prop khi render list trong React",
+    "category": "javascript",
+    "tags": ["javascript", "array", "map", "functional", "react"],
+    "priority": 7
+  }
+]
+

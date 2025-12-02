@@ -4,7 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Alert, AlertDescription } from '../ui/alert';
 import { Badge } from '../ui/badge';
 
-const API_BASE_URL = 'http://localhost:5000/api';
+import { getApiBase } from '../../lib/apiBase'
+const API_BASE_URL = getApiBase();
 
 const TokenDebugger = () => {
   const [token, setToken] = useState<string | null>(null);
