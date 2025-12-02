@@ -114,6 +114,85 @@ export const getProgressByUsername = async (req: Request, res: Response) => {
   }
 }
 
+// GET /api/users/me/today-stats
+export const getTodayStats = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.id
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Chưa xác thực' })
+    }
+
+    const userObjectId = new mongoose.Types.ObjectId(userId)
+
+    // Get start and end of today in UTC+7 (Asia/Saigon timezone)
+    const now = new Date()
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0)
+    // Adjust for UTC+7 timezone
+    todayStart.setHours(todayStart.getHours() - 7)
+    
+    const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999)
+    todayEnd.setHours(todayEnd.getHours() - 7)
+
+    // Get all submissions today
+    const todaySubmissions = await Submission.find({
+      user: userObjectId,
+      submittedAt: { $gte: todayStart, $lte: todayEnd }
+    }).populate('challenge', 'title difficulty')
+
+    // Count completed challenges today (distinct challenges with Accepted status)
+    const completedToday = await Submission.distinct('challenge', {
+      user: userObjectId,
+      status: 'Accepted',
+      submittedAt: { $gte: todayStart, $lte: todayEnd }
+    })
+
+    // Calculate total learning time today (sum of all submission execution times)
+    const learningTimeAgg = await Submission.aggregate([
+      {
+        $match: {
+          user: userObjectId,
+          submittedAt: { $gte: todayStart, $lte: todayEnd },
+          executionTime: { $exists: true }
+        }
+      },
+      { $group: { _id: null, totalTimeMs: { $sum: '$executionTime' } } }
+    ])
+
+    const totalLearningTimeMs = learningTimeAgg[0]?.totalTimeMs || 0
+    const learningTimeMinutes = Math.round(totalLearningTimeMs / 60000)
+
+    // Get list of challenges attempted today with their status
+    const challengesAttempted = todaySubmissions.reduce((acc: any[], sub: any) => {
+      const challengeId = sub.challenge._id.toString()
+      if (!acc.find((c: any) => c.id === challengeId)) {
+        acc.push({
+          id: challengeId,
+          title: sub.challenge.title,
+          difficulty: sub.challenge.difficulty,
+          completed: completedToday.some((c: any) => c.toString() === challengeId),
+          attempts: todaySubmissions.filter((s: any) => s.challenge._id.toString() === challengeId).length,
+          bestStatus: sub.status
+        })
+      }
+      return acc
+    }, [])
+
+    return res.json({
+      success: true,
+      data: {
+        completedCount: completedToday.length,
+        totalAttempts: todaySubmissions.length,
+        learningTimeMinutes,
+        challengesAttempted,
+        date: now.toISOString().split('T')[0]
+      }
+    })
+  } catch (err) {
+    console.error('getTodayStats error', err)
+    return res.status(500).json({ success: false, message: 'Lỗi máy chủ' })
+  }
+}
+
 // PATCH /api/users/me  (update profile)
 export const updateMe = async (req: Request, res: Response) => {
   try {
@@ -154,4 +233,4 @@ export const updateMe = async (req: Request, res: Response) => {
   }
 }
 
-export default { getMyProgress, updateMe }
+export default { getMyProgress, getTodayStats, getProgressByUsername, updateMe }
