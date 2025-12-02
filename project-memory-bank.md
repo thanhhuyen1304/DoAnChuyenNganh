@@ -1,6 +1,6 @@
 # BugHunter Project Memory Bank
 
-## Last Updated: November 24, 2025
+## Last Updated: December 2, 2024
 
 ## Project Overview
 - **Name**: BugHunter
@@ -26,26 +26,8 @@
 - ✅ JWT Authentication với role-based access
 - ✅ OAuth Buttons trên frontend (Login & Register)
 - ✅ OAuth Callback & Error Handlers
-- ✅ **Settings Page** - User preferences and security
-  - ✅ Theme toggle (Light/Dark mode)
-  - ✅ Background customization with image upload
-  - ✅ Language preference (Vietnamese/English)
-  - ✅ Password change for local accounts
-  - ✅ Account info display (email, username, login method)
-  - ❌ Language preference persistence to database
-- ✅ **Profile Page** - User profile with avatar, XP, rank, badges - COMPLETE
-  - ✅ Avatar upload and management with drag-drop
-  - ✅ User information display and edit (email, phone, username)
-  - ✅ XP and rank display with progression
-  - ✅ Badges showcase
-  - ✅ Profile statistics and achievements
-  - ✅ Favorite languages selection and display
-  - ✅ Challenge completion tracking
-  - ✅ Learning time statistics
-  - ✅ Progress bars and ranking percentile
-  - ✅ Edit/Save/Cancel functionality
-  - ✅ Password change in profile
-  - ✅ Responsive design with dark mode
+- ✅ Hồ sơ cá nhân: avatar, thông tin, ngôn ngữ yêu thích, XP, rank, huy hiệu
+- ✅ Quản lý mật khẩu, cập nhật thông tin (Profile page với updateMe API)
 
 #### Challenge System
 - ✅ Chọn bài tập từ danh sách có sẵn bug (Syntax bug, Logic bug) - ProblemsList component
@@ -60,77 +42,38 @@
 - ✅ Leaderboard toàn hệ thống (top điểm, top PvP, sự kiện) - Leaderboard component và routes
 
 #### PvP Challenge System
-- ❌ Tạo phòng hoặc tham gia phòng đấu trực tiếp
-- ❌ Thời gian thực: đếm ngược, so sánh kết quả submit
-- ❌ Xếp hạng người thắng dựa trên tốc độ & số test case pass
+- ✅ Tạo phòng hoặc tham gia phòng đấu trực tiếp - PvPPage component
+- ✅ Hệ thống phòng chờ với ready status - WaitingRoom component
+- ✅ Thời gian thực: đếm ngược, so sánh kết quả submit - WebSocket integration
+- ✅ Xếp hạng người thắng dựa trên tốc độ & số test case pass - PvPMatch model với determineWinner()
+- ✅ Real-time updates với Socket.IO - WebSocketService
+- ✅ Room code system để tham gia phòng - 6-character room codes
+- ✅ Friend system - Gửi/nhận lời mời kết bạn, quản lý danh sách bạn bè
+- ✅ PvP Arena với Monaco Editor - Thi đấu code real-time
+- ✅ Match result display với XP rewards - PvPResult component
 
-### Admin Features
+### 2. Admin Features
 #### User Management
-- ✅ User activity tracking
-- ✅ User statistics viewing
-- ✅ User report management
+- ✅ Xem danh sách user, tìm kiếm, khóa/mở tài khoản - User routes và controllers
+- ✅ Theo dõi tiến độ luyện tập, thành tích - Progress tracking API (getMyProgress, getProgressByUsername)
 
 #### Challenge Management
-- ✅ CRUD bài tập (tạo, sửa, xóa, import/export)
-- ✅ Phân loại độ khó, loại bug, gắn tag (syntax, logic, performance)
-- ✅ Quản lý test case: input, output, chấm điểm
-- ✅ Problem scraper (auto scrape từ CSES.fi)
-- ✅ Bulk import/export challenges
-
-#### System Management
-- ✅ System settings configuration
-- ✅ Achievement management
-- ✅ Training data management
-- ✅ Admin dashboard with statistics
+- ✅ CRUD bài tập (tạo, sửa, xóa) - Challenge controller và Admin Dashboard
+- ✅ Phân loại độ khó, loại bug, gắn tag (syntax, logic, performance) - Challenge model với difficulty, category, tags
+- ✅ Quản lý test case: input, output, chấm điểm - TestCase schema với points, isHidden
 
 #### Event & PvP Management
-- 🔄 Leaderboard system (implemented, being refined)
-- ❌ Tạo giải đấu định kỳ, xếp hạng user
-- ❌ Theo dõi số lượng người tham gia, thống kê kết quả
+- ✅ Theo dõi số lượng người tham gia, thống kê kết quả - PvP stats tracking
+- ✅ Leaderboard cho PvP matches - PvP leaderboard modal
+- ❌ Tạo giải đấu định kỳ (Tournament mode chưa implement)
 
 ### 3. AI/ML/DL Features
 #### AI Debug Assistant
-- ✅ **ChatBox Component** - 24/7 AI Mentor integrated into frontend
-  - ✅ Real-time chat interface with message history
-  - ✅ Floating window (380px × 450px) on bottom-right corner
-  - ✅ Responsive design with dark mode support
-  - ✅ Message threading and conversation history
-  - ✅ Code block syntax highlighting with highlight.js
-  - ✅ Markdown rendering for AI responses
-  - ✅ Chat session management (save/load/delete)
-  - ✅ Copy message functionality
-  - ✅ Message rating system (👍/👎)
-  - ✅ Auto-scroll to latest messages
-
-#### AdaptiveAI - Client-side Learning System
-- ✅ Self-learning AI with localStorage persistence
-  - ✅ Stores user interactions and learned patterns locally
-  - ✅ Learns from user feedback (👍/👎 ratings)
-  - ✅ Optional server sync endpoint for cross-device sync
-  - ✅ Maintains conversation history with context awareness
-  - ✅ Tracks user preferences and interaction patterns
-  - ✅ JSON-based storage format for flexibility
-
-#### Gemini Pro AI Integration
-- ✅ **GeminiProAI Wrapper Class** - Google Generative AI integration
-  - ✅ API Key configuration via environment variables (VITE_GEMINI_API_KEY)
-  - ✅ Model: gemini-1.5-flash (latest lightweight model)
-  - ✅ System prompt customization for BugHunter context
-  - ✅ Conversation history management
-  - ✅ Multi-turn conversation support
-  - ✅ Temperature and token control
-  - ✅ Proper error handling with detailed error messages
-  - ✅ Request/response logging for debugging
-  - ✅ Test connection utility for API validation
-
-#### HybridAI - Multi-AI Strategy
-- ✅ 3-tier AI response prioritization:
-  1. AdaptiveAI (local learned patterns)
-  2. Training data (pre-trained responses)
-  3. Gemini Pro (cloud-based fallback)
-- ✅ Automatic fallback mechanism if primary AI unavailable
-- ✅ Response caching and optimization
-- ✅ Error recovery and graceful degradation
+- ✅ Phân tích lỗi trả về từ sandbox, đọc stacktrace - AIAnalysisService với error analysis
+- ✅ Gợi ý nguyên nhân và cách khắc phục - Code suggestions và recommendations
+- ✅ Đưa ra snippet mẫu - CodeSuggestions với suggestedCode
+- ✅ Hỗ trợ đa ngôn ngữ lập trình - Support Python, JavaScript, Java, C++, C#, C
+- ✅ Tích hợp Gemini AI (gemini-pro, gemini-1.5-flash, gemini-1.5-pro) với fallback rule-based
 
 #### Machine Learning - Personalization
 - ❌ Ghi nhận lịch sử bug mà user thường gặp
@@ -142,13 +85,9 @@
 - ❌ Đề xuất tài liệu/hướng dẫn liên quan
 
 #### AI Mentor (Chatbot 24/7)
-- ✅ Real-time AI assistant for programming help
-- ✅ Natural Vietnamese language support
-- ✅ Context-aware responses based on conversation history
-- ✅ Code debugging and explanation capabilities
-- ✅ Best practices and coding tips
-- ✅ Algorithm and data structure guidance
-- ✅ Multi-language programming support (Python, Java, C++, JavaScript, etc.)
+- ❌ Giải thích khái niệm lập trình, cú pháp
+- ❌ Gợi ý mẹo sửa bug & best practices coding
+- ❌ Cộng đồng chatbox, hoặc chat cá nhân (Idea cho 80%+ completion)
 
 ## Technical Stack
 
@@ -167,7 +106,8 @@
 - **Routing**: React Router DOM
 - **HTTP Client**: Axios
 - **UI Components**: Headless UI + Heroicons
-- **Real-time**: Socket.IO (cho PvP)
+- **Real-time**: Socket.IO (đã hoàn thiện cho PvP)
+- **Code Editor**: Monaco Editor (cho PvP Arena)
 
 ### AI/ML/DL
 - **APIs**: Google Gemini API (gemini-pro, gemini-1.5-flash, gemini-1.5-pro) với fallback rule-based
@@ -204,38 +144,30 @@
      - ✅ loginMethod field để lưu phương thức đăng nhập ('local', 'google', 'github', 'facebook')
      - ✅ XP, rank, badges support
      - ✅ Password hashing với bcryptjs
-     - ✅ Settings (theme, background, language)
-     - ✅ Favorite languages tracking
    - ✅ Challenge Model với test cases và validation
-   - ✅ Submission Model cho kết quả làm bài
-   - ✅ Achievement Model (badges system)
-   - ✅ Favorite Model (challenge favorites)
-   - ✅ ChatHistory Model (conversation persistence)
-   - ✅ TrainingData Model (AI training samples)
-   - ✅ Report Model (user reports)
-   - ✅ Feedback Model (user feedback)
-   - ✅ SystemSettings Model (admin configuration)
+   - ✅ Submission Model cho kết quả làm bài (với AI analysis, execution results)
+   - ❌ Badge Model (chưa có model riêng, chỉ có field trong User)
+   - ✅ Ranking System (tính toán từ XP, không cần model riêng)
+   - ✅ PvP Room Model - Complete với participants, settings, status
+   - ✅ PvP Match Model - Complete với winner determination, XP calculation
+   - ✅ Friend Model - Complete với friendship levels, interactions tracking
    - ✅ Test Case Model (embedded trong Challenge)
 
 3. **Services**
    - ✅ Judge0Service - Code execution với Judge0 API
    - ✅ AIAnalysisService - AI analysis với Gemini và rule-based fallback
+   - ✅ WebSocketService - Real-time communication cho PvP
    - ✅ Error handling và fallback mechanisms
 
 3. **API Routes**
    - ✅ Auth Routes với validation
    - ✅ Challenge Routes (CRUD + admin functions)
-   - ✅ User Routes (profile management)
-   - ✅ Favorite Routes (challenge favorites)
-   - ✅ Admin Routes (challenge management)
-   - ✅ Scraper Routes (problem scraping)
-   - ✅ Report Routes (user reports)
-   - ✅ Feedback Routes (user feedback)
-   - ✅ Achievement Routes (badges & achievements)
-   - ✅ System Settings Routes (admin settings)
-   - ✅ Chat Routes (chatbox messages)
-   - ✅ Leaderboard Routes (ranking system)
-   - ✅ Training Data Routes (AI training data management)
+   - ✅ User Profile Routes (getMyProgress, updateMe, getProgressByUsername)
+   - ✅ Submission Routes (submit, getUserSubmissions, getAllUserSubmissions, getSubmissionById, getUserSubmissionStats)
+   - ✅ Ranking Routes (Leaderboard routes với getTopLearners)
+   - ✅ PvP Routes - Complete CRUD cho rooms và matches
+   - ✅ Friend Routes - Complete friend system APIs
+   - ✅ Admin Routes (challenge management, scraper, import-export)
 
 4. **Middleware**
    - ✅ Authentication Middleware với role checking
@@ -257,41 +189,19 @@
    - ❌ Password Reset
 
 2. **Main Components**
-   - ✅ **ClientDashboard** - User dashboard with activity streak
-   - ✅ Challenge List
-   - ❌ Challenge Detail
-   - ❌ Code Editor
-   - ❌ Submission Form
-   - ✅ **Profile Page** - User profile with avatar, XP, rank, badges (COMPLETE)
-     - ✅ Avatar upload with drag-drop and preview
-     - ✅ User info editing (email, phone)
-     - ✅ XP and rank display with progression bars
-     - ✅ Badges showcase
-     - ✅ Favorite languages selection
-     - ✅ Challenge completion stats
-     - ✅ Learning time tracking
-     - ✅ Ranking percentile display
-     - ✅ Password change functionality
-   - ✅ **Settings Page** - User preferences and security (IMPLEMENTED)
-     - ✅ Theme settings
-     - ✅ Background customization
-     - ✅ Language preferences
-     - ✅ Password management
-     - ✅ Account information display
-   - ✅ Leaderboard (UI component ready)
-   - ❌ PvP Lobby
-   - ❌ PvP Room
-   - ✅ **ChatBox Component** - Full-featured AI chat interface
-     - ✅ Floating chat window with minimize/maximize
-     - ✅ Chat history sidebar
-     - ✅ Multi-turn conversation support
-     - ✅ Message copy functionality
-     - ✅ Code syntax highlighting
-     - ✅ Markdown message rendering
-     - ✅ Session management (new/load/delete)
-     - ✅ Message statistics dashboard
-   - ✅ **NotificationBox Component** - Real-time notifications
-   - ✅ **Header Component** - Navigation with language switcher
+   - ✅ Dashboard - Dashboard.tsx với user stats và progress
+   - ✅ Challenge List - ProblemsList component
+   - ✅ Challenge Detail - ProblemDetail component
+   - ✅ Code Editor - CodeEditor với Monaco Editor, syntax highlighting, submit functionality
+   - ✅ Submission Form - Integrated trong CodeEditor với handleSubmit
+   - ✅ Profile Page - Profile.tsx với progress tracking, edit profile
+   - ✅ Leaderboard - Leaderboard component và page
+   - ✅ PvP Lobby - PvPPage với room list và search
+   - ✅ PvP Waiting Room - WaitingRoom với ready system
+   - ✅ PvP Arena - PvPArena với Monaco Editor
+   - ✅ PvP Result - PvPResult với match statistics
+   - ✅ Friends Modal - FriendsAndUsersModal để quản lý bạn bè
+   - ✅ Leaderboard Modal - LeaderboardModal cho PvP rankings
 
 3. **Common Components**
    - ✅ UI Components (shadcn/ui)
@@ -299,29 +209,21 @@
    - ✅ Error Messages
    - ✅ Success Messages
    - ✅ Alert Components
-   - ❌ Modal Components
+   - ✅ Modal Components - Dialog, Sheet components từ shadcn/ui
 
-3. **Admin Components**
+4. **Admin Components**
    - ✅ Admin Dashboard với tabs
-   - ✅ Challenge Management (CRUD, Import/Export)
+   - ✅ Challenge Management (CRUD)
    - ✅ Challenge creation form với test cases
-   - ✅ Problem Scraper (CSES.fi scraping)
-   - ✅ Advanced Scraper for various sources
    - ✅ Statistics display
-   - ✅ Training Data Management (CRUD, Extract from Chat)
-   - ✅ API Tester component
-   - ✅ Database Debugger component
-   - ✅ Challenge Import/Export feature
-   - ✅ User Management (view user data)
-   - ✅ Achievement Management (badges system)
+   - ✅ User Management - Basic user stats và progress tracking
+   - ❌ Event Management - Tournament system chưa có
 
 ## Security Implementation
 - ✅ JWT Authentication
 - ✅ Password Hashing (bcryptjs)
 - ✅ CORS Configuration
 - ✅ Helmet Security Headers
-- ✅ Environment variable protection
-- ✅ OAuth secure token handling
 - ❌ XSS Protection
 - ❌ CSRF Protection
 - ❌ Rate Limiting
@@ -335,25 +237,6 @@
 - ❌ Database Indexing
 - ❌ Redis Caching
 
-## Technical Improvements (November 17, 2025)
-- ✅ **API Configuration**: Centralized API base URL management
-  - getApiBase() helper function
-  - Environment variable VITE_API_URL for dynamic configuration
-  - Automatic /api path handling
-- ✅ **Code Quality**:
-  - TypeScript strict type checking
-  - Proper error handling with type safety
-  - Error message logging for debugging
-  - Removed all hard-coded localhost URLs
-- ✅ **Environment Configuration**:
-  - VITE_GEMINI_API_KEY for API security
-  - VITE_API_URL for backend endpoint configuration
-  - OAuth credentials in environment variables
-- ✅ **Routing Improvements**:
-  - OAuth redirect routes for backwards compatibility
-  - Proper Express middleware ordering
-  - CORS configured for frontend requests
-
 ## Testing Strategy
 - ❌ Unit Tests (Jest)
 - ❌ Integration Tests
@@ -362,17 +245,14 @@
 - ❌ API Tests
 
 ## Current Focus
-- ✅ Hoàn thiện hệ thống authentication (OAuth + JWT)
-- ✅ Implement AI chatbot with self-learning capabilities
-- ✅ Standardize API configuration across frontend
-- ✅ Challenge system CRUD operations
-- ✅ User dashboard and statistics
-- ✅ Admin dashboard with extended features
-- ✅ Training data management system
-- ✅ Problem scraper integration
-- 🔄 Leaderboard system refinement
-- ❌ Implement Code Editor với syntax highlighting
-- ❌ Tích hợp Judge0 API cho code execution
+- ✅ Hoàn thiện hệ thống authentication - COMPLETE
+- ✅ Xây dựng Challenge system cơ bản - COMPLETE
+- ✅ Implement Code Editor với syntax highlighting - COMPLETE
+- ✅ Tích hợp Judge0 API cho code execution - COMPLETE với self-hosted Judge0
+- ✅ Hoàn thiện PvP System - COMPLETE
+- ✅ Friend System - COMPLETE
+- 🔄 Cải thiện error handling và edge cases cho production
+- 🔄 Performance optimization cho production deployment
 
 ## Next Steps (Priority Order)
 1. **Phase 1: Core Features** ✅ COMPLETE
@@ -386,10 +266,13 @@
    - 🔄 Tạo Badge system (UI có nhưng chưa có backend logic)
    - ✅ Xây dựng Leaderboard
 
-3. **Phase 3: PvP System** ❌ NOT STARTED
-   - ❌ Implement Socket.IO
-   - ❌ Tạo PvP room system
-   - ❌ Real-time competition features
+3. **Phase 3: PvP System** ✅ COMPLETE
+   - ✅ Implement Socket.IO với authentication
+   - ✅ Tạo PvP room system với CRUD operations
+   - ✅ Real-time competition features với WebSocket
+   - ✅ Friend system với requests và management
+   - ✅ Match history và statistics
+   - ✅ Winner determination và XP rewards
 
 4. **Phase 4: AI Features** ✅ MOSTLY COMPLETE
    - ✅ Tích hợp Gemini AI (thay vì OpenAI)
@@ -401,158 +284,83 @@
    - ✅ Challenge management
    - ✅ User management (basic)
 
-## Known Issues & Improvements Needed
+## Known Issues
 1. ✅ TypeScript errors in auth controller (Fixed: October 2, 2025)
-2. ✅ Hard-coded API URLs causing double /api/api paths (Fixed: November 17, 2025)
-3. ✅ Gemini API model deprecation - updated to gemini-1.5-flash (Fixed: November 17, 2025)
-4. ✅ OAuth routes returning 404 - added redirect routes (Fixed: November 17, 2025)
-5. ✅ Mongoose duplicate index warning (Fixed: November 17, 2025)
-6. ❌ Missing environment variable validation
-7. ❌ Incomplete error handling for edge cases
-8. ❌ No input validation middleware for all routes
-9. ❌ Missing rate limiting for API endpoints
-10. ❌ Challenge system execution (Judge0 integration)
-11. ❌ Server sync endpoint for AdaptiveAI not yet fully tested
-12. ❌ PvP real-time features (Socket.io integration needed)
+2. ❌ Missing environment variable validation
+3. ✅ Incomplete error handling (Đã cải thiện với fallback mechanisms)
+4. ✅ OAuth callback implementation needs review (Đã hoàn thiện)
+5. ✅ No input validation middleware (Đã có express-validator)
+6. ❌ Missing rate limiting
+7. ✅ Judge0 system errors trên Windows (Đã có fallback mechanism, không ảnh hưởng chức năng)
 
 ## Recent Changes Log
 
-### November 24, 2025 - Extended Backend Routes & Admin Features Complete
-- ✅ **Expanded Backend Routes**:
-  - ✅ Favorite Routes: Create, read, delete favorite challenges
-  - ✅ Admin Routes: Challenge bulk operations, statistics
-  - ✅ Report Routes: User report management
-  - ✅ Feedback Routes: Collect user feedback
-  - ✅ Achievement Routes: Badge/achievement management
-  - ✅ System Settings Routes: Admin configuration
-  - ✅ Chat Routes: Chatbox message persistence
-  - ✅ Leaderboard Routes: User ranking system
-  - ✅ Training Data Routes: AI training sample management
-  - ✅ Scraper Routes: Problem scraping from multiple sources
-- ✅ **Database Models Expansion**:
-  - ✅ Achievement Model (badges, icons, conditions)
-  - ✅ Favorite Model (user favorites with metadata)
-  - ✅ ChatHistory Model (conversation persistence with ratings)
-  - ✅ TrainingData Model (AI training samples with categories)
-  - ✅ Report Model (user problem reports)
-  - ✅ Feedback Model (user feedback collection)
-  - ✅ SystemSettings Model (admin configuration)
-- ✅ **Admin Dashboard Features**:
-  - ✅ Training Data Management tab with CRUD operations
-  - ✅ Challenge list viewing with filters
-  - ✅ Extract training data from chat history
-  - ✅ Bulk import/export training data
-  - ✅ Problem Scraper with CSES.fi support
-  - ✅ Advanced Scraper for multiple sources
-  - ✅ API Tester component for debugging
-  - ✅ Database Debugger for data inspection
-  - ✅ Challenge Import/Export functionality
-- ✅ **UI Improvements**:
-  - ✅ Responsive TrainingDataManagement component
-  - ✅ Tabs for Training Data and Challenges sections
-  - ✅ Pagination with gradient styling
-  - ✅ Search and filter capabilities
-  - ✅ Dark mode support
-- ✅ **Scraper System**:
-  - ✅ CSES.fi problem scraper
-  - ✅ Multiple problem source support
-  - ✅ Auto test case extraction
-  - ✅ Difficulty classification
-  - ✅ Bulk import to database
-- ✅ **Styling Refinement**:
-  - ✅ Updated padding in TrainingDataManagement (pt-16 md:pt-20)
-  - ✅ Pagination styling with header gradient colors
-  - ✅ Responsive design improvements
+### December 2, 2024 - PvP System Complete
+- ✅ **PvP Room System Complete**:
+  - Room creation với customizable settings (difficulty, time limit, max participants)
+  - Room code system (6-character codes) để dễ dàng share và join
+  - Real-time room updates với WebSocket
+  - Waiting room với ready status system
+  - Host controls (start match, delete room)
+- ✅ **PvP Match System Complete**:
+  - Match model với participants tracking
+  - Real-time code execution trong PvP Arena
+  - Winner determination algorithm (score + time based)
+  - XP rewards system (Easy: 20 XP, Medium: 50 XP, Hard: 100 XP)
+  - Match history và statistics
+- ✅ **Friend System Complete**:
+  - Send/accept/decline friend requests
+  - Friend list management
+  - Friendship levels (1-5) dựa trên interactions
+  - Block/unblock users
+  - Privacy settings cho friends
+- ✅ **WebSocket Integration Complete**:
+  - Real-time room updates (create, join, leave, delete)
+  - Live participant status (ready/not ready)
+  - Match events (started, completed, submission received)
+  - Friend notifications (requests, accepts)
+  - Authenticated connections với JWT
+- ✅ **Frontend Components**:
+  - PvPPage - Main lobby với room list
+  - CreateRoomModal - Tạo phòng với settings
+  - WaitingRoom - Phòng chờ với participants và ready system
+  - PvPArena - Arena thi đấu với Monaco Editor
+  - PvPResult - Kết quả trận đấu với statistics
+  - FriendsAndUsersModal - Quản lý bạn bè và search users
+  - LeaderboardModal - PvP rankings và top players
+- ✅ **Database Models**:
+  - PVPRoom model với participants và settings
+  - PVPMatch model với winner determination methods
+  - Friend model với friendship tracking
+- ✅ **API Routes**:
+  - `/api/pvp/rooms` - CRUD operations cho rooms
+  - `/api/pvp/matches` - Match management và submissions
+  - `/api/friends` - Friend system APIs
+  - Complete validation và error handling
 
-### November 17, 2025 - Server Optimization & Profile/Settings/Dashboard Complete
-- ✅ **Fixed Mongoose Duplicate Index Warning**:
-  - Removed duplicate `{ key: 1 }` index definition in systemSettingsSchema
-  - The `unique: true` field property already creates the index automatically
-  - Mongoose warning eliminated, server runs cleanly
-- ✅ **Profile Page** (`client/src/components/pages/Profile.tsx`) - COMPLETE:
-  - Avatar upload with drag-drop support and file validation
-  - Avatar preview with fallback to UI avatars API
-  - User information display and editing (email, phone, username)
-  - XP and rank display with progression system
-  - Rank-based color gradients and emoji icons
-  - Badge showcase with empty state handling
-  - Favorite languages selection and display (JavaScript, Python, Java, C++, Ruby, PHP, C#, Go)
-  - Challenge completion tracking (completed/total)
-  - Learning time statistics in minutes
-  - Progress bars for completion percentage and XP progression
-  - Ranking percentile display (top X% users)
-  - Password change functionality for account security
-  - Edit/Save/Cancel functionality with form validation
-  - Login method badges (Google, GitHub, Facebook, Local)
-  - Responsive design with dark mode support
-  - Error and loading state handling
-  - API integration for profile updates
-- ✅ **Settings Page** (`client/src/components/pages/Settings.tsx`):
-  - Theme toggle (Light/Dark mode) with persistent storage
-  - Background customization with predefined options and custom image upload
-  - Language preference switcher (Vietnamese/English)
-  - Password change functionality for local accounts
-  - Account information display (email, username, login method)
-  - Responsive design with smooth animations
-  - Dark mode support
-- ✅ **ClientDashboard Component** - User activity tracking:
-  - Activity streak calendar with fire-themed colors
-  - Daily login/submission tracking
-  - Gamification stats (XP, rank, badges, learning time)
-  - Sidebar navigation (Home, Library, Favorites)
-  - Admin panel access for administrators
-  - Session-based activity recording
-- ✅ **API Base Standardization** (continued refinement)
-- ✅ **ChatBox Component** improvements
-- ✅ **Gemini Pro AI** integration updates
-- ✅ **ChatBox Component**: Full-featured AI chat interface
-  - Real-time messaging with conversation history
-  - Floating window interface (380px × 450px)
-  - Chat session management (save, load, delete)
-  - Message rating system (👍/👎)
-  - Code syntax highlighting with highlight.js
-  - Markdown message rendering
-  - Message copy functionality
-  - Dark mode support
-- ✅ **Gemini Pro AI Integration**:
-  - Google Generative AI API integration (gemini-1.5-flash model)
-  - API key configuration via VITE_GEMINI_API_KEY
-  - System prompt customization for BugHunter context
-  - Multi-turn conversation support
-  - Temperature and token control
-  - Detailed error logging and debugging
-- ✅ **AdaptiveAI - Client-side Learning**:
-  - Self-learning AI with localStorage persistence
-  - User feedback learning (interaction patterns)
-  - Optional server sync endpoint (/api/ai/learn)
-  - Conversation context awareness
-  - JSON-based storage format
-- ✅ **HybridAI Strategy**:
-  - 3-tier response prioritization (Adaptive → Training → Gemini)
-  - Automatic fallback mechanism
-  - Error recovery and graceful degradation
-- ✅ **API Base Standardization**:
-  - Created getApiBase() helper for centralized API configuration
-  - Removed all hard-coded API URLs
-  - Fixed double `/api/api` path issues
-  - Standardized environment variable usage (VITE_API_URL)
-- ✅ **OAuth Route Fixes**:
-  - Added redirect routes for legacy OAuth paths (/auth/* → /api/auth/*)
-  - Proper error handling for OAuth flows
-  - Google, GitHub, Facebook OAuth fully functional
-- ✅ **UI Components**:
-  - NotificationBox for real-time alerts
-  - Header with language switcher
-  - Responsive design across all components
-  - Dark mode support
-- ✅ **AdminDashboard Fixes**:
-  - Updated to use getApiBase() helper
-  - Removed hard-coded localhost URLs
-- ✅ **Testing & Debugging**:
-  - testChatBox.ts for API validation
-  - test-gemini.js for API connection testing
-  - Comprehensive error logging in all AI components
-  - TypeScript error fixes (proper error type handling)
+
+### November 21, 2024 - Major Features Complete
+- ✅ **Challenge System Complete**: 
+  - CodeEditor component với Monaco Editor
+  - Submission system với Judge0 integration
+  - Test cases execution và feedback
+  - ProblemDetail và ProblemsList components
+- ✅ **Gamification Complete**:
+  - XP system với calculateXP function
+  - Ranking system (Newbie → Expert) với updateUserRank
+  - Leaderboard component và API
+- ✅ **AI Analysis Complete**:
+  - AIAnalysisService với Gemini AI integration
+  - Error analysis, code suggestions, recommendations
+  - Fallback to rule-based analysis
+- ✅ **User Features Complete**:
+  - Profile page với progress tracking
+  - Dashboard với user stats
+  - User routes và controllers
+- ✅ **Judge0 Integration**:
+  - Self-hosted Judge0 với Docker Compose
+  - Fallback mechanisms cho Windows compatibility
+  - Error handling và validation
 
 ### December 28, 2024 - OAuth Implementation Complete
 - ✅ **Backend OAuth Complete**: 
@@ -586,23 +394,45 @@
 ## Project Structure
 ```
 bughunter/
-├── client/                 # React Frontend
+├── client/                      # React Frontend
 │   ├── src/
 │   │   ├── components/
-│   │   │   └── auth/      # Authentication components
-│   │   ├── pages/         # Page components (empty)
-│   │   ├── styles/        # Styling files (empty)
+│   │   │   ├── auth/           # Authentication components
+│   │   │   ├── practice/       # Practice mode components
+│   │   │   ├── simplePvp/      # PvP components
+│   │   │   ├── admin/          # Admin dashboard
+│   │   │   ├── pages/          # Page components
+│   │   │   ├── ui/             # shadcn/ui components
+│   │   │   └── contexts/       # React contexts
+│   │   ├── services/           # API services
+│   │   │   ├── simplePvpApi.ts
+│   │   │   ├── friendApi.ts
+│   │   │   └── websocket.service.ts
 │   │   └── App.tsx
 │   └── package.json
-├── server/                # Express Backend
+├── server/                      # Express Backend
 │   ├── src/
-│   │   ├── controllers/   # Route controllers
-│   │   ├── models/        # Database models
-│   │   ├── routes/        # API routes
-│   │   ├── middleware/    # Custom middleware
-│   │   ├── config/        # Configuration files
+│   │   ├── controllers/        # Route controllers
+│   │   ├── models/             # Database models
+│   │   │   ├── user.model.ts
+│   │   │   ├── challenge.model.ts
+│   │   │   ├── pvpRoom.model.ts
+│   │   │   ├── pvpMatch.model.ts
+│   │   │   └── friend.model.ts
+│   │   ├── routes/             # API routes
+│   │   ├── services/           # Business logic services
+│   │   │   ├── judge0Service.ts
+│   │   │   ├── aiAnalysisService.ts
+│   │   │   └── websocket.service.ts
+│   │   ├── middleware/         # Custom middleware
+│   │   ├── config/             # Configuration files
 │   │   └── app.ts
+│   ├── scripts/                # Setup scripts
 │   └── package.json
+├── docs/                        # Documentation
+│   ├── PVP_COMPETITION_DESIGN.md
+│   ├── PVP_GUIDE.md
+│   └── INSTALLATION.md
 └── project-memory-bank.md
 ```
 
@@ -614,67 +444,41 @@ bughunter/
 ## Notes
 - Cần validate environment variables trước khi deploy
 - Consider implementing refresh tokens
-- Cần thêm input validation middleware
+- ✅ Input validation middleware đã có (express-validator)
 - Consider adding rate limiting cho auth routes
-- Cần implement proper error handling middleware
+- ✅ Error handling middleware đã có
 - Consider upgrading từ Express lên NestJS cho scalability
 
-## AI System Architecture (November 2025)
+## Known Limitations & Future Improvements
+1. **PvP System**:
+   - Tournament mode chưa implement (chỉ có 1vs1)
+   - Spectator mode chưa có
+   - Replay system chưa có
+   - Chat trong arena chưa có
 
-### Component Overview
-1. **GeminiProAI** (`client/src/utils/geminiAI.ts`)
-   - Wrapper around Google Generative AI API
-   - Model: gemini-1.5-flash
-   - Handles API calls, error logging, response parsing
-   - Configuration: temperature, maxOutputTokens, topP, topK
-   - Conversation history management
+2. **Performance**:
+   - Chưa có caching cho API responses
+   - Chưa có load balancing cho Judge0
+   - Database indexing cần optimize thêm
 
-2. **AdaptiveAI** (`client/src/utils/adaptiveAI.ts`)
-   - Client-side learning system
-   - Stores interactions and patterns in localStorage
-   - Optional server sync via `/api/ai/learn`
-   - Learns from user feedback (👍/👎 ratings)
-   - Persistent across sessions
+3. **Security**:
+   - Rate limiting chưa implement
+   - CSRF protection chưa có
+   - XSS protection cần cải thiện
 
-3. **HybridAI** (in ChatBox component)
-   - Orchestrates multi-AI strategy
-   - Response priority: AdaptiveAI → Training Data → Gemini
-   - Automatic fallback on failure
-   - Error recovery and graceful degradation
+4. **Testing**:
+   - Unit tests chưa có
+   - Integration tests chưa có
+   - E2E tests chưa có
 
-### Data Flow
-```
-User Message
-    ↓
-ChatBox Component
-    ↓
-HybridAI Strategy
-    ├→ Check AdaptiveAI (local patterns) → Return if match
-    ├→ Check Training Data → Return if available
-    └→ Fall back to Gemini Pro API
-    ↓
-Response Processing
-    ├→ Markdown parsing
-    ├→ Code syntax highlighting
-    └→ Store in conversation history
-    ↓
-Display in ChatBox UI
-```
-
-### Configuration
-- **API Key**: `VITE_GEMINI_API_KEY` in `.env.local`
-- **Backend URL**: `VITE_API_URL` (defaults to http://localhost:5000)
-- **Model**: `gemini-1.5-flash` (latest lightweight model)
-- **System Prompt**: Customized for BugHunter programming assistant context
-
-### Persistence
-- **Conversation History**: stored in memory during session
-- **Adaptive Patterns**: localStorage key `bughunter_ai_learning_data`
-- **Chat Sessions**: Can be saved/loaded via backend API
-- **User Ratings**: Feed learning for AdaptiveAI
-
-### API Endpoints
-- `POST /api/chat/message` - Send message to AI
-- `GET /api/chat/histories` - Load chat history list
-- `GET /api/chat/:id` - Load specific chat
-- `POST /api/ai/learn` - Sync adaptive learning to server (optional)
+## Deployment Checklist
+- [ ] Environment variables validation
+- [ ] MongoDB production setup với authentication
+- [ ] Judge0 production deployment
+- [ ] SSL certificates cho HTTPS
+- [ ] Rate limiting implementation
+- [ ] Monitoring và logging setup
+- [ ] Backup strategy cho database
+- [ ] CDN setup cho static assets
+- [ ] Load balancer configuration
+- [ ] Error tracking (Sentry hoặc tương tự)
