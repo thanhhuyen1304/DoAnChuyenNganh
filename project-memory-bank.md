@@ -1,6 +1,6 @@
 # BugHunter Project Memory Bank
 
-## Last Updated: November 21, 2024
+## Last Updated: December 2, 2024
 
 ## Project Overview
 - **Name**: BugHunter
@@ -42,9 +42,15 @@
 - ✅ Leaderboard toàn hệ thống (top điểm, top PvP, sự kiện) - Leaderboard component và routes
 
 #### PvP Challenge System
-- ❌ Tạo phòng hoặc tham gia phòng đấu trực tiếp
-- ❌ Thời gian thực: đếm ngược, so sánh kết quả submit
-- ❌ Xếp hạng người thắng dựa trên tốc độ & số test case pass
+- ✅ Tạo phòng hoặc tham gia phòng đấu trực tiếp - PvPPage component
+- ✅ Hệ thống phòng chờ với ready status - WaitingRoom component
+- ✅ Thời gian thực: đếm ngược, so sánh kết quả submit - WebSocket integration
+- ✅ Xếp hạng người thắng dựa trên tốc độ & số test case pass - PvPMatch model với determineWinner()
+- ✅ Real-time updates với Socket.IO - WebSocketService
+- ✅ Room code system để tham gia phòng - 6-character room codes
+- ✅ Friend system - Gửi/nhận lời mời kết bạn, quản lý danh sách bạn bè
+- ✅ PvP Arena với Monaco Editor - Thi đấu code real-time
+- ✅ Match result display với XP rewards - PvPResult component
 
 ### 2. Admin Features
 #### User Management
@@ -57,8 +63,9 @@
 - ✅ Quản lý test case: input, output, chấm điểm - TestCase schema với points, isHidden
 
 #### Event & PvP Management
-- ❌ Tạo giải đấu định kỳ, xếp hạng user
-- ❌ Theo dõi số lượng người tham gia, thống kê kết quả
+- ✅ Theo dõi số lượng người tham gia, thống kê kết quả - PvP stats tracking
+- ✅ Leaderboard cho PvP matches - PvP leaderboard modal
+- ❌ Tạo giải đấu định kỳ (Tournament mode chưa implement)
 
 ### 3. AI/ML/DL Features
 #### AI Debug Assistant
@@ -99,7 +106,8 @@
 - **Routing**: React Router DOM
 - **HTTP Client**: Axios
 - **UI Components**: Headless UI + Heroicons
-- **Real-time**: Socket.IO (cho PvP)
+- **Real-time**: Socket.IO (đã hoàn thiện cho PvP)
+- **Code Editor**: Monaco Editor (cho PvP Arena)
 
 ### AI/ML/DL
 - **APIs**: Google Gemini API (gemini-pro, gemini-1.5-flash, gemini-1.5-pro) với fallback rule-based
@@ -140,12 +148,15 @@
    - ✅ Submission Model cho kết quả làm bài (với AI analysis, execution results)
    - ❌ Badge Model (chưa có model riêng, chỉ có field trong User)
    - ✅ Ranking System (tính toán từ XP, không cần model riêng)
-   - ❌ PvP Room Model
+   - ✅ PvP Room Model - Complete với participants, settings, status
+   - ✅ PvP Match Model - Complete với winner determination, XP calculation
+   - ✅ Friend Model - Complete với friendship levels, interactions tracking
    - ✅ Test Case Model (embedded trong Challenge)
 
 3. **Services**
    - ✅ Judge0Service - Code execution với Judge0 API
    - ✅ AIAnalysisService - AI analysis với Gemini và rule-based fallback
+   - ✅ WebSocketService - Real-time communication cho PvP
    - ✅ Error handling và fallback mechanisms
 
 3. **API Routes**
@@ -154,7 +165,8 @@
    - ✅ User Profile Routes (getMyProgress, updateMe, getProgressByUsername)
    - ✅ Submission Routes (submit, getUserSubmissions, getAllUserSubmissions, getSubmissionById, getUserSubmissionStats)
    - ✅ Ranking Routes (Leaderboard routes với getTopLearners)
-   - ❌ PvP Routes
+   - ✅ PvP Routes - Complete CRUD cho rooms và matches
+   - ✅ Friend Routes - Complete friend system APIs
    - ✅ Admin Routes (challenge management, scraper, import-export)
 
 4. **Middleware**
@@ -184,8 +196,12 @@
    - ✅ Submission Form - Integrated trong CodeEditor với handleSubmit
    - ✅ Profile Page - Profile.tsx với progress tracking, edit profile
    - ✅ Leaderboard - Leaderboard component và page
-   - ❌ PvP Lobby
-   - ❌ PvP Room
+   - ✅ PvP Lobby - PvPPage với room list và search
+   - ✅ PvP Waiting Room - WaitingRoom với ready system
+   - ✅ PvP Arena - PvPArena với Monaco Editor
+   - ✅ PvP Result - PvPResult với match statistics
+   - ✅ Friends Modal - FriendsAndUsersModal để quản lý bạn bè
+   - ✅ Leaderboard Modal - LeaderboardModal cho PvP rankings
 
 3. **Common Components**
    - ✅ UI Components (shadcn/ui)
@@ -193,15 +209,15 @@
    - ✅ Error Messages
    - ✅ Success Messages
    - ✅ Alert Components
-   - ❌ Modal Components
+   - ✅ Modal Components - Dialog, Sheet components từ shadcn/ui
 
 4. **Admin Components**
    - ✅ Admin Dashboard với tabs
    - ✅ Challenge Management (CRUD)
    - ✅ Challenge creation form với test cases
    - ✅ Statistics display
-   - ❌ User Management
-   - ❌ Event Management
+   - ✅ User Management - Basic user stats và progress tracking
+   - ❌ Event Management - Tournament system chưa có
 
 ## Security Implementation
 - ✅ JWT Authentication
@@ -233,8 +249,10 @@
 - ✅ Xây dựng Challenge system cơ bản - COMPLETE
 - ✅ Implement Code Editor với syntax highlighting - COMPLETE
 - ✅ Tích hợp Judge0 API cho code execution - COMPLETE với self-hosted Judge0
+- ✅ Hoàn thiện PvP System - COMPLETE
+- ✅ Friend System - COMPLETE
 - 🔄 Cải thiện error handling và edge cases cho production
-- 🔄 Hoàn thiện PvP System
+- 🔄 Performance optimization cho production deployment
 
 ## Next Steps (Priority Order)
 1. **Phase 1: Core Features** ✅ COMPLETE
@@ -248,10 +266,13 @@
    - 🔄 Tạo Badge system (UI có nhưng chưa có backend logic)
    - ✅ Xây dựng Leaderboard
 
-3. **Phase 3: PvP System** ❌ NOT STARTED
-   - ❌ Implement Socket.IO
-   - ❌ Tạo PvP room system
-   - ❌ Real-time competition features
+3. **Phase 3: PvP System** ✅ COMPLETE
+   - ✅ Implement Socket.IO với authentication
+   - ✅ Tạo PvP room system với CRUD operations
+   - ✅ Real-time competition features với WebSocket
+   - ✅ Friend system với requests và management
+   - ✅ Match history và statistics
+   - ✅ Winner determination và XP rewards
 
 4. **Phase 4: AI Features** ✅ MOSTLY COMPLETE
    - ✅ Tích hợp Gemini AI (thay vì OpenAI)
@@ -273,6 +294,50 @@
 7. ✅ Judge0 system errors trên Windows (Đã có fallback mechanism, không ảnh hưởng chức năng)
 
 ## Recent Changes Log
+
+### December 2, 2024 - PvP System Complete
+- ✅ **PvP Room System Complete**:
+  - Room creation với customizable settings (difficulty, time limit, max participants)
+  - Room code system (6-character codes) để dễ dàng share và join
+  - Real-time room updates với WebSocket
+  - Waiting room với ready status system
+  - Host controls (start match, delete room)
+- ✅ **PvP Match System Complete**:
+  - Match model với participants tracking
+  - Real-time code execution trong PvP Arena
+  - Winner determination algorithm (score + time based)
+  - XP rewards system (Easy: 20 XP, Medium: 50 XP, Hard: 100 XP)
+  - Match history và statistics
+- ✅ **Friend System Complete**:
+  - Send/accept/decline friend requests
+  - Friend list management
+  - Friendship levels (1-5) dựa trên interactions
+  - Block/unblock users
+  - Privacy settings cho friends
+- ✅ **WebSocket Integration Complete**:
+  - Real-time room updates (create, join, leave, delete)
+  - Live participant status (ready/not ready)
+  - Match events (started, completed, submission received)
+  - Friend notifications (requests, accepts)
+  - Authenticated connections với JWT
+- ✅ **Frontend Components**:
+  - PvPPage - Main lobby với room list
+  - CreateRoomModal - Tạo phòng với settings
+  - WaitingRoom - Phòng chờ với participants và ready system
+  - PvPArena - Arena thi đấu với Monaco Editor
+  - PvPResult - Kết quả trận đấu với statistics
+  - FriendsAndUsersModal - Quản lý bạn bè và search users
+  - LeaderboardModal - PvP rankings và top players
+- ✅ **Database Models**:
+  - PVPRoom model với participants và settings
+  - PVPMatch model với winner determination methods
+  - Friend model với friendship tracking
+- ✅ **API Routes**:
+  - `/api/pvp/rooms` - CRUD operations cho rooms
+  - `/api/pvp/matches` - Match management và submissions
+  - `/api/friends` - Friend system APIs
+  - Complete validation và error handling
+
 
 ### November 21, 2024 - Major Features Complete
 - ✅ **Challenge System Complete**: 
@@ -329,23 +394,45 @@
 ## Project Structure
 ```
 bughunter/
-├── client/                 # React Frontend
+├── client/                      # React Frontend
 │   ├── src/
 │   │   ├── components/
-│   │   │   └── auth/      # Authentication components
-│   │   ├── pages/         # Page components (empty)
-│   │   ├── styles/        # Styling files (empty)
+│   │   │   ├── auth/           # Authentication components
+│   │   │   ├── practice/       # Practice mode components
+│   │   │   ├── simplePvp/      # PvP components
+│   │   │   ├── admin/          # Admin dashboard
+│   │   │   ├── pages/          # Page components
+│   │   │   ├── ui/             # shadcn/ui components
+│   │   │   └── contexts/       # React contexts
+│   │   ├── services/           # API services
+│   │   │   ├── simplePvpApi.ts
+│   │   │   ├── friendApi.ts
+│   │   │   └── websocket.service.ts
 │   │   └── App.tsx
 │   └── package.json
-├── server/                # Express Backend
+├── server/                      # Express Backend
 │   ├── src/
-│   │   ├── controllers/   # Route controllers
-│   │   ├── models/        # Database models
-│   │   ├── routes/        # API routes
-│   │   ├── middleware/    # Custom middleware
-│   │   ├── config/        # Configuration files
+│   │   ├── controllers/        # Route controllers
+│   │   ├── models/             # Database models
+│   │   │   ├── user.model.ts
+│   │   │   ├── challenge.model.ts
+│   │   │   ├── pvpRoom.model.ts
+│   │   │   ├── pvpMatch.model.ts
+│   │   │   └── friend.model.ts
+│   │   ├── routes/             # API routes
+│   │   ├── services/           # Business logic services
+│   │   │   ├── judge0Service.ts
+│   │   │   ├── aiAnalysisService.ts
+│   │   │   └── websocket.service.ts
+│   │   ├── middleware/         # Custom middleware
+│   │   ├── config/             # Configuration files
 │   │   └── app.ts
+│   ├── scripts/                # Setup scripts
 │   └── package.json
+├── docs/                        # Documentation
+│   ├── PVP_COMPETITION_DESIGN.md
+│   ├── PVP_GUIDE.md
+│   └── INSTALLATION.md
 └── project-memory-bank.md
 ```
 
@@ -357,7 +444,41 @@ bughunter/
 ## Notes
 - Cần validate environment variables trước khi deploy
 - Consider implementing refresh tokens
-- Cần thêm input validation middleware
+- ✅ Input validation middleware đã có (express-validator)
 - Consider adding rate limiting cho auth routes
-- Cần implement proper error handling middleware
+- ✅ Error handling middleware đã có
 - Consider upgrading từ Express lên NestJS cho scalability
+
+## Known Limitations & Future Improvements
+1. **PvP System**:
+   - Tournament mode chưa implement (chỉ có 1vs1)
+   - Spectator mode chưa có
+   - Replay system chưa có
+   - Chat trong arena chưa có
+
+2. **Performance**:
+   - Chưa có caching cho API responses
+   - Chưa có load balancing cho Judge0
+   - Database indexing cần optimize thêm
+
+3. **Security**:
+   - Rate limiting chưa implement
+   - CSRF protection chưa có
+   - XSS protection cần cải thiện
+
+4. **Testing**:
+   - Unit tests chưa có
+   - Integration tests chưa có
+   - E2E tests chưa có
+
+## Deployment Checklist
+- [ ] Environment variables validation
+- [ ] MongoDB production setup với authentication
+- [ ] Judge0 production deployment
+- [ ] SSL certificates cho HTTPS
+- [ ] Rate limiting implementation
+- [ ] Monitoring và logging setup
+- [ ] Backup strategy cho database
+- [ ] CDN setup cho static assets
+- [ ] Load balancer configuration
+- [ ] Error tracking (Sentry hoặc tương tự)
