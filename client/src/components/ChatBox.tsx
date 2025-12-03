@@ -339,10 +339,8 @@ const ChatBox: React.FC = () => {
     }
   };
 
-  // Send message
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  // Send message logic
+  const sendMessage = async () => {
     if (!inputValue.trim() || isLoading) return;
 
     const userMessage: Message = {
@@ -380,25 +378,36 @@ const ChatBox: React.FC = () => {
         }),
       });
 
+      // Check if response is ok
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.message || errorMessage;
+        } catch {
+          errorMessage = errorText || errorMessage;
+        }
+        throw new Error(errorMessage);
+      }
+
       const data = await response.json();
 
       if (data.success) {
-        // Tính messageIndex: số lượng assistant messages trước đó + 1
         const assistantMessageCount = messages.filter(m => m.role === 'assistant').length;
         const aiMessage: Message = {
           id: (Date.now() + 1).toString(),
           role: 'assistant',
           content: data.data.message.content,
           timestamp: new Date(data.data.message.timestamp),
-          messageIndex: assistantMessageCount, // Index của AI message trong chat history
+          messageIndex: assistantMessageCount,
         };
 
         setMessages(prev => [...prev, aiMessage]);
-        
-        // Update chatId if this is a new chat
+
         if (!chatId && data.data.chatId) {
           setChatId(data.data.chatId);
-          loadChatHistories(); // Reload chat list
+          loadChatHistories();
         }
       } else {
         throw new Error(data.message || 'Lỗi khi gửi tin nhắn');
@@ -410,12 +419,16 @@ const ChatBox: React.FC = () => {
         description: error.message || (language === 'vi' ? 'Không thể gửi tin nhắn' : 'Failed to send message'),
         variant: 'destructive',
       });
-      
-      // Remove user message on error
       setMessages(prev => prev.filter(msg => msg.id !== userMessage.id));
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Form submission handler
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    sendMessage();
   };
 
   // Handle textarea resize
@@ -497,7 +510,7 @@ const ChatBox: React.FC = () => {
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSendMessage(e);
+      sendMessage();
     }
   };
 
@@ -676,34 +689,31 @@ const ChatBox: React.FC = () => {
                                 remarkPlugins={[remarkGfm]}
                                 components={{
                                   code: ({ node, inline, className, children, ...props }: any) => {
-                                    const match = /language-(\w+)/.exec(className || '');
-                                    return !inline && match ? (
-                                      <div className="relative group">
-                                        <pre className="bg-gray-900 dark:bg-gray-950 rounded-lg p-4 overflow-x-auto">
-                                          <code className={className} {...props}>
-                                            {children}
-                                          </code>
-                                        </pre>
-                                        <button
-                                          onClick={() => copyMessage(String(children), message.id)}
-                                          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-1.5 bg-gray-700 hover:bg-gray-600 rounded transition-all"
-                                        >
-                                          {copiedId === message.id ? (
-                                            <Check size={14} className="text-green-400" />
-                                          ) : (
-                                            <Copy size={14} className="text-gray-300" />
-                                          )}
-                                        </button>
-                                      </div>
-                                    ) : (
-                                      <code
-                                        className="bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 rounded text-sm"
-                                        {...props}
-                                      >
-                                        {children}
-                                      </code>
-                                    );
-                                  },
+                                     const match = /language-(\w+)/.exec(className || '');
+                                     return !inline && match ? (
+                                       <div className="relative group">
+                                         <pre className="bg-gray-900 dark:bg-gray-950 rounded-lg p-4 overflow-x-auto">
+                                           <code className={className}>
+                                             {children}
+                                           </code>
+                                         </pre>
+                                         <button
+                                           onClick={() => copyMessage(String(children), message.id)}
+                                           className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-1.5 bg-gray-700 hover:bg-gray-600 rounded transition-all"
+                                         >
+                                           {copiedId === message.id ? (
+                                             <Check size={14} className="text-green-400" />
+                                           ) : (
+                                             <Copy size={14} className="text-gray-300" />
+                                           )}
+                                         </button>
+                                       </div>
+                                     ) : (
+                                       <code className="bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 rounded text-sm">
+                                         {children}
+                                       </code>
+                                     );
+                                   },
                                 }}
                               >
                                 {message.content}
@@ -777,7 +787,7 @@ const ChatBox: React.FC = () => {
                 </div>
               ) : (
                 <div className="border-t border-gray-200 dark:border-gray-700 p-4">
-            <form onSubmit={handleSendMessage} className="flex gap-2">
+            <form onSubmit={handleFormSubmit} className="flex gap-2">
                     <textarea
                 ref={inputRef}
                 value={inputValue}

@@ -3,7 +3,14 @@ import { AuthController } from '../controllers/auth.controller';
 import { body, validationResult } from 'express-validator';
 import { authenticate } from '../middleware/auth';
 import passport from 'passport';
-import { otpRequestRateLimitIP, otpRequestRateLimitIdentifier, otpVerifyRateLimitIP, otpVerifyRateLimitIdentifier } from '../middleware/rateLimit';
+import { 
+  otpRequestRateLimitIP, 
+  otpRequestRateLimitIdentifier, 
+  otpVerifyRateLimitIP, 
+  otpVerifyRateLimitIdentifier,
+  authRateLimit,
+  authRateLimitUser
+} from '../middleware/rateLimit';
 
 const router = Router();
 const authController = new AuthController();
@@ -37,8 +44,8 @@ const loginValidation = [
 ];
 
 // Auth routes
-router.post('/register', registerValidation, authController.register);
-router.post('/login', loginValidation, authController.login);
+router.post('/register', registerValidation, authRateLimit, authController.register);
+router.post('/login', loginValidation, authRateLimit, authRateLimitUser, authController.login);
 // Password reset: request code (chỉ dùng email)
 
 // Chấp nhận emailOrPhone (email hoặc số điện thoại)

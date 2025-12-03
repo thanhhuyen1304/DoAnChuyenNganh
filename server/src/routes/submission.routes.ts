@@ -8,6 +8,7 @@ import {
   getUserSubmissionStats
 } from '../controllers/submission.controller';
 import { authenticateToken } from '../middleware/auth';
+import { submissionRateLimit } from '../middleware/rateLimit';
 
 const router = express.Router();
 
@@ -33,7 +34,7 @@ const submitValidation = [
 ];
 
 // Routes
-router.post('/submit', submitValidation, submitSolution);
+router.post('/submit', submitValidation, submissionRateLimit, submitSolution);
 
 router.get('/challenge/:challengeId', [
   param('challengeId').isMongoId().withMessage('ID bài tập không hợp lệ')

@@ -28,6 +28,7 @@ import FeedbackManagement from './FeedbackManagement';
 import AchievementManagement from './AchievementManagement';
 import SystemSettings from './SystemSettings';
 import TrainingDataManagement from './TrainingDataManagement';
+import KnowledgeGraphCanvas from './KnowledgeGraphCanvas';
 import Header from '../Header';
 import ErrorBoundary from '../ui/ErrorBoundary';
 
@@ -78,7 +79,8 @@ import {
   MessageSquare, 
   Award,
   Shield,
-  Brain
+  Brain,
+  Network
 } from 'lucide-react';
 
 const OTHER_TABS = [
@@ -88,6 +90,7 @@ const OTHER_TABS = [
   { id: 'feedback', icon: MessageSquare, label: { vi: 'Phản hồi', en: 'Feedback' }, color: 'text-emerald-500' },
   { id: 'achievements', icon: Award, label: { vi: 'Thành tích', en: 'Achievements' }, color: 'text-amber-500' },
   { id: 'training-data', icon: Brain, label: { vi: 'Training Data AI', en: 'Training Data AI' }, color: 'text-purple-500' },
+  { id: 'knowledge-graph', icon: Network, label: { vi: 'Knowledge Graph', en: 'Knowledge Graph' }, color: 'text-indigo-500' },
   { id: 'settings', icon: Settings, label: { vi: 'Cài đặt hệ thống', en: 'System Settings' }, color: 'text-gray-500' },
   
   // Development Tools
@@ -545,6 +548,24 @@ const AdminDashboard: React.FC = () => {
                   </Card>
                 }>
                   <TrainingDataManagement />
+                </ErrorBoundary>
+              </div>
+            )}
+            {activeOtherTab === 'knowledge-graph' && (
+              <div className="space-y-6">
+                <ErrorBoundary fallback={
+                  <Card className="bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800">
+                    <CardContent className="p-4">
+                      <h3 className="text-red-600 dark:text-red-400 font-semibold mb-2">
+                        {language === 'vi' ? 'Lỗi khi tải Knowledge Graph' : 'Error loading Knowledge Graph'}
+                      </h3>
+                      <p className="text-red-600 dark:text-red-400 text-sm">
+                        {language === 'vi' ? 'Vui lòng kiểm tra console để xem chi tiết lỗi và refresh trang.' : 'Please check console for error details and refresh the page.'}
+                      </p>
+                    </CardContent>
+                  </Card>
+                }>
+                  <KnowledgeGraphCanvas />
                 </ErrorBoundary>
               </div>
             )}

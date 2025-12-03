@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import { config } from 'dotenv';
 import path from 'path';
+import bcrypt from 'bcryptjs';
 import User from '../src/models/user.model';
 import Challenge from '../src/models/challenge.model';
 
@@ -200,10 +201,11 @@ async function setupDatabase() {
     const adminExists = await User.findOne({ email: ENV.ADMIN_EMAIL });
     
     if (!adminExists) {
+      // Không hash password ở đây, để pre-save hook tự động hash
       const adminUser = new User({
         email: ENV.ADMIN_EMAIL,
         username: 'admin',
-        password: 'admin123', // Mật khẩu mặc định, nên thay đổi sau
+        password: 'admin123', // ✅ Password plain text, sẽ tự động hash trong pre-save hook
         role: 'admin', // Set role admin
         favoriteLanguages: ['Python', 'JavaScript', 'Java'],
         experience: 1000,

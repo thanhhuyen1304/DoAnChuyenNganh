@@ -211,10 +211,12 @@ export class AuthController {
                         email: user.email,
                         username: user.username,
                         avatar: user.avatar,
+                        phone: user.phone,
                         experience: user.experience,
                         rank: user.rank,
                         badges: user.badges,
                         favoriteLanguages: user.favoriteLanguages,
+                        loginMethod: user.loginMethod,
                         role: getUserRole(user)
                     }
                 }
@@ -248,10 +250,12 @@ export class AuthController {
                         email: user.email,
                         username: user.username,
                         avatar: user.avatar,
+                        phone: user.phone,
                         experience: user.experience,
                         rank: user.rank,
                         badges: user.badges,
                         favoriteLanguages: user.favoriteLanguages,
+                        loginMethod: user.loginMethod,
                         role: getUserRole(user)
                     }
                 }

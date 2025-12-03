@@ -3,21 +3,61 @@ import ChatHistory from '../models/chatHistory.model';
 import User from '../models/user.model';
 import TrainingData from '../models/trainingData.model';
 import Challenge from '../models/challenge.model';
+import Submission from '../models/submission.model';
 import axios from 'axios';
 import { word2vecService } from '../services/word2vecService';
+import { knowledgeGraphService } from '../services/knowledgeGraphService';
+import { keywordExtractionService } from '../services/keywordExtractionService';
+import mongoose from 'mongoose';
+
+// Helper để lấy biến môi trường từ nhiều key khác nhau
+function resolveEnvVariable(keys: string[]) {
+  for (const key of keys) {
+    const value = process.env[key];
+    if (value && value.trim().length > 0) {
+      return { value: value.trim(), source: key };
+    }
+  }
+  return { value: '', source: undefined };
+}
+
+const GEMINI_ENV = resolveEnvVariable([
+  'GEMINI_API_KEY',
+  'GOOGLE_GEMINI_API_KEY',
+  'VITE_GEMINI_API_KEY',
+  'REACT_APP_GEMINI_API_KEY',
+]);
+
+const OPENAI_ENV = resolveEnvVariable([
+  'OPENAI_API_KEY',
+  'VITE_OPENAI_API_KEY',
+  'REACT_APP_OPENAI_API_KEY',
+]);
 
 // Environment configuration
 const ENV = {
-  GEMINI_API_KEY: process.env.GEMINI_API_KEY || '',
-  OPENAI_API_KEY: process.env.OPENAI_API_KEY || '',
+  GEMINI_API_KEY: GEMINI_ENV.value,
+  OPENAI_API_KEY: OPENAI_ENV.value,
   AI_PROVIDER: process.env.AI_PROVIDER || 'gemini', // 'gemini' | 'openai'
 };
 
 // Log configuration on startup
 console.log('[Chat Controller] AI Configuration:');
 console.log(`  - AI_PROVIDER: ${ENV.AI_PROVIDER}`);
-console.log(`  - GEMINI_API_KEY: ${ENV.GEMINI_API_KEY ? '✅ Đã cấu hình (' + ENV.GEMINI_API_KEY.substring(0, 10) + '...)' : '❌ Chưa cấu hình'}`);
-console.log(`  - OPENAI_API_KEY: ${ENV.OPENAI_API_KEY ? '✅ Đã cấu hình' : '❌ Chưa cấu hình'}`);
+console.log(
+  `  - GEMINI_API_KEY: ${
+    ENV.GEMINI_API_KEY
+      ? `✅ Đã cấu hình thông qua ${GEMINI_ENV.source}`
+      : '❌ Chưa cấu hình'
+  }`,
+);
+console.log(
+  `  - OPENAI_API_KEY: ${
+    ENV.OPENAI_API_KEY
+      ? `✅ Đã cấu hình thông qua ${OPENAI_ENV.source}`
+      : '❌ Chưa cấu hình'
+  }`,
+);
 
 interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
@@ -369,75 +409,218 @@ async function generateOpenAIResponse(messages: ChatMessage[]): Promise<string> 
   }
 }
 
+// Detect if user is asking about errors or debugging
+function detectErrorRequest(userMessage: string): { isRequest: boolean; errorTypes?: string[] } {
+  const lowerMessage = userMessage.toLowerCase();
+  
+  const errorKeywords = [
+    'lỗi', 'error', 'bug', 'sai', 'không chạy', 'crash', 'exception',
+    'undefined', 'null', 'syntax error', 'runtime error', 'compile error',
+    'cách sửa', 'làm sao fix', 'giúp debug', 'gợi ý', 'hướng dẫn'
+  ];
+  
+  const isRequest = errorKeywords.some(keyword => lowerMessage.includes(keyword));
+  
+  if (!isRequest) {
+    return { isRequest: false };
+  }
+
+  // Extract error types
+  const errorTypes: string[] = [];
+  const commonErrorTypes = ['syntax', 'logic', 'runtime', 'performance', 'timeout', 'memory'];
+  commonErrorTypes.forEach(type => {
+    if (lowerMessage.includes(type)) {
+      errorTypes.push(type);
+    }
+  });
+
+  return { isRequest: true, errorTypes };
+}
+
+// Get user's recent errors from submissions
+async function getUserRecentErrors(userId: string): Promise<{
+  errorTypes: Record<string, number>;
+  errorMessages: string[];
+  recentSubmissions: any[];
+}> {
+  try {
+    const recentSubmissions = await Submission.find({
+      user: new mongoose.Types.ObjectId(userId),
+      status: { $ne: 'Accepted' }
+    })
+      .sort({ submittedAt: -1 })
+      .limit(10)
+      .lean();
+
+    const errorTypes: Record<string, number> = {};
+    const errorMessages: string[] = [];
+
+    recentSubmissions.forEach(sub => {
+      if (sub.aiAnalysis?.errorAnalyses) {
+        sub.aiAnalysis.errorAnalyses.forEach((error: any) => {
+          errorTypes[error.errorType] = (errorTypes[error.errorType] || 0) + 1;
+          if (error.errorMessage) {
+            errorMessages.push(error.errorMessage);
+          }
+        });
+      }
+      if (sub.errorMessage) {
+        errorMessages.push(sub.errorMessage);
+      }
+    });
+
+    return {
+      errorTypes,
+      errorMessages: [...new Set(errorMessages)].slice(0, 5),
+      recentSubmissions: recentSubmissions.slice(0, 5),
+    };
+  } catch (error) {
+    console.error('[Chat] Error getting user errors:', error);
+    return { errorTypes: {}, errorMessages: [], recentSubmissions: [] };
+  }
+}
+
 // Generate AI response (wrapper) with training data context
-async function generateAIResponse(messages: ChatMessage[], userMessage?: string): Promise<string> {
+async function generateAIResponse(messages: ChatMessage[], userMessage?: string, userId?: string): Promise<string> {
+  const startTime = Date.now();
   console.log('[Chat] generateAIResponse called');
   console.log(`[Chat] AI_PROVIDER: ${ENV.AI_PROVIDER}`);
-  console.log(`[Chat] GEMINI_API_KEY exists: ${!!ENV.GEMINI_API_KEY}`);
-  console.log(`[Chat] OPENAI_API_KEY exists: ${!!ENV.OPENAI_API_KEY}`);
   
-  // Find relevant training data if user message provided
+  // Sử dụng Keyword Extraction Service để tạo context tự động
+  let responseContext: any = null;
   let trainingContext = '';
-  if (userMessage) {
-    const relevantData = await findRelevantTrainingData(userMessage, 3);
-    if (relevantData.length > 0) {
-      console.log(`[Training Data] Found ${relevantData.length} relevant training data`);
-      trainingContext = '\n\n=== Training Data (Context) ===\n';
-      relevantData.forEach((td, index) => {
-        trainingContext += `\n[Example ${index + 1}]\nQ: ${td.question}\nA: ${td.answer}\n`;
-      });
-      trainingContext += '\n=== End Training Data ===\n\n';
-      trainingContext += 'Hãy sử dụng các ví dụ trên làm tham khảo khi trả lời. Nếu câu hỏi tương tự, hãy trả lời theo phong cách và nội dung tương tự.\n';
-    }
-  }
-
-  // Find challenges if user is asking about exercises/challenges
   let challengesContext = '';
+  let errorBasedContext = '';
+  
   if (userMessage) {
-    const challenges = await findChallenges(userMessage, 5);
-    if (challenges.length > 0) {
-      console.log(`[Challenges] Found ${challenges.length} challenges to recommend`);
-      challengesContext = '\n\n=== DANH SÁCH BÀI TẬP (CHALLENGES) ===\n';
-      challengesContext += 'Người dùng đang hỏi về bài tập/challenges. Bạn CẦN giới thiệu các bài tập sau:\n\n';
-      challenges.forEach((challenge, index) => {
-        challengesContext += `📝 [Bài ${index + 1}] ${challenge.title}\n`;
-        challengesContext += `   • Ngôn ngữ: ${challenge.language}\n`;
-        challengesContext += `   • Độ khó: ${challenge.difficulty}\n`;
-        challengesContext += `   • Danh mục: ${challenge.category}\n`;
-        challengesContext += `   • Điểm: ${challenge.points} điểm\n`;
-        if (challenge.tags && challenge.tags.length > 0) {
-          challengesContext += `   • Tags: ${challenge.tags.join(', ')}\n`;
-        }
-        challengesContext += `   • Mô tả: ${challenge.description.substring(0, 200)}${challenge.description.length > 200 ? '...' : ''}\n\n`;
+    try {
+      // OPTIMIZATION: Use Promise.race with timeout to prevent hanging
+      // If keyword extraction takes too long, use fallback
+      const contextPromise = keywordExtractionService.createResponseContext(userMessage, userId);
+      responseContext = await Promise.race([
+        contextPromise,
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Keyword extraction timeout')), 8000) // 8s timeout
+        ),
+      ]);
+      
+      const contextTime = Date.now() - startTime;
+      console.log(`[Performance] Keyword extraction completed in ${contextTime}ms`);
+      
+      console.log('[Keyword Extraction] Created response context:', {
+        trainingDataCount: responseContext?.trainingData?.length || 0,
+        challengesCount: responseContext?.challenges?.length || 0,
+        keywords: responseContext?.keywords || {},
       });
-      challengesContext += '=== HẾT DANH SÁCH BÀI TẬP ===\n\n';
-      challengesContext += '⚠️ QUAN TRỌNG: Khi người dùng hỏi về bài tập/challenges, bạn CẦN:\n';
-      challengesContext += '1. ✅ Giới thiệu các bài tập trên một cách hấp dẫn và chi tiết\n';
-      challengesContext += '2. ✅ Liệt kê đầy đủ thông tin về mỗi bài tập (tiêu đề, ngôn ngữ, độ khó, điểm, mô tả ngắn gọn)\n';
-      challengesContext += '3. ✅ Gợi ý người dùng thử làm các bài tập này trên BugHunter platform\n';
-      challengesContext += '4. ✅ Khuyến khích và động viên người dùng\n';
-      challengesContext += '5. ✅ Giải thích ngắn gọn về lợi ích của việc làm các bài tập này\n';
-      challengesContext += '6. ✅ Nếu có nhiều bài tập từ nhiều ngôn ngữ khác nhau, bạn có thể nhóm theo ngôn ngữ\n';
-      challengesContext += '7. ✅ Nếu người dùng chỉ hỏi về một ngôn ngữ cụ thể (ví dụ: Python), hãy tập trung vào các bài tập của ngôn ngữ đó\n';
-      challengesContext += '8. ✅ Nếu người dùng hỏi chung chung, hãy giới thiệu các bài tập từ nhiều ngôn ngữ khác nhau\n\n';
-      challengesContext += 'LƯU Ý: Hãy trả lời bằng tiếng Việt và thân thiện. Đừng chỉ liệt kê danh sách, hãy giới thiệu một cách tự nhiên như một người bạn đang tư vấn.\n';
+
+      // Build training context
+      if (responseContext && responseContext.trainingData && responseContext.trainingData.length > 0) {
+        trainingContext = '\n\n=== Training Data (Context từ BugHunter) ===\n';
+        responseContext.trainingData.forEach((td: any, index: number) => {
+          trainingContext += `\n[Ví dụ ${index + 1}]\nQ: ${td.question}\nA: ${td.answer}\n`;
+        });
+        trainingContext += '\n=== End Training Data ===\n\n';
+        trainingContext += '⚠️ QUAN TRỌNG: Hãy sử dụng các ví dụ trên làm tham khảo. Nếu câu hỏi tương tự, hãy trả lời theo phong cách và nội dung tương tự.\n';
+      }
+
+      // Build challenges context
+      if (responseContext && responseContext.challenges && responseContext.challenges.length > 0) {
+        challengesContext = '\n\n=== DANH SÁCH BÀI TẬP (CHALLENGES TỪ BUGHUNTER) ===\n';
+        challengesContext += 'Người dùng đang hỏi về bài tập/challenges. Bạn CẦN giới thiệu các bài tập sau:\n\n';
+        responseContext.challenges.forEach((challenge: any, index: number) => {
+          challengesContext += `📝 [Bài ${index + 1}] ${challenge.title}\n`;
+          challengesContext += `   • Ngôn ngữ: ${challenge.language}\n`;
+          challengesContext += `   • Độ khó: ${challenge.difficulty}\n`;
+          challengesContext += `   • Điểm: ${challenge.points} điểm\n`;
+          if (challenge.description) {
+            challengesContext += `   • Mô tả: ${challenge.description.substring(0, 200)}${challenge.description.length > 200 ? '...' : ''}\n`;
+          }
+          challengesContext += '\n';
+        });
+        challengesContext += '=== HẾT DANH SÁCH BÀI TẬP ===\n\n';
+        challengesContext += '⚠️ QUAN TRỌNG: Khi người dùng hỏi về bài tập/challenges, bạn CẦN:\n';
+        challengesContext += '1. ✅ Giới thiệu các bài tập trên một cách hấp dẫn và chi tiết\n';
+        challengesContext += '2. ✅ Liệt kê đầy đủ thông tin về mỗi bài tập\n';
+        challengesContext += '3. ✅ Gợi ý người dùng thử làm các bài tập này trên BugHunter platform\n';
+        challengesContext += '4. ✅ Khuyến khích và động viên người dùng\n';
+      }
+
+      // Build error-based context
+      if (responseContext && responseContext.errorBasedRecommendations && responseContext.errorBasedRecommendations.length > 0) {
+        errorBasedContext = '\n\n=== GỢI Ý DỰA TRÊN LỖI CỦA NGƯỜI DÙNG ===\n';
+        errorBasedContext += 'Người dùng đã gặp các lỗi liên quan. Dưới đây là các gợi ý:\n\n';
+        responseContext.errorBasedRecommendations.forEach((td: any, index: number) => {
+          errorBasedContext += `[Gợi ý ${index + 1}]\nQ: ${td.question}\nA: ${td.answer}\n\n`;
+        });
+        errorBasedContext += '=== HẾT GỢI Ý ===\n\n';
+        errorBasedContext += '⚠️ QUAN TRỌNG: Hãy tham khảo các gợi ý trên để trả lời câu hỏi về lỗi.\n';
+      }
+    } catch (error: any) {
+      console.error('[Keyword Extraction] Error creating context, falling back to old method:', error?.message);
+      
+      // Fallback to old method with timeout
+      try {
+        const relevantData: any = await Promise.race([
+          findRelevantTrainingData(userMessage, 3),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Fallback timeout')), 5000)
+          ),
+        ]);
+        
+        if (relevantData.length > 0) {
+          trainingContext = '\n\n=== Training Data (Context) ===\n';
+          relevantData.forEach((td: any, index: number) => {
+            trainingContext += `\n[Example ${index + 1}]\nQ: ${td.question}\nA: ${td.answer}\n`;
+          });
+          trainingContext += '\n=== End Training Data ===\n\n';
+          trainingContext += 'Hãy sử dụng các ví dụ trên làm tham khảo khi trả lời. Nếu câu hỏi tương tự, hãy trả lời theo phong cách và nội dung tương tự.\n';
+        }
+      } catch (fallbackError: any) {
+        console.error('[Chat] Fallback method also failed:', fallbackError?.message);
+        // Continue without context - AI will still work
+      }
     }
   }
 
-  // Enhance system message with training context and challenges context
+  // Enhance system message với context từ keyword extraction
   let enhancedMessages = [...messages];
   const systemMessageIndex = enhancedMessages.findIndex(msg => msg.role === 'system');
   
-  const additionalContext = trainingContext + challengesContext;
-  
-  if (systemMessageIndex >= 0 && additionalContext) {
-    enhancedMessages[systemMessageIndex].content += additionalContext;
-  } else if (additionalContext) {
-    // Add system message if not exists
-    enhancedMessages.unshift({
-      role: 'system',
-      content: 'Bạn là trợ lý AI thông minh của BugHunter - một nền tảng học lập trình thông qua việc sửa lỗi code. Hãy trả lời một cách thân thiện, chính xác và hữu ích. Bạn có thể giúp người dùng học lập trình, debug code, giải thích các khái niệm, và trả lời các câu hỏi về lập trình.' + additionalContext,
-    });
+  // Sử dụng system prompt từ keyword extraction service nếu có context
+  if (responseContext) {
+    try {
+      const systemPrompt = keywordExtractionService.createSystemPrompt(responseContext as any);
+      
+      if (systemMessageIndex >= 0) {
+        enhancedMessages[systemMessageIndex].content = systemPrompt;
+      } else {
+        enhancedMessages.unshift({
+          role: 'system',
+          content: systemPrompt,
+        });
+      }
+    } catch (error: any) {
+      console.error('[Chat] Error creating system prompt:', error);
+      // Fallback to default system message
+      if (systemMessageIndex < 0) {
+        enhancedMessages.unshift({
+          role: 'system',
+          content: 'Bạn là trợ lý AI thông minh của BugHunter - một nền tảng học lập trình thông qua việc sửa lỗi code. Hãy trả lời một cách thân thiện, chính xác và hữu ích.',
+        });
+      }
+    }
+  } else {
+    // Fallback: sử dụng context cũ nếu không có responseContext
+    const additionalContext = trainingContext + challengesContext + errorBasedContext;
+    
+    if (systemMessageIndex >= 0 && additionalContext) {
+      enhancedMessages[systemMessageIndex].content += additionalContext;
+    } else if (additionalContext) {
+      enhancedMessages.unshift({
+        role: 'system',
+        content: 'Bạn là trợ lý AI thông minh của BugHunter - một nền tảng học lập trình thông qua việc sửa lỗi code. Hãy trả lời một cách thân thiện, chính xác và hữu ích. Bạn có thể giúp người dùng học lập trình, debug code, giải thích các khái niệm, và trả lời các câu hỏi về lập trình.' + additionalContext,
+      });
+    }
   }
   
   if (ENV.AI_PROVIDER === 'openai' && ENV.OPENAI_API_KEY) {
@@ -460,6 +643,7 @@ async function generateAIResponse(messages: ChatMessage[], userMessage?: string)
 export class ChatController {
   // Send message and get AI response
   async sendMessage(req: Request, res: Response): Promise<any> {
+    const startTime = Date.now();
     try {
       const userId = req.user?.id;
       if (!userId) {
@@ -514,7 +698,12 @@ export class ChatController {
       const contextMessages: ChatMessage[] = [
         {
           role: 'system',
-          content: 'Bạn là trợ lý AI thông minh của BugHunter - một nền tảng học lập trình thông qua việc sửa lỗi code. Hãy trả lời một cách thân thiện, chính xác và hữu ích. Bạn có thể giúp người dùng học lập trình, debug code, giải thích các khái niệm, và trả lời các câu hỏi về lập trình.',
+          content:
+            'Bạn là trợ lý AI thông minh của BugHunter - một nền tảng học lập trình thông qua việc sửa lỗi code. ' +
+            'Hãy trả lời một cách thân thiện, chính xác và hữu ích. Bạn có thể giúp người dùng học lập trình, debug code, ' +
+            'giải thích các khái niệm, và trả lời các câu hỏi về lập trình. ' +
+            '⚠️ QUAN TRỌNG: Bạn KHÔNG có quyền truy cập thời gian thực (ngày, giờ hiện tại, thời lượng chính xác). ' +
+            'Nếu người dùng hỏi về ngày/giờ hiện tại hoặc thời lượng tính theo thời gian thực, hãy trả lời rằng bạn không thể xem đồng hồ hoặc thời gian hệ thống và KHÔNG được tự đoán ngày/giờ.',
         },
         ...recentMessages.map(msg => ({
           role: msg.role as 'user' | 'assistant',
@@ -522,12 +711,21 @@ export class ChatController {
         })),
       ];
 
-      // Generate AI response with training data context
+      // Generate AI response with training data context using timeout
       let aiResponse: string;
       try {
-        aiResponse = await generateAIResponse(contextMessages, message.trim());
+        // Set timeout to prevent hanging (max 30 seconds)
+        const responsePromise = generateAIResponse(contextMessages, message.trim(), userId);
+        aiResponse = await Promise.race([
+          responsePromise,
+          new Promise<string>((_, reject) =>
+            setTimeout(() => reject(new Error('Chat response timeout - please try again')), 30000)
+          ),
+        ]);
       } catch (error: any) {
         console.error('AI Response Error:', error);
+        const elapsedTime = Date.now() - startTime;
+        console.error(`[Chat Performance] Failed after ${elapsedTime}ms`);
         return res.status(500).json({
           success: false,
           message: error.message || 'Lỗi khi tạo phản hồi AI',
@@ -546,8 +744,11 @@ export class ChatController {
         chatHistory.title = message.substring(0, 50);
       }
 
-      // Lưu chat history
-      await chatHistory.save();
+      // Lưu chat history (async, không cần chờ)
+      chatHistory.save().catch(err => console.error('[Chat] Error saving history:', err));
+
+      const elapsedTime = Date.now() - startTime;
+      console.log(`[Chat Performance] Response generated in ${elapsedTime}ms`);
 
       return res.json({
         success: true,

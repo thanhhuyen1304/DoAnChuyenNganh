@@ -3,6 +3,7 @@ import { CodeEditor } from '../practice/CodeEditor';
 import { ProblemsList } from '../practice/ProblemsList';
 import { ProblemDetail } from '../practice/ProblemDetail';
 import { TopNavigation } from '../practice/TopNavigation';
+import KnowledgeGraphWidget from '../practice/KnowledgeGraphWidget';
 import { buildApi } from '@/lib/api';
 import { useNavigate } from 'react-router-dom';
 
@@ -61,6 +62,8 @@ const Practice = () => {
     }
     // Dispatch custom event để cập nhật XP ở TopNavigation
     window.dispatchEvent(new Event('xpUpdated'));
+    // Dispatch event để cập nhật Knowledge Graph
+    window.dispatchEvent(new Event('submissionCompleted'));
     // Force storage event để cập nhật localStorage
     const userData = localStorage.getItem('user');
     if (userData) {
@@ -78,7 +81,7 @@ const Practice = () => {
           onSelect={(id) => setSelectedProblemId(id)} 
         />
 
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 flex flex-col overflow-hidden relative">
           <ProblemDetail 
             problemId={selectedProblemId}
             onSubmissionSuccess={handleSubmissionSuccess}
@@ -89,6 +92,14 @@ const Practice = () => {
               problemId={selectedProblemId}
               challenge={challenge}
               onSubmissionSuccess={handleSubmissionSuccess}
+            />
+          )}
+
+          {/* Knowledge Graph Widget - Hiển thị khi có challenge được chọn */}
+          {selectedProblemId && (
+            <KnowledgeGraphWidget 
+              challengeId={selectedProblemId}
+              compact={true}
             />
           )}
         </div>

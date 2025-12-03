@@ -7,4 +7,11 @@ export function getApiBase(): string {
   return cleaned.endsWith('/api') ? cleaned : `${cleaned}/api`
 }
 
+// Build full API URL with endpoint
+export function buildApi(endpoint: string): string {
+  const base = getApiBase()
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`
+  return `${base}${cleanEndpoint}`
+}
+
 export default getApiBase

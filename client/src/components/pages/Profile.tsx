@@ -529,7 +529,7 @@ const Profile: React.FC = () => {
                   <div className="space-y-4 border border-gray-200 dark:border-gray-700 rounded-xl p-4 bg-gray-50 dark:bg-gray-800/50">
                     <h3 className="font-medium text-gray-900 dark:text-white">Ngôn ngữ yêu thích</h3>
                     <div className="flex flex-wrap gap-2">
-                      {['JavaScript', 'Python', 'Java', 'C++', 'Ruby', 'PHP', 'C#', 'Go'].map((lang) => (
+                      {['JavaScript', 'Python', 'Java', 'C++', 'C#'].map((lang) => (
                         <button
                           key={lang}
                           onClick={() => {

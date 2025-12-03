@@ -8,6 +8,7 @@ import { config } from 'dotenv';
 import session from 'express-session';
 import passport from 'passport';
 import { createServer } from 'http';
+import path from 'path';
 
 // Load env vars FIRST - before importing passport config
 config();
@@ -23,6 +24,8 @@ import pvpRoutes from './routes/simplePvp.routes';
 import leaderboardRoutes from './routes/leaderboard.routes';
 import importExportRoutes from './routes/import-export.routes';
 import friendRoutes from './routes/friend.routes';
+import trainingDataRoutes from './routes/trainingData.routes';
+import knowledgeGraphRoutes from './routes/knowledgeGraph.routes';
 
 // WebSocket Service
 import { WebSocketService } from './services/websocket.service';
@@ -70,6 +73,9 @@ app.use(helmet());
 app.use(compression());
 app.use(passport.initialize());
 
+// Serve uploaded files statically
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
 // Inject WebSocket service into requests
 app.use((req, res, next) => {
   (req as any).wsService = wsService;
@@ -87,6 +93,19 @@ app.use('/api/pvp', pvpRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/import-export', importExportRoutes);
 app.use('/api/friends', friendRoutes);
+app.use('/api/training-data', trainingDataRoutes);
+app.use('/api/knowledge-graph', knowledgeGraphRoutes);
+
+// Catch-all redirect for legacy routes without /api prefix (helpful for debugging)
+app.get('/auth/:provider', (req: Request, res: Response) => {
+    const provider = req.params.provider;
+    res.redirect(`/api/auth/${provider}`);
+});
+
+app.get('/auth/:provider/callback', (req: Request, res: Response) => {
+    const provider = req.params.provider;
+    res.redirect(`/api/auth/${provider}/callback?${new URLSearchParams(req.query as any).toString()}`);
+});
 
 // Error handling middleware
 app.use((err: ErrorWithStack, req: Request, res: Response, _next: NextFunction) => {
