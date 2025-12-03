@@ -55,16 +55,20 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && process.
                     
                     let user = await User.findOne({ 'oauth.google': profile.id });
 
-                    if (!user && profile.emails && profile.photos) {
+                    if (!user && profile.emails && profile.emails.length > 0) {
+                        const email = profile.emails[0].value;
+                        const avatar = (profile.photos && profile.photos.length > 0) ? profile.photos[0].value : '';
+                        
                         // Check if email already exists
-                        const existingUser = await User.findOne({ email: profile.emails[0].value });
+                        const existingUser = await User.findOne({ email });
                         
                         if (existingUser) {
                             // Update existing user with OAuth info
+                            existingUser.oauth = existingUser.oauth || {};
                             existingUser.oauth.google = profile.id;
                             existingUser.loginMethod = 'google';
-                            if (profile.photos && profile.photos[0] && !existingUser.avatar) {
-                                existingUser.avatar = profile.photos[0].value;
+                            if (avatar && !existingUser.avatar) {
+                                existingUser.avatar = avatar;
                             }
                             await existingUser.save();
                             console.log('Google OAuth - User found/updated:', existingUser.email);
@@ -72,20 +76,23 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && process.
                         } else {
                             // Create new user
                             user = await User.create({
-                                email: profile.emails[0].value,
-                                username: `user_${profile.id}`,
+                                email: email,
+                                username: `google_${profile.id}`,
                                 oauth: { google: profile.id },
-                                avatar: profile.photos[0].value,
+                                avatar: avatar,
                                 password: Math.random().toString(36).slice(-8),
                                 loginMethod: 'google'
                             });
                             console.log('Google OAuth - User created:', user.email);
+                            return done(null, user);
                         }
                     } else if (user) {
                         console.log('Google OAuth - User found:', user.email);
+                        return done(null, user);
+                    } else {
+                        console.error('Google OAuth - No email provided by Google');
+                        return done(new Error('No email provided by Google'), undefined);
                     }
-
-                    return done(null, user);
                 } catch (error) {
                     console.error('Google OAuth Strategy Error:', error);
                     return done(error as Error, undefined);
@@ -127,34 +134,44 @@ if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET && process.
                     
                     let user = await User.findOne({ 'oauth.github': profile.id });
 
-                    if (!user && profile.emails && profile.photos) {
+                    if (!user && profile.emails && profile.emails.length > 0) {
+                        const email = profile.emails[0].value;
+                        const avatar = (profile.photos && profile.photos.length > 0) ? profile.photos[0].value : '';
+                        
                         // Check if email already exists
-                        const existingUser = await User.findOne({ email: profile.emails[0].value });
+                        const existingUser = await User.findOne({ email });
                         
                         if (existingUser) {
                             // Update existing user with OAuth info
+                            existingUser.oauth = existingUser.oauth || {};
                             existingUser.oauth.github = profile.id;
                             existingUser.loginMethod = 'github';
-                            if (profile.photos && profile.photos[0] && !existingUser.avatar) {
-                                existingUser.avatar = profile.photos[0].value;
+                            if (avatar && !existingUser.avatar) {
+                                existingUser.avatar = avatar;
                             }
                             await existingUser.save();
+                            console.log('GitHub OAuth - User found/updated:', existingUser.email);
                             return done(null, existingUser);
                         } else {
                             // Create new user
                             user = await User.create({
-                                email: profile.emails[0].value,
-                                username: profile.username || `user_${profile.id}`,
+                                email: email,
+                                username: profile.username || `github_${profile.id}`,
                                 oauth: { github: profile.id },
-                                avatar: profile.photos[0].value,
+                                avatar: avatar,
                                 password: Math.random().toString(36).slice(-8),
                                 loginMethod: 'github'
                             });
+                            console.log('GitHub OAuth - User created:', user.email);
+                            return done(null, user);
                         }
+                    } else if (user) {
+                        console.log('GitHub OAuth - User found:', user.email);
+                        return done(null, user);
+                    } else {
+                        console.error('GitHub OAuth - No email provided by GitHub');
+                        return done(new Error('No email provided by GitHub'), undefined);
                     }
-
-                    console.log('GitHub OAuth - User found/created:', user ? user.email : 'none');
-                    return done(null, user);
                 } catch (error) {
                     console.error('GitHub OAuth Strategy Error:', error);
                     console.error('Error details:', error);

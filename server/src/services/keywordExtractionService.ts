@@ -5,6 +5,8 @@
 
 import TrainingData from '../models/trainingData.model';
 import Challenge from '../models/challenge.model';
+import Submission from '../models/submission.model';
+import User from '../models/user.model';
 import { word2vecService } from './word2vecService';
 import { knowledgeGraphService } from './knowledgeGraphService';
 
@@ -37,6 +39,19 @@ export interface ResponseContext {
   errorBasedRecommendations?: any[];
   keywords: ExtractedKeywords;
   suggestedTopics: string[];
+  userProfile?: {
+    id: string;
+    username: string;
+    email: string;
+    avatar?: string;
+    favoriteLanguages: string[];
+    experience: number;
+    rank: string;
+    badgesCount: number;
+    createdAt: Date;
+    totalSubmissions?: number;
+    acceptedSubmissions?: number;
+  };
 }
 
 class KeywordExtractionService {
@@ -323,6 +338,45 @@ class KeywordExtractionService {
       
       console.log('[Keyword Extraction] Extracted keywords:', keywords);
 
+      // Build user profile context nếu có userId
+      let userProfile: ResponseContext['userProfile'] | undefined = undefined;
+      if (userId) {
+        try {
+          const user = await User.findById(userId)
+            .select('email username avatar favoriteLanguages experience rank badges createdAt')
+            .lean();
+
+          if (user) {
+            // Thống kê submissions:
+            // - totalSubmissions: tổng số lần nộp bài
+            // - acceptedChallenges: số bài (challenge) khác nhau đã Accepted
+            const [totalSubmissions, acceptedDistinct] = await Promise.all([
+              Submission.countDocuments({ user: user._id }),
+              Submission.distinct('challenge', { user: user._id, status: 'Accepted' }),
+            ]);
+
+            const acceptedChallenges =
+              Array.isArray(acceptedDistinct) ? acceptedDistinct.length : 0;
+
+            userProfile = {
+              id: (user._id as any).toString(),
+              username: user.username,
+              email: user.email,
+              avatar: user.avatar,
+              favoriteLanguages: user.favoriteLanguages || [],
+              experience: user.experience || 0,
+              rank: user.rank || 'Newbie',
+              badgesCount: Array.isArray(user.badges) ? user.badges.length : 0,
+              createdAt: user.createdAt,
+              totalSubmissions,
+              acceptedSubmissions: acceptedChallenges,
+            };
+          }
+        } catch (profileError) {
+          console.error('[Keyword Extraction] Error building user profile context:', profileError);
+        }
+      }
+
       // Tìm training data với error handling
       let trainingData: any[] = [];
       try {
@@ -364,13 +418,14 @@ class KeywordExtractionService {
         ...keywords.topics,
         ...keywords.languages,
       ].slice(0, 5);
-
+      
       return {
         trainingData: trainingData || [],
         challenges: challenges || [],
         errorBasedRecommendations: errorBasedRecommendations.length > 0 ? errorBasedRecommendations : undefined,
         keywords,
         suggestedTopics: suggestedTopics || [],
+        userProfile,
       };
     } catch (error: any) {
       console.error('[Keyword Extraction] Error creating response context:', error);
@@ -394,6 +449,10 @@ class KeywordExtractionService {
     prompt += '- Gợi ý bài tập và challenges phù hợp\n';
     prompt += '- Hỗ trợ người dùng sửa lỗi và cải thiện kỹ năng lập trình\n';
     prompt += '- Trả lời một cách thân thiện, chính xác và hữu ích\n\n';
+    prompt += '⚠️ QUAN TRỌNG VỀ THỜI GIAN THỰC:\n';
+    prompt += '- Bạn KHÔNG có quyền truy cập ngày/giờ hiện tại hoặc đồng hồ hệ thống.\n';
+    prompt += '- Không được tự bịa hoặc suy đoán ngày/tháng/năm hoặc giờ hiện tại.\n';
+    prompt += '- Nếu người dùng hỏi: "Bây giờ là mấy giờ?", "Hôm nay là ngày bao nhiêu?", hãy trả lời rằng bạn không thể xem thời gian thực và chỉ tập trung hỗ trợ về lập trình.\n\n';
 
     // Add keywords context
     if (context.keywords.concepts.length > 0 || context.keywords.topics.length > 0) {
@@ -444,6 +503,30 @@ class KeywordExtractionService {
         prompt += `\n[Gợi ý ${index + 1}]\nQ: ${td.question}\nA: ${td.answer}\n`;
       });
       prompt += '\n⚠️ QUAN TRỌNG: Hãy tham khảo các gợi ý trên để trả lời câu hỏi về lỗi.\n\n';
+    }
+
+    // Add current user profile context nếu có
+    if (context.userProfile) {
+      const p = context.userProfile;
+      prompt += '**Thông tin hồ sơ người dùng hiện tại (đọc-only):**\n';
+      prompt += `- Username: ${p.username}\n`;
+      prompt += `- Email: ${p.email}\n`;
+      prompt += `- Rank: ${p.rank}\n`;
+      prompt += `- XP (experience): ${p.experience}\n`;
+      prompt += `- Ngôn ngữ yêu thích: ${p.favoriteLanguages.join(', ') || 'Chưa thiết lập'}\n`;
+      prompt += `- Số badges: ${p.badgesCount}\n`;
+      if (typeof p.totalSubmissions === 'number') {
+        prompt += `- Tổng số submissions: ${p.totalSubmissions}\n`;
+      }
+      if (typeof p.acceptedSubmissions === 'number') {
+        prompt += `- Số bài Accepted: ${p.acceptedSubmissions}\n`;
+      }
+      prompt += '\n';
+
+      prompt += '⚠️ QUAN TRỌNG về quyền riêng tư:\n';
+      prompt += '- Chỉ sử dụng các thông tin trên để trả lời câu hỏi liên quan đến hồ sơ của **chính người dùng hiện tại**.\n';
+      prompt += '- Không suy đoán hoặc bịa đặt thêm dữ liệu cá nhân khác.\n';
+      prompt += '- Không hiển thị email hoặc thông tin nhạy cảm trừ khi người dùng **hỏi rõ** về chúng.\n\n';
     }
 
     prompt += '**Hướng dẫn trả lời:**\n';

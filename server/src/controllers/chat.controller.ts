@@ -10,18 +10,54 @@ import { knowledgeGraphService } from '../services/knowledgeGraphService';
 import { keywordExtractionService } from '../services/keywordExtractionService';
 import mongoose from 'mongoose';
 
+// Helper để lấy biến môi trường từ nhiều key khác nhau
+function resolveEnvVariable(keys: string[]) {
+  for (const key of keys) {
+    const value = process.env[key];
+    if (value && value.trim().length > 0) {
+      return { value: value.trim(), source: key };
+    }
+  }
+  return { value: '', source: undefined };
+}
+
+const GEMINI_ENV = resolveEnvVariable([
+  'GEMINI_API_KEY',
+  'GOOGLE_GEMINI_API_KEY',
+  'VITE_GEMINI_API_KEY',
+  'REACT_APP_GEMINI_API_KEY',
+]);
+
+const OPENAI_ENV = resolveEnvVariable([
+  'OPENAI_API_KEY',
+  'VITE_OPENAI_API_KEY',
+  'REACT_APP_OPENAI_API_KEY',
+]);
+
 // Environment configuration
 const ENV = {
-  GEMINI_API_KEY: process.env.GEMINI_API_KEY || '',
-  OPENAI_API_KEY: process.env.OPENAI_API_KEY || '',
+  GEMINI_API_KEY: GEMINI_ENV.value,
+  OPENAI_API_KEY: OPENAI_ENV.value,
   AI_PROVIDER: process.env.AI_PROVIDER || 'gemini', // 'gemini' | 'openai'
 };
 
 // Log configuration on startup
 console.log('[Chat Controller] AI Configuration:');
 console.log(`  - AI_PROVIDER: ${ENV.AI_PROVIDER}`);
-console.log(`  - GEMINI_API_KEY: ${ENV.GEMINI_API_KEY ? '✅ Đã cấu hình (' + ENV.GEMINI_API_KEY.substring(0, 10) + '...)' : '❌ Chưa cấu hình'}`);
-console.log(`  - OPENAI_API_KEY: ${ENV.OPENAI_API_KEY ? '✅ Đã cấu hình' : '❌ Chưa cấu hình'}`);
+console.log(
+  `  - GEMINI_API_KEY: ${
+    ENV.GEMINI_API_KEY
+      ? `✅ Đã cấu hình thông qua ${GEMINI_ENV.source}`
+      : '❌ Chưa cấu hình'
+  }`,
+);
+console.log(
+  `  - OPENAI_API_KEY: ${
+    ENV.OPENAI_API_KEY
+      ? `✅ Đã cấu hình thông qua ${OPENAI_ENV.source}`
+      : '❌ Chưa cấu hình'
+  }`,
+);
 
 interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
@@ -662,7 +698,12 @@ export class ChatController {
       const contextMessages: ChatMessage[] = [
         {
           role: 'system',
-          content: 'Bạn là trợ lý AI thông minh của BugHunter - một nền tảng học lập trình thông qua việc sửa lỗi code. Hãy trả lời một cách thân thiện, chính xác và hữu ích. Bạn có thể giúp người dùng học lập trình, debug code, giải thích các khái niệm, và trả lời các câu hỏi về lập trình.',
+          content:
+            'Bạn là trợ lý AI thông minh của BugHunter - một nền tảng học lập trình thông qua việc sửa lỗi code. ' +
+            'Hãy trả lời một cách thân thiện, chính xác và hữu ích. Bạn có thể giúp người dùng học lập trình, debug code, ' +
+            'giải thích các khái niệm, và trả lời các câu hỏi về lập trình. ' +
+            '⚠️ QUAN TRỌNG: Bạn KHÔNG có quyền truy cập thời gian thực (ngày, giờ hiện tại, thời lượng chính xác). ' +
+            'Nếu người dùng hỏi về ngày/giờ hiện tại hoặc thời lượng tính theo thời gian thực, hãy trả lời rằng bạn không thể xem đồng hồ hoặc thời gian hệ thống và KHÔNG được tự đoán ngày/giờ.',
         },
         ...recentMessages.map(msg => ({
           role: msg.role as 'user' | 'assistant',
