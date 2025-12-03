@@ -1,6 +1,6 @@
 # BugHunter Project Memory Bank
 
-## Last Updated: November 24, 2025
+## Last Updated: December 3, 2025
 
 ## Project Overview
 - **Name**: BugHunter
@@ -32,7 +32,7 @@
   - ✅ Language preference (Vietnamese/English)
   - ✅ Password change for local accounts
   - ✅ Account info display (email, username, login method)
-  - ❌ Language preference persistence to database
+  - ✅ Language preference persistence to database
 - ✅ **Profile Page** - User profile with avatar, XP, rank, badges - COMPLETE
   - ✅ Avatar upload and management with drag-drop
   - ✅ User information display and edit (email, phone, username)
@@ -194,6 +194,7 @@
    - ✅ TypeScript Type Definitions
    - ✅ Error Handling với consistent response format
    - ✅ Admin role system
+   <!-- Xem lại 2 chức năng này -->
    - ❌ Rate Limiting
    - ❌ Email Verification
 
@@ -242,8 +243,8 @@
    - ✅ Request Validation với express-validator
    - ✅ Error Handling Middleware
    - ✅ Admin role middleware
-   - ❌ File Upload Middleware
-   - ❌ Rate Limiting Middleware
+   - ✅ File Upload Middleware
+   - ✅ Rate Limiting Middleware (OAuth & password reset endpoints)
 
 ### Frontend (client/)
 1. **Authentication Pages**
@@ -254,7 +255,14 @@
    - ✅ Form Validation với error handling
    - ✅ OAuth Callback handler (OAuthCallback.tsx và OAuthError.tsx)
    - ✅ Routes trong App.tsx
-   - ❌ Password Reset
+   - ✅ **Password Reset** (ForgotPassword.tsx)
+     - ✅ Request reset code via email/phone
+     - ✅ Verify reset code and set new password
+     - ✅ RequestResetForm component with SMS/Email support
+     - ✅ VerifyResetForm component with OTP verification
+     - ✅ Rate limiting for reset requests
+     - ✅ 10-minute code expiration
+     - ✅ Backend routes: /request-reset, /verify-reset
 
 2. **Main Components**
    - ✅ **ClientDashboard** - User dashboard with activity streak
@@ -407,15 +415,184 @@
 3. ✅ Gemini API model deprecation - updated to gemini-1.5-flash (Fixed: November 17, 2025)
 4. ✅ OAuth routes returning 404 - added redirect routes (Fixed: November 17, 2025)
 5. ✅ Mongoose duplicate index warning (Fixed: November 17, 2025)
-6. ❌ Missing environment variable validation
-7. ❌ Incomplete error handling for edge cases
-8. ❌ No input validation middleware for all routes
-9. ❌ Missing rate limiting for API endpoints
+6. ❌ Missing environment variable validation Thiếu Xác Thực Biến Môi Trường 
+    Mục Đích: Kiểm tra tất cả các biến môi trường cần thiết tồn tại và có giá trị đúng trước khi ứng dụng khởi động.
+7. ❌ Incomplete error handling for edge cases Xử Lý Lỗi Không Hoàn Chỉnh
+    Mục Đích: Xử lý các tình huống lỗi bất ngờ để ứng dụng không crash.
+8. ❌ No input validation middleware for all routes Thiếu Xác Thực Input
+    Mục Đích: Kiểm tra dữ liệu từ user trước khi xử lý để tránh dữ liệu sai.
+9. ❌ Missing rate limiting for API endpoints Thiếu Rate Limiting cho API
+    Mục Đích: Giới hạn số request để tránh brute force và abuse API.
 10. ❌ Challenge system execution (Judge0 integration)
 11. ❌ Server sync endpoint for AdaptiveAI not yet fully tested
 12. ❌ PvP real-time features (Socket.io integration needed)
 
 ## Recent Changes Log
+
+### December 2, 2025 - File Upload Middleware & Advanced AI Features Complete
+- ✅ **File Upload Middleware Implementation** (`server/src/middleware/upload.ts`):
+  - ✅ Single file upload with disk storage (multer integration)
+  - ✅ Multiple files upload (max 5 files per request)
+  - ✅ Image upload middleware (JPEG, PNG, GIF, WebP)
+  - ✅ Document upload middleware (JSON, TXT, PDF)
+  - ✅ Avatar-specific upload middleware (optimized for user avatars)
+  - ✅ Memory storage upload (for file processing in memory)
+  - ✅ File validation (size limit: 10MB, type checking, MIME validation)
+  - ✅ Automatic directory management:
+    - ✅ uploads/images for image files
+    - ✅ uploads/documents for document files
+    - ✅ uploads/avatars for user avatars
+    - ✅ uploads/general for mixed files
+  - ✅ Comprehensive error handling (MulterError, file size, invalid type)
+  - ✅ Helper utilities:
+    - ✅ `getFileUrl()` - Get public file URL
+    - ✅ `deleteFile()` - Delete uploaded file
+    - ✅ `cleanupOldFiles()` - Auto cleanup files older than 7 days
+  - ✅ Express middleware integration with error handler
+
+- ✅ **Knowledge Graph Service Implementation** (`server/src/services/knowledgeGraphService.ts`):
+  - ✅ `buildGraph()` - Build knowledge graph from training data + challenges
+    - ✅ Creates nodes: training_data, challenge, category, tag
+    - ✅ Creates links: category, tag, similar (Word2Vec-based), learning_path
+    - ✅ Node visualization properties (size, color, position)
+  - ✅ `buildFilteredGraph()` - Filter graph by categories, tags, search query
+  - ✅ `buildErrorBasedGraph()` - Build error-focused graph for user practice
+    - ✅ Analyzes recent user submissions and errors
+    - ✅ Creates error nodes and highlights related resources
+    - ✅ Provides error summary with recommendations
+  - ✅ `findTrainingDataForErrors()` - Find training data for specific error types
+  - ✅ `findSimilarTrainingData()` - Find similar content using Word2Vec similarity
+
+- ✅ **Personalized Learning Plan Service** (`server/src/services/personalizedPlanService.ts`):
+  - ✅ `buildPlan()` - Create comprehensive personalized learning plan
+  - ✅ User profile analysis:
+    - ✅ Total submissions & accepted count
+    - ✅ Experience level detection (beginner/intermediate/advanced)
+    - ✅ Preferred languages tracking
+    - ✅ Category & difficulty statistics
+    - ✅ Error pattern analysis
+    - ✅ Weakness identification (categories & tags with errors)
+  - ✅ Challenge recommendations:
+    - ✅ Scores based on focus categories, language preference, difficulty
+    - ✅ Excludes completed challenges
+    - ✅ Difficulty adjustment based on experience level
+  - ✅ Training data recommendations:
+    - ✅ Targets categories with most errors
+    - ✅ Matches focus tags and topics
+    - ✅ Prioritizes high-quality content
+  - ✅ Learning path generation:
+    - ✅ Step-by-step progression with training + challenges
+    - ✅ Organized by focus categories
+    - ✅ Includes reasoning for each recommendation
+
+- ✅ **Keyword Extraction Service** (`server/src/services/keywordExtractionService.ts`):
+  - ✅ Keyword extraction from user messages:
+    - ✅ Programming concepts (array, function, recursion, etc.)
+    - ✅ Languages (Python, JavaScript, Java, C++, C#, C)
+    - ✅ Error types (syntax, runtime, logic, type, reference, etc.)
+    - ✅ Topics (debug, algorithm, data-structure, best-practices, testing, git)
+    - ✅ User intent detection (question, exercise, error, learning, general)
+    - ✅ Difficulty level inference (Easy, Medium, Hard)
+  - ✅ Context-aware search:
+    - ✅ `findTrainingDataByKeywords()` - Uses Word2Vec similarity + keyword matching
+    - ✅ `findChallengesByKeywords()` - Filter challenges by extracted keywords
+    - ✅ Relevance scoring based on keyword matches
+  - ✅ Response context generation:
+    - ✅ Gathers related training data, challenges, error-based recommendations
+    - ✅ Suggests topics based on extracted keywords
+  - ✅ Dynamic system prompt generation:
+    - ✅ Creates contextual prompts for AI responses
+    - ✅ Includes training data examples
+    - ✅ Lists relevant challenges
+    - ✅ Provides error-based recommendations
+    - ✅ Guides AI to use BugHunter context in responses
+
+- ✅ **Knowledge Graph Controller & Routes** (`server/src/controllers/knowledgeGraph.controller.ts` & `server/src/routes/knowledgeGraph.routes.ts`):
+  - ✅ `GET /api/knowledge-graph/` - Get full knowledge graph
+    - ✅ Support filtering by categories, tags, search query
+  - ✅ `GET /api/knowledge-graph/stats` - Get graph statistics
+    - ✅ Node count by type, link count by type
+  - ✅ `GET /api/knowledge-graph/personalized` - Get personalized learning graph
+    - ✅ User profile, recommendations, learning path
+  - ✅ `GET /api/knowledge-graph/error-based` - Get error-focused graph
+    - ✅ Option to filter by specific challenge
+    - ✅ Error analysis and recommendations
+  - ✅ `POST /api/knowledge-graph/find-training-for-errors` - Find training data for errors
+    - ✅ Accept array of error messages and error types
+    - ✅ Returns top N most relevant training data
+
+- ✅ **Database Model: Language Preference** (`server/src/models/languagePreference.model.ts`):
+  - ✅ Stores in 'favorite' collection to unify data structure
+  - ✅ Unique index on (user_id, type) for fast lookups
+  - ✅ Automatic timestamp management (created_at, updated_at)
+
+- ✅ **Test Scripts** (for validation & data seeding):
+  - ✅ `test-chatbot-create-history.ts` - Create 100+ sample chat histories with ratings
+  - ✅ `test-chatbot-data-integration.ts` - Comprehensive integration test suite
+  - ✅ `test-knowledge-graph-chatbot.ts` - Test knowledge graph with user errors
+  - ✅ `test-personalized-plan.ts` - Test personalized learning plan generation
+
+### December 1, 2025 - Language Preference Persistence Complete
+- ✅ **Language Preference Persistence Implementation** (Frontend & Backend):
+  - ✅ `Settings.tsx` - Language preference UI with Vietnamese/English buttons
+    - ✅ Language selection interface in Settings page
+    - ✅ Integration with LanguageContext for global state management
+    - ✅ Real-time UI update on language change
+  - ✅ Backend Routes:
+    - ✅ `GET /api/users/me/preferences` - Retrieve user language preferences
+    - ✅ `PATCH /api/users/me/preferences` - Update language preferences
+  - ✅ Backend Controller Methods:
+    - ✅ `getMyPreferences()` - Fetch preferences with auto-migration from User model
+    - ✅ `updateMyPreferences()` - Persist language preferences to LanguagePreference collection
+  - ✅ Database Model:
+    - ✅ `LanguagePreference` model with user_id and type fields
+    - ✅ Unique index on (user_id, type) for efficient queries
+    - ✅ Storage in "favorite" collection (MongoDB)
+  - ✅ Features:
+    - ✅ Auto-migration from legacy User.favoriteLanguages field
+    - ✅ Duplicate removal and validation of language values
+    - ✅ Backward compatibility with User model
+    - ✅ Error handling for invalid language inputs
+    - ✅ Detailed logging for debugging
+  - ✅ API Documentation:
+    - ✅ `LANGUAGE_PREFERENCES_API.md` with full endpoint documentation
+    - ✅ Request/response examples
+    - ✅ Error handling guide
+    - ✅ Usage patterns and best practices
+
+### November 30, 2025 - Password Reset System Complete
+- ✅ **Password Reset Implementation** (Frontend & Backend):
+  - ✅ `ForgotPassword.tsx` - Main password reset page with responsive design
+  - ✅ `RequestResetForm.tsx` - Form to request reset code via email or phone
+    - ✅ SMS/Email support with fallback mechanism
+    - ✅ Rate limiting (IP-based and identifier-based)
+    - ✅ Input validation and error handling
+    - ✅ Loading states and success messages
+  - ✅ `VerifyResetForm.tsx` - Form to verify OTP code and set new password
+    - ✅ 6-digit OTP input with auto-focus
+    - ✅ Password strength validation
+    - ✅ Error handling and retry logic
+    - ✅ 10-minute code expiration
+  - ✅ Backend Routes:
+    - ✅ `POST /api/auth/request-reset` - Request password reset code
+    - ✅ `POST /api/auth/verify-reset` - Verify code and set new password
+  - ✅ Backend Controller Methods:
+    - ✅ `requestPasswordReset()` - Generate and send reset code
+    - ✅ `verifyPasswordReset()` - Verify code and update password
+  - ✅ Security Features:
+    - ✅ Rate limiting middleware (otpRequestRateLimitIP, otpRequestRateLimitIdentifier)
+    - ✅ Rate limiting for verify (otpVerifyRateLimitIP, otpVerifyRateLimitIdentifier)
+    - ✅ Privacy protection (generic response for non-existent users)
+    - ✅ Crypto-based code generation
+    - ✅ Time-based code expiration (10 minutes)
+  - ✅ User Experience:
+    - ✅ Smooth form transitions between request and verify steps
+    - ✅ Dark mode support
+    - ✅ Responsive design (mobile, tablet, desktop)
+    - ✅ Toast notifications for feedback
+    - ✅ Loading indicators during API calls
+    - ✅ Back button to login page
+    - ✅ Vietnamese and English language support
 
 ### November 24, 2025 - Extended Backend Routes & Admin Features Complete
 - ✅ **Expanded Backend Routes**:

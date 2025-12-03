@@ -31,6 +31,7 @@ import systemSettingsRoutes from './routes/systemSettings.routes';
 import chatRoutes from './routes/chat.routes';
 import leaderboardRoutes from './routes/leaderboard.routes';
 import trainingDataRoutes from './routes/trainingData.routes';
+import knowledgeGraphRoutes from './routes/knowledgeGraph.routes';
 
 // Passport strategies - must be imported AFTER dotenv config
 import './config/passport';
@@ -63,6 +64,9 @@ app.use(helmet());
 app.use(compression());
 app.use(passport.initialize());
 
+// Serve uploaded files statically
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/challenges', challengeRoutes);
@@ -79,6 +83,7 @@ app.use('/api/settings', systemSettingsRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/training-data', trainingDataRoutes);
+app.use('/api/knowledge-graph', knowledgeGraphRoutes);
 
 // Catch-all redirect for legacy routes without /api prefix (helpful for debugging)
 app.get('/auth/:provider', (req: Request, res: Response) => {

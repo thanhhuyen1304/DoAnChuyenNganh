@@ -234,17 +234,33 @@ export class Word2VecService {
           env.PYTHONIOENCODING = 'utf-8';
         }
 
+        // Prepare words argument - JSON string without shell escaping issues
+        const wordsJson = JSON.stringify(words);
+        
         const pythonProcess = spawn('python', [
           queryScriptPath,
           '--model', this.modelPath,
-          '--words', JSON.stringify(words)
+          '--words', wordsJson
         ], {
           env: env,
-          shell: process.platform === 'win32'
+          shell: false, // Set to false để tránh shell quoting issues
+          stdio: ['pipe', 'pipe', 'pipe'], // Explicitly set stdio
+          timeout: 5000 // Timeout subprocess after 5 seconds
         });
 
         let output = '';
         let errorOutput = '';
+        let completed = false;
+
+        // Set timeout to kill process if it hangs
+        const timeoutHandle = setTimeout(() => {
+          if (!completed) {
+            completed = true;
+            pythonProcess.kill();
+            console.error('[Word2Vec Query] Process timeout - took too long');
+            resolve(null);
+          }
+        }, 5000);
 
         pythonProcess.stdout.on('data', (data) => {
           output += data.toString();
@@ -255,23 +271,41 @@ export class Word2VecService {
         });
 
         pythonProcess.on('close', (code) => {
-          if (code === 0) {
+          if (completed) return; // Already handled by timeout
+          completed = true;
+          clearTimeout(timeoutHandle);
+
+          if (code === 0 && output.trim()) {
             try {
-              const vector = JSON.parse(output.trim());
-              resolve(vector);
+              const cleanOutput = output.trim();
+              // Kiểm tra output có hợp lệ không trước khi parse
+              if (cleanOutput.startsWith('[')) {
+                const vector = JSON.parse(cleanOutput);
+                resolve(vector);
+              } else {
+                console.error('[Word2Vec] Output không phải JSON array:', cleanOutput);
+                resolve(null);
+              }
             } catch (e) {
-              console.error('[Word2Vec] Lỗi parse vector:', e);
+              console.error('[Word2Vec] Lỗi parse vector:', e, 'Output:', output.trim());
               resolve(null);
             }
+          } else if (code !== 0) {
+            console.error(`[Word2Vec Query] Query script failed with code ${code}: ${errorOutput}`);
+            resolve(null);
           } else {
-            console.error(`[Word2Vec] Query script failed: ${errorOutput}`);
+            console.error('[Word2Vec] Không có output từ Python script');
             resolve(null);
           }
         });
 
         pythonProcess.on('error', (error) => {
-          console.error('[Word2Vec] Cannot run query script:', error);
-          resolve(null);
+          if (!completed) {
+            completed = true;
+            clearTimeout(timeoutHandle);
+            console.error('[Word2Vec] Cannot run query script:', error);
+            resolve(null);
+          }
         });
       });
     } catch (error) {
