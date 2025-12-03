@@ -26,7 +26,6 @@ export interface IUser extends Document {
   // PvP specific fields
   rating?: number; // Elo rating for PvP matchmaking
   level?: number; // User level based on experience
-  role?: string; // User role (user, admin, moderator)
   // PvP statistics
   pvpStats?: {
     wins: number;
@@ -128,11 +127,6 @@ const userSchema = new Schema<IUser>(
       type: Number,
       default: 1,
       min: 1,
-    },
-    role: {
-      type: String,
-      enum: ['user', 'admin', 'moderator'],
-      default: 'user',
     },
     // PvP statistics
     pvpStats: {

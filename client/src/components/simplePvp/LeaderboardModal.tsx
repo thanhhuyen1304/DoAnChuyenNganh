@@ -70,16 +70,7 @@ export function LeaderboardModal({ open, onClose }: LeaderboardModalProps) {
   };
 
   const getRankIcon = (rank: number) => {
-    switch (rank) {
-      case 1:
-        return <Trophy className="w-6 h-6 text-yellow-500" />;
-      case 2:
-        return <Medal className="w-6 h-6 text-gray-400" />;
-      case 3:
-        return <Medal className="w-6 h-6 text-amber-600" />;
-      default:
-        return <span className="text-lg font-bold text-slate-600">#{rank}</span>;
-    }
+    return <span className="text-lg font-bold text-slate-600">#{rank}</span>;
   };
 
   const getRankBadgeColor = (rank: number) => {
