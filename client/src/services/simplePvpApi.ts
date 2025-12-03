@@ -38,6 +38,8 @@ export interface RoomSettings {
   timeLimit: number;
   difficulty: 'Easy' | 'Medium' | 'Hard';
   maxParticipants?: number;
+  isPrivate?: boolean;
+  language?: string;
 }
 
 export interface Room {
@@ -283,6 +285,20 @@ class SimplePvPApi {
     };
   }> {
     const response = await api.get('/stats/me');
+    return response.data;
+  }
+
+  // Gửi lời mời vào phòng
+  async sendRoomInvite(roomId: string, targetUserId: string): Promise<{
+    success: boolean;
+    message: string;
+    data?: {
+      targetUsername: string;
+      roomName: string;
+      expiresIn: number;
+    };
+  }> {
+    const response = await api.post(`/rooms/${roomId}/invite`, { targetUserId });
     return response.data;
   }
 }

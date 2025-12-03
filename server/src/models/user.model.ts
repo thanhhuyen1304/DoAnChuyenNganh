@@ -1,6 +1,19 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import bcrypt from 'bcryptjs';
 
+export interface IUnlockedSolution {
+  challengeId: mongoose.Types.ObjectId;
+  solutionIndex: number;
+  unlockedAt: Date;
+}
+
+export interface ICompletedChallenge {
+  challengeId: mongoose.Types.ObjectId;
+  completedAt: Date;
+  maxScoreAchieved: number;
+  tokenAwarded: boolean;
+}
+
 export interface IUser extends Document {
   email: string;
   username: string;
@@ -13,6 +26,9 @@ export interface IUser extends Document {
   experience: number;
   rank: string;
   badges: string[];
+  tokens: number;
+  unlockedSolutions: IUnlockedSolution[];
+  completedChallenges: ICompletedChallenge[];
   loginMethod?: string; // 'local', 'google', 'github', 'facebook'
   role?: string; // 'user', 'moderator', 'admin'
   isBanned?: boolean;
@@ -90,6 +106,45 @@ const userSchema = new Schema<IUser>(
     },
     badges: [{
       type: String,
+    }],
+    tokens: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    unlockedSolutions: [{
+      challengeId: {
+        type: Schema.Types.ObjectId,
+        ref: 'Challenge',
+        required: true,
+      },
+      solutionIndex: {
+        type: Number,
+        required: true,
+      },
+      unlockedAt: {
+        type: Date,
+        default: Date.now,
+      },
+    }],
+    completedChallenges: [{
+      challengeId: {
+        type: Schema.Types.ObjectId,
+        ref: 'Challenge',
+        required: true,
+      },
+      completedAt: {
+        type: Date,
+        default: Date.now,
+      },
+      maxScoreAchieved: {
+        type: Number,
+        default: 0,
+      },
+      tokenAwarded: {
+        type: Boolean,
+        default: false,
+      },
     }],
     loginMethod: {
       type: String,

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useToast } from '../hooks/use-toast';
 import { Button } from '../ui/button';
@@ -16,6 +16,16 @@ interface TestCase {
   points: number;
 }
 
+interface Solution {
+  title: string;
+  content: string;
+  language: string;
+  code: string;
+  explanation: string;
+  tokenCost: number;
+  order: number;
+}
+
 interface ChallengeData {
   title: string;
   description: string;
@@ -28,6 +38,8 @@ interface ChallengeData {
   points: number;
   timeLimit: number;
   memoryLimit: number;
+  tokenReward: number;
+  solutions: Solution[];
 }
 
 export const CreateChallenge: React.FC = () => {
@@ -44,8 +56,23 @@ export const CreateChallenge: React.FC = () => {
     testCases: [{ input: '', expectedOutput: '', isHidden: false, points: 10 }],
     points: 10,
     timeLimit: 1,
-    memoryLimit: 128
+    memoryLimit: 128,
+    tokenReward: 1, // Default: Easy = 1, Medium = 2, Hard = 3
+    solutions: []
   });
+
+  // Auto-update tokenReward when difficulty changes
+  useEffect(() => {
+    const tokenRewards: Record<string, number> = {
+      'Easy': 1,
+      'Medium': 2,
+      'Hard': 3
+    };
+    setChallenge(prev => ({
+      ...prev,
+      tokenReward: tokenRewards[prev.difficulty] || 1
+    }));
+  }, [challenge.difficulty]);
 
   const handleTestCaseChange = (index: number, field: keyof TestCase, value: any) => {
     const newTestCases = [...challenge.testCases];
@@ -79,6 +106,48 @@ export const CreateChallenge: React.FC = () => {
     }
   };
 
+  const handleSolutionChange = (index: number, field: keyof Solution, value: any) => {
+    const newSolutions = [...challenge.solutions];
+    newSolutions[index] = {
+      ...newSolutions[index],
+      [field]: value
+    };
+    setChallenge({
+      ...challenge,
+      solutions: newSolutions
+    });
+  };
+
+  const handleAddSolution = () => {
+    setChallenge({
+      ...challenge,
+      solutions: [
+        ...challenge.solutions,
+        {
+          title: '',
+          content: '',
+          language: challenge.language,
+          code: '',
+          explanation: '',
+          tokenCost: 1,
+          order: challenge.solutions.length + 1
+        }
+      ]
+    });
+  };
+
+  const handleRemoveSolution = (index: number) => {
+    const newSolutions = challenge.solutions.filter((_, i) => i !== index);
+    // Re-order remaining solutions
+    newSolutions.forEach((sol, i) => {
+      sol.order = i + 1;
+    });
+    setChallenge({
+      ...challenge,
+      solutions: newSolutions
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -110,7 +179,9 @@ export const CreateChallenge: React.FC = () => {
         testCases: [{ input: '', expectedOutput: '', isHidden: false, points: 10 }],
         points: 10,
         timeLimit: 1,
-        memoryLimit: 128
+        memoryLimit: 128,
+        tokenReward: 1,
+        solutions: []
       });
     } catch (error: any) {
       toast({
@@ -392,6 +463,155 @@ export const CreateChallenge: React.FC = () => {
             required
           />
         </div>
+      </div>
+
+      {/* Token Reward */}
+      <div className="space-y-2 p-4 border rounded bg-amber-50">
+        <Label htmlFor="tokenReward" className="flex items-center gap-2">
+          <span>🪙</span>
+          Token thưởng khi hoàn thành
+        </Label>
+        <Input
+          id="tokenReward"
+          type="number"
+          value={challenge.tokenReward}
+          onChange={(e) => setChallenge({...challenge, tokenReward: Number(e.target.value) || 1})}
+          min={1}
+          max={10}
+          required
+        />
+        <p className="text-sm text-muted-foreground">
+          Số token học sinh nhận được khi hoàn thành bài lần đầu (Default: Easy=1, Medium=2, Hard=3)
+        </p>
+      </div>
+
+      {/* Solutions Section */}
+      <div className="space-y-4 p-4 border rounded bg-blue-50">
+        <div className="flex justify-between items-center">
+          <div>
+            <Label className="text-lg">Lời giải mẫu</Label>
+            <p className="text-sm text-muted-foreground">
+              Thêm các lời giải để học sinh có thể mở khóa bằng token
+            </p>
+          </div>
+          <Button
+            type="button"
+            onClick={handleAddSolution}
+            variant="outline"
+          >
+            Thêm Lời Giải
+          </Button>
+        </div>
+
+        {challenge.solutions.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            Chưa có lời giải. Nhấn "Thêm Lời Giải" để bắt đầu.
+          </div>
+        ) : (
+          challenge.solutions.map((solution, index) => (
+            <div key={index} className="space-y-3 p-4 border rounded bg-white">
+              <div className="flex justify-between items-center">
+                <h4 className="font-semibold">Lời giải #{solution.order}</h4>
+                <Button
+                  type="button"
+                  onClick={() => handleRemoveSolution(index)}
+                  variant="outline"
+                  size="sm"
+                >
+                  Xóa
+                </Button>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Tiêu đề</Label>
+                <Input
+                  type="text"
+                  value={solution.title}
+                  onChange={(e) => handleSolutionChange(index, 'title', e.target.value)}
+                  placeholder="VD: Solution sử dụng HashMap"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Ngôn ngữ</Label>
+                  <Select.Root
+                    value={solution.language}
+                    onValueChange={(value) => handleSolutionChange(index, 'language', value)}
+                  >
+                    <Select.Trigger className="w-full flex items-center justify-between border rounded-md px-3 py-2 bg-white">
+                      <Select.Value />
+                      <Select.Icon>
+                        <CaretSortIcon />
+                      </Select.Icon>
+                    </Select.Trigger>
+                    <Select.Portal>
+                      <Select.Content className="bg-white border rounded-md shadow-lg z-50">
+                        <Select.Viewport>
+                          {['Python', 'JavaScript', 'Java', 'C++', 'C#', 'C'].map((lang) => (
+                            <Select.Item key={lang} value={lang} className="flex items-center px-3 py-2 hover:bg-gray-100 cursor-pointer">
+                              <Select.ItemText>{lang}</Select.ItemText>
+                              <Select.ItemIndicator className="ml-2">
+                                <CheckIcon />
+                              </Select.ItemIndicator>
+                            </Select.Item>
+                          ))}
+                        </Select.Viewport>
+                      </Select.Content>
+                    </Select.Portal>
+                  </Select.Root>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Chi phí mở khóa (Token)</Label>
+                  <Input
+                    type="number"
+                    value={solution.tokenCost}
+                    onChange={(e) => handleSolutionChange(index, 'tokenCost', Number(e.target.value) || 1)}
+                    min={1}
+                    max={5}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Giải thích</Label>
+                <Textarea
+                  value={solution.explanation}
+                  onChange={(e) => handleSolutionChange(index, 'explanation', e.target.value)}
+                  placeholder="Giải thích cách tiếp cận, thuật toán, độ phức tạp..."
+                  rows={3}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Code mẫu</Label>
+                <div className="border rounded-md overflow-hidden">
+                  <CodePreview
+                    code={solution.code}
+                    language={solution.language.toLowerCase()}
+                    height="200px"
+                    readOnly={false}
+                    onChange={(value) => handleSolutionChange(index, 'code', value || '')}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Nội dung bổ sung (Tùy chọn)</Label>
+                <Textarea
+                  value={solution.content}
+                  onChange={(e) => handleSolutionChange(index, 'content', e.target.value)}
+                  placeholder="Thêm thông tin chi tiết, ví dụ, lưu ý..."
+                  rows={3}
+                />
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
       {/* Submit Button */}

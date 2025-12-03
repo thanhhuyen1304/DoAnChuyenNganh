@@ -10,9 +10,11 @@ import { PvPArena } from './PvPArena';
 import { PvPDuelResult } from './PvPResult';
 import { LeaderboardModal } from './LeaderboardModal';
 import { FriendsAndUsersModal } from './FriendsAndUsersModal';
+import { RoomInviteNotification, RoomInvite } from './RoomInviteNotification';
 import simplePvpApi, { Room, RoomSettings } from '@/services/simplePvpApi';
 import { useToastActions } from '@/components/ui/toast';
 import { getWebSocketService } from '@/services/websocket.service';
+import Header from '../Header';
 import {
   Users,
   Swords,
@@ -24,7 +26,10 @@ import {
   Plus,
   Trash2,
   Award,
-  UserPlus
+  UserPlus,
+  Code2,
+  Lock,
+  Globe
 } from 'lucide-react';
 
 interface PvPPageProps {
@@ -71,6 +76,7 @@ export function PvPPage({ currentUser: currentUserProp }: PvPPageProps) {
   const [isJoiningByCode, setIsJoiningByCode] = useState(false);
   const [showCreateRoom, setShowCreateRoom] = useState(false);
   const [showWaitingRoom, setShowWaitingRoom] = useState(false);
+  const [isWaitingRoomMinimized, setIsWaitingRoomMinimized] = useState(false);
   const [showArena, setShowArena] = useState(false);
   const [showResult, setShowResult] = useState(false);
   const [currentRoom, setCurrentRoom] = useState<Room | null>(null);
@@ -79,6 +85,7 @@ export function PvPPage({ currentUser: currentUserProp }: PvPPageProps) {
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [showFriendsAndUsers, setShowFriendsAndUsers] = useState(false);
   const [userStats, setUserStats] = useState<any>(null);
+  const [roomInvites, setRoomInvites] = useState<RoomInvite[]>([]);
 
   // Load rooms function
   const loadRooms = async () => {
@@ -86,12 +93,13 @@ export function PvPPage({ currentUser: currentUserProp }: PvPPageProps) {
     try {
       const result = await simplePvpApi.getRooms(20, 0);
       if (result.success) {
-        // Filter rooms based on search query
+        // Show all rooms (both public and private)
         let filteredRooms = result.data;
+        
+        // Filter based on search query
         if (searchQuery.trim()) {
-          filteredRooms = result.data.filter(room =>
+          filteredRooms = filteredRooms.filter(room =>
             room.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            room.roomCode.toLowerCase().includes(searchQuery.toLowerCase()) ||
             room.hostUsername.toLowerCase().includes(searchQuery.toLowerCase())
           );
         }
@@ -174,6 +182,12 @@ export function PvPPage({ currentUser: currentUserProp }: PvPPageProps) {
       }
     };
 
+    const handleRoomInviteReceived = (data: RoomInvite) => {
+      console.log('📢 Room invite received:', data);
+      setRoomInvites(prev => [...prev, data]);
+      success('Lời mời mới', `${data.hostUsername} mời bạn vào phòng ${data.roomName}`);
+    };
+
     // Register event listeners
     wsService.on('room_created', handleRoomCreated);
     wsService.on('room_updated', handleRoomUpdated);
@@ -182,6 +196,7 @@ export function PvPPage({ currentUser: currentUserProp }: PvPPageProps) {
     wsService.on('user_left_room', handleUserLeftRoom);
     wsService.on('match_started', handleMatchStarted);
     wsService.on('match_completed', handleMatchCompleted);
+    wsService.on('room_invite_received', handleRoomInviteReceived);
 
     // Cleanup on unmount
     return () => {
@@ -192,12 +207,15 @@ export function PvPPage({ currentUser: currentUserProp }: PvPPageProps) {
       wsService.off('user_left_room', handleUserLeftRoom);
       wsService.off('match_started', handleMatchStarted);
       wsService.off('match_completed', handleMatchCompleted);
+      wsService.off('room_invite_received', handleRoomInviteReceived);
     };
   }, [loadRooms, searchQuery, currentRoom, currentMatch]);
 
   const handleCreateRoom = (room: Room) => {
     setCurrentRoom(room);
     setShowWaitingRoom(true);
+    // Reload rooms to show the newly created room in the list
+    loadRooms();
   };
 
   const handleRoomUpdate = (updatedRoom: Room) => {
@@ -235,12 +253,12 @@ export function PvPPage({ currentUser: currentUserProp }: PvPPageProps) {
         setJoinRoomCode('');
         loadRooms();
       }
-    } catch (error: any) {
-      console.error('Join room error:', error);
-      if (error && typeof error === 'object' && error.response?.data) {
-        error('Lỗi', error.response.data.message || 'Không thể tham gia phòng');
+    } catch (err: any) {
+      console.error('Join room error:', err);
+      if (err && typeof err === 'object' && err.response?.data) {
+        error('Lỗi', err.response.data.message || 'Không thể tham gia phòng');
       } else {
-        error('Lỗi', error.message || 'Không thể tham gia phòng');
+        error('Lỗi', err.message || 'Không thể tham gia phòng');
       }
     }
   };
@@ -263,6 +281,7 @@ export function PvPPage({ currentUser: currentUserProp }: PvPPageProps) {
     setCurrentMatch(matchData);
     setShowArena(true);
     setShowWaitingRoom(false);
+    setIsWaitingRoomMinimized(false); // Close minimized widget when match starts
   };
 
   const handleMatchEnd = (result: any) => {
@@ -282,6 +301,16 @@ export function PvPPage({ currentUser: currentUserProp }: PvPPageProps) {
     }
   };
 
+  const handleMinimizeWaitingRoom = () => {
+    setIsWaitingRoomMinimized(true);
+    setShowWaitingRoom(false);
+  };
+
+  const handleRestoreWaitingRoom = () => {
+    setIsWaitingRoomMinimized(false);
+    setShowWaitingRoom(true);
+  };
+
   const handleLeaveWaitingRoom = async () => {
     if (!currentRoom) return;
     
@@ -290,22 +319,29 @@ export function PvPPage({ currentUser: currentUserProp }: PvPPageProps) {
       try {
         await simplePvpApi.deleteRoom(currentRoom._id);
         success('Thành công', 'Đã xóa phòng thành công');
-      } catch (error: any) {
-        console.error('Delete room error:', error);
-        error('Lỗi', error.response?.data?.message || 'Không thể xóa phòng');
+      } catch (err: any) {
+        console.error('Delete room error:', err);
+        // Only show error if it's not a 404 (room already deleted)
+        if (err.response?.status !== 404) {
+          error('Lỗi', err.response?.data?.message || 'Không thể xóa phòng');
+        }
       }
     } else {
       // Just leave the room as participant
       try {
         await simplePvpApi.leaveRoom(currentRoom._id);
         success('Thành công', 'Đã rời phòng thành công');
-      } catch (error: any) {
-        console.error('Leave room error:', error);
-        error('Lỗi', error.response?.data?.message || 'Không thể rời phòng');
+      } catch (err: any) {
+        console.error('Leave room error:', err);
+        // Only show error if it's not a 404 (room already deleted)
+        if (err.response?.status !== 404) {
+          error('Lỗi', err.response?.data?.message || 'Không thể rời phòng');
+        }
       }
     }
     
     setShowWaitingRoom(false);
+    setIsWaitingRoomMinimized(false);
     setCurrentRoom(null);
     loadRooms();
   };
@@ -331,9 +367,40 @@ export function PvPPage({ currentUser: currentUserProp }: PvPPageProps) {
     setShowCreateRoom(true);
   };
 
+  const handleInviteAccept = async (roomCode: string) => {
+    // Remove the accepted invite
+    setRoomInvites(prev => prev.filter(inv => inv.roomCode !== roomCode));
+    
+    // Join the room and open waiting room
+    try {
+      const result = await simplePvpApi.joinRoom(roomCode);
+      if (result.success) {
+        setCurrentRoom(result.data);
+        setShowWaitingRoom(true);
+        // Reload rooms to show updated state
+        loadRooms();
+      }
+    } catch (err: any) {
+      console.error('Join room after invite error:', err);
+      error('Lỗi', err.response?.data?.message || 'Không thể vào phòng');
+      // Reload rooms anyway
+      loadRooms();
+    }
+  };
+
+  const handleInviteDecline = (inviteId: string) => {
+    setRoomInvites(prev => prev.filter(inv => inv.inviteId !== inviteId));
+  };
+
+  const handleInviteExpire = (inviteId: string) => {
+    setRoomInvites(prev => prev.filter(inv => inv.inviteId !== inviteId));
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-4">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <>
+      <Header />
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
@@ -525,11 +592,18 @@ export function PvPPage({ currentUser: currentUserProp }: PvPPageProps) {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {rooms.map((room) => (
-                <Card key={room._id} className="hover:shadow-lg transition-shadow cursor-pointer">
+                <Card key={room._id} className="hover:shadow-lg transition-shadow cursor-pointer border-2">
                   <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg truncate">{room.name}</CardTitle>
-                      <Badge 
+                    <div className="flex items-center justify-between mb-2">
+                      <CardTitle className="text-lg truncate flex items-center gap-2">
+                        {room.settings.isPrivate ? (
+                          <Lock className="w-4 h-4 text-orange-500" />
+                        ) : (
+                          <Globe className="w-4 h-4 text-green-500" />
+                        )}
+                        {room.name}
+                      </CardTitle>
+                      <Badge
                         variant={room.status === 'waiting' ? "secondary" : room.status === 'in-progress' ? "destructive" : "outline"}
                       >
                         {room.status === 'waiting' ? 'Đang chờ' : room.status === 'in-progress' ? 'Đang diễn ra' : 'Hoàn thành'}
@@ -555,9 +629,15 @@ export function PvPPage({ currentUser: currentUserProp }: PvPPageProps) {
                       </span>
                     </div>
                     
-                    <div className="flex items-center justify-between text-sm text-slate-600 dark:text-slate-400">
-                      <span>Người chơi: {room.participants.length}/{room.settings.maxParticipants || 2}</span>
-                      <span>Mã: {room.roomCode}</span>
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
+                        <Users className="w-4 h-4" />
+                        <span>{room.participants.length}/{room.settings.maxParticipants || 2} người chơi</span>
+                      </div>
+                      <div className="flex items-center gap-1 text-blue-600 dark:text-blue-400">
+                        <Code2 className="w-4 h-4" />
+                        <span className="font-medium">{room.settings.language || 'JavaScript'}</span>
+                      </div>
                     </div>
 
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -589,10 +669,16 @@ export function PvPPage({ currentUser: currentUserProp }: PvPPageProps) {
                         <Button
                           onClick={() => handleJoinRoom(room._id, room.roomCode)}
                           className="w-full"
-                          disabled={room.status !== 'waiting' || room.participants.length >= (room.settings.maxParticipants || 2) || showArena}
+                          disabled={
+                            room.status !== 'waiting' ||
+                            room.participants.length >= (room.settings.maxParticipants || 2) ||
+                            showArena ||
+                            room.settings.isPrivate
+                          }
                         >
                           {room.status !== 'waiting' ? 'Không khả dụng' :
                            room.participants.length >= (room.settings.maxParticipants || 2) ? 'Đầy' :
+                           room.settings.isPrivate ? 'Phòng riêng tư' :
                            'Tham gia'}
                         </Button>
                       )}
@@ -611,9 +697,71 @@ export function PvPPage({ currentUser: currentUserProp }: PvPPageProps) {
         room={currentRoom}
         currentUserId={currentUserId}
         onLeaveRoom={handleLeaveWaitingRoom}
+        onMinimize={handleMinimizeWaitingRoom}
         onMatchStart={handleMatchStart}
         onRoomUpdate={handleRoomUpdate}
       />
+
+      {/* Minimized Waiting Room Widget */}
+      {isWaitingRoomMinimized && currentRoom && (
+        <div className="fixed bottom-4 right-4 z-50 animate-in slide-in-from-bottom-5 duration-300">
+          <Card className="w-80 shadow-2xl border-2 border-blue-500 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  {currentRoom.settings.isPrivate ? (
+                    <Lock className="w-4 h-4 text-orange-500" />
+                  ) : (
+                    <Globe className="w-4 h-4 text-green-500" />
+                  )}
+                  <h3 className="font-semibold truncate">{currentRoom.name}</h3>
+                </div>
+                <Badge variant={currentRoom.settings.isPrivate ? "destructive" : "secondary"} className="text-xs">
+                  {currentRoom.settings.isPrivate ? 'Riêng tư' : 'Công khai'}
+                </Badge>
+              </div>
+              
+              <div className="space-y-2 mb-3">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground flex items-center gap-1">
+                    <Users className="w-3 h-3" />
+                    Người chơi
+                  </span>
+                  <span className="font-medium">
+                    {currentRoom.participants.length}/{currentRoom.settings.maxParticipants}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    Thời gian
+                  </span>
+                  <span className="font-medium">
+                    {simplePvpApi.formatTimeLimit(currentRoom.settings.timeLimit)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  onClick={handleRestoreWaitingRoom}
+                  size="sm"
+                  className="flex-1 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"
+                >
+                  Mở phòng chờ
+                </Button>
+                <Button
+                  onClick={handleLeaveWaitingRoom}
+                  variant="outline"
+                  size="sm"
+                >
+                  Rời
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       <PvPArena
         open={showArena}
@@ -641,6 +789,22 @@ export function PvPPage({ currentUser: currentUserProp }: PvPPageProps) {
         open={showFriendsAndUsers}
         onClose={() => setShowFriendsAndUsers(false)}
       />
-    </div>
+
+      {/* Room Invites */}
+      <div className="fixed bottom-0 right-0 p-4 space-y-2 pointer-events-none">
+        <div className="space-y-2 pointer-events-auto">
+          {roomInvites.map((invite) => (
+            <RoomInviteNotification
+              key={invite.inviteId}
+              invite={invite}
+              onAccept={handleInviteAccept}
+              onDecline={handleInviteDecline}
+              onExpire={handleInviteExpire}
+            />
+          ))}
+        </div>
+      </div>
+      </div>
+    </>
   );
 }

@@ -40,6 +40,16 @@ const readyStatusValidation = [
     .withMessage('isReady must be a boolean')
 ];
 
+const sendInviteValidation = [
+  body('targetUserId')
+    .trim()
+    .notEmpty()
+    .withMessage('Target user ID is required')
+];
+
+// Leaderboard Route (public, must be before auth middleware)
+router.get('/leaderboard', optionalAuth, simplePvpController.getLeaderboard);
+
 // Room Management Routes (all require authentication)
 router.post('/rooms', authenticateToken, createRoomValidation, (req: any, res: any, next: any) => {
   console.log('Route middleware - Request body:', req.body);
@@ -50,9 +60,10 @@ router.get('/rooms', authenticateToken, simplePvpController.getRooms);
 router.post('/rooms/:roomCode/join', authenticateToken, simplePvpController.joinRoom);
 router.post('/rooms/:roomId/join', authenticateToken, simplePvpController.joinRoom); // Join by room ID
 router.post('/rooms/:roomId/leave', authenticateToken, simplePvpController.leaveRoom);
-router.delete('/rooms/:roomId', authenticateToken, simplePvpController.deleteRoom);
-router.post('/rooms/:roomId/start', authenticateToken, simplePvpController.startMatch);
 router.post('/rooms/:roomId/ready', authenticateToken, readyStatusValidation, simplePvpController.setReadyStatus);
+router.post('/rooms/:roomId/invite', authenticateToken, sendInviteValidation, simplePvpController.sendRoomInvite);
+router.post('/rooms/:roomId/start', authenticateToken, simplePvpController.startMatch);
+router.delete('/rooms/:roomId', authenticateToken, simplePvpController.deleteRoom);
 
 // Match Routes (all require authentication)
 router.post('/matches/:matchId/submit', authenticateToken, submitCodeValidation, simplePvpController.submitCode);
@@ -60,11 +71,7 @@ router.get('/matches/:matchId/status', authenticateToken, simplePvpController.ge
 router.post('/matches/:matchId/finish', authenticateToken, simplePvpController.finishMatch);
 router.post('/matches/:matchId/forfeit', authenticateToken, simplePvpController.forfeitMatch);
 
-// Leaderboard and Stats Routes (leaderboard is public, stats require auth)
-router.get('/leaderboard', optionalAuth, simplePvpController.getLeaderboard);
+// Stats Routes (require authentication)
 router.get('/stats/me', authenticateToken, simplePvpController.getUserStats);
-
-// All other routes require authentication
-router.use(authenticateToken);
 
 export default router;
