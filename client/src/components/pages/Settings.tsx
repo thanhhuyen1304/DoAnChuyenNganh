@@ -31,43 +31,54 @@ const Settings: React.FC = () => {
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
-    if (file) {
-      // Check file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        alert(t('settings.file.tooLarge'))
-        return
-      }
+    if (!file) return
 
-      // Check file type
-      if (!file.type.startsWith('image/')) {
-        alert(t('settings.file.invalid'))
-        return
+    // Check file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert(t('settings.file.tooLarge'))
+      // Clear input after error
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
       }
+      return
+    }
 
-      const reader = new FileReader()
-      
-      reader.onerror = () => {
-        alert(t('settings.file.readError'))
+    // Check file type
+    if (!file.type.startsWith('image/')) {
+      alert(t('settings.file.invalid'))
+      // Clear input after error
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
       }
+      return
+    }
 
-      reader.onloadend = () => {
-        const imageUrl = reader.result as string
+    const reader = new FileReader()
+    
+    reader.onerror = () => {
+      alert(t('settings.file.readError'))
+      // Clear input after error
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    }
+
+    reader.onloadend = () => {
+      const imageUrl = reader.result as string
+      if (imageUrl) {
         setCustomImage(imageUrl)
         setBackground({ id: 'custom', url: imageUrl, label: t('settings.background.options.custom') })
-        // Clear file input so selecting the same file again will trigger onChange
-        try {
-          if (fileInputRef.current) {
-            fileInputRef.current.value = ''
-          }
-          // Also clear the native event target value to be safe
-          ;(event.target as HTMLInputElement).value = ''
-        } catch (e) {
-          // ignore
-        }
       }
-
-      reader.readAsDataURL(file)
+      // Clear file input AFTER processing is complete so selecting the same file again will trigger onChange
+      // Use setTimeout to ensure state updates are complete
+      setTimeout(() => {
+        if (fileInputRef.current) {
+          fileInputRef.current.value = ''
+        }
+      }, 100)
     }
+
+    reader.readAsDataURL(file)
   }
   
   // Password change
@@ -159,7 +170,7 @@ const Settings: React.FC = () => {
   return (
     <>
       <Header />
-      <div className="min-h-screen flex items-center py-8 md:py-12 overflow-hidden relative bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm">
+      <div className="min-h-screen flex items-center py-8 md:py-12 overflow-hidden relative">
         {/* Background decorations */}
         <div className="absolute top-20 right-0 w-60 h-60 bg-yellow-400/20 rounded-full blur-3xl animate-pulse"></div>
         <div className="absolute bottom-4 left-6 w-60 h-60 bg-primary-400/20 rounded-full blur-3xl animate-pulse"></div>
@@ -216,19 +227,6 @@ const Settings: React.FC = () => {
                       <div className="text-sm font-medium">{t('settings.theme.dark')}</div>
                     </div>
                   </button>
-                  {/* <button
-                    onClick={() => setTheme('system')}
-                    className={`px-4 py-3 rounded-xl border-2 transition-all ${
-                      theme === 'system'
-                        ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400'
-                        : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
-                    }`} 
-                  >
-                    <div className="text-center">
-                      <div className="text-2xl mb-1">💻</div>
-                      <div className="text-sm font-medium">{t('settings.theme.system')}</div>
-                    </div>
-                  </button> */}
                 </div>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                   {t('settings.theme.current')} {resolvedTheme === 'dark' ? t('settings.theme.current.dark') : t('settings.theme.current.light')}
@@ -244,13 +242,12 @@ const Settings: React.FC = () => {
                   {BACKGROUND_OPTIONS.map((option) => (
                     <button
                       key={option.id}
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation()
                         if (option.id === 'custom') {
                           // Always open file picker to choose or replace the custom background
+                          // Don't clear input here - let handleFileChange handle it
                           if (fileInputRef.current) {
-                            try {
-                              fileInputRef.current.value = ''
-                            } catch (e) {}
                             fileInputRef.current.click()
                           }
                         } else {
@@ -281,9 +278,10 @@ const Settings: React.FC = () => {
                       </div>
                       {option.id === 'custom' && !customImage && (
                         <div className="absolute inset-0 flex items-center justify-center bg-gray-900/70 hover:bg-gray-900/80 cursor-pointer transition-all duration-300"
-                             onClick={() => {
+                             onClick={(e) => {
+                               e.stopPropagation()
+                               // Don't clear input here - let handleFileChange handle it
                                if (fileInputRef.current) {
-                                 try { fileInputRef.current.value = '' } catch (e) {}
                                  fileInputRef.current.click()
                                }
                              }}>

@@ -37,6 +37,14 @@ export interface IUser extends Document {
     bestStreak: number;
     averageCompletionTime: number;
   };
+  // User settings
+  settings?: {
+    background?: {
+      id: string;
+      url: string;
+      label?: string;
+    };
+  };
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -148,7 +156,15 @@ const userSchema = new Schema<IUser>(
     resetCodeExpires: {
       type: Date,
       default: undefined,
-    }
+    },
+    // User settings (theme, background, etc.)
+    settings: {
+      background: {
+        id: { type: String },
+        url: { type: String },
+        label: { type: String },
+      },
+    },
   },
   {
     timestamps: true,

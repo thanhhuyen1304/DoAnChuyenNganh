@@ -748,5 +748,211 @@
       "debugging"
     ],
     "priority": 5
+  },
+  {
+    "question": "Làm sao debug lỗi trong code?",
+    "answer": "Để debug lỗi hiệu quả, bạn nên làm theo các bước sau:\n\n1. **Đọc và hiểu thông báo lỗi**: Xem kỹ error message, stack trace để biết lỗi xảy ra ở đâu.\n\n2. **Sử dụng console.log() hoặc print()**: In ra giá trị các biến để kiểm tra:\n```javascript\nconsole.log('Giá trị biến:', myVariable);\n```\n\n3. **Sử dụng debugger/breakpoints**: Dừng code tại điểm cụ thể để kiểm tra:\n- JavaScript: `debugger;` hoặc F12 DevTools\n- Python: `import pdb; pdb.set_trace()`\n\n4. **Kiểm tra logic từng bước**: Chia nhỏ code, test từng phần một\n\n5. **Tìm kiếm lỗi trên Google/Stack Overflow**: Copy error message và search\n\n6. **Sử dụng rubber duck debugging**: Giải thích code cho người khác hoặc vật vô tri\n\n**Mẹo**: Luôn kiểm tra giá trị input, output và các điều kiện biên!",
+    "category": "debugging",
+    "tags": [
+      "debug",
+      "lỗi",
+      "error",
+      "fix",
+      "sửa lỗi",
+      "tìm lỗi"
+    ],
+    "priority": 10
+  },
+  {
+    "question": "Lỗi null pointer exception là gì?",
+    "answer": "**Null Pointer Exception** (hoặc NullReferenceException) xảy ra khi bạn cố gắng truy cập thuộc tính/phương thức của một object có giá trị `null`.\n\n**Ví dụ lỗi:**\n```javascript\nlet user = null;\nconsole.log(user.name); // TypeError: Cannot read property 'name' of null\n```\n\n**Cách khắc phục:**\n\n1. **Kiểm tra null trước khi sử dụng:**\n```javascript\nif (user !== null && user !== undefined) {\n  console.log(user.name);\n}\n```\n\n2. **Sử dụng Optional Chaining (JS/TS):**\n```javascript\nconsole.log(user?.name); // Trả về undefined nếu user null\n```\n\n3. **Sử dụng default values:**\n```javascript\nconst userName = user?.name || 'Guest';\n```\n\n4. **Kiểm tra kỹ code khởi tạo**: Đảm bảo object được khởi tạo đúng trước khi sử dụng\n\n**Tip**: Luôn validate input và khởi tạo biến đầy đủ!",
+    "category": "debugging",
+    "tags": [
+      "null",
+      "exception",
+      "error",
+      "lỗi",
+      "pointer",
+      "undefined"
+    ],
+    "priority": 9
+  },
+  {
+    "question": "Làm sao fix lỗi syntax error?",
+    "answer": "**Syntax Error** là lỗi cú pháp khi code không tuân theo quy tắc ngôn ngữ lập trình.\n\n**Các lỗi syntax phổ biến:**\n\n1. **Thiếu dấu ngoặc đóng:**\n```javascript\n// ❌ Sai\nfunction test() {\n  console.log('Hello');\n// Thiếu }\n\n// ✅ Đúng\nfunction test() {\n  console.log('Hello');\n}\n```\n\n2. **Thiếu dấu chấm phẩy:**\n```javascript\nlet x = 5  // ❌ (một số ngôn ngữ bắt buộc ;)\nlet x = 5; // ✅\n```\n\n3. **Sai tên biến/từ khóa:**\n```python\n# ❌ Sai\nif x == 5\n  print('OK')\n\n# ✅ Đúng\nif x == 5:\n  print('OK')\n```\n\n**Cách fix:**\n- Đọc kỹ error message (thường có line number)\n- Kiểm tra dấu ngoặc, dấu chấm phẩy\n- Sử dụng IDE có syntax highlighting\n- Sử dụng linter (ESLint, Pylint)\n- Format code tự động (Prettier)\n\n**Tip**: IDE tốt sẽ highlight syntax error ngay khi bạn gõ!",
+    "category": "debugging",
+    "tags": [
+      "syntax",
+      "error",
+      "lỗi cú pháp",
+      "fix",
+      "sửa"
+    ],
+    "priority": 8
+  },
+  {
+    "question": "Cú pháp khai báo biến trong JavaScript?",
+    "answer": "JavaScript có 3 cách khai báo biến: `var`, `let`, và `const`.\n\n**1. var (cũ, không khuyến khích):**\n```javascript\nvar name = 'John';\nvar age = 25;\n// Có function scope, có thể redeclare\n```\n\n**2. let (khuyến khích cho biến có thể thay đổi):**\n```javascript\nlet count = 0;\ncount = 1; // ✅ Có thể thay đổi\nlet count = 2; // ❌ Không thể khai báo lại\n// Có block scope\n```\n\n**3. const (khuyến khích cho hằng số):**\n```javascript\nconst PI = 3.14159;\nPI = 3.14; // ❌ Không thể thay đổi\n\n// Với object/array, có thể thay đổi nội dung:\nconst user = { name: 'John' };\nuser.name = 'Jane'; // ✅ OK\nuser = {}; // ❌ Không được gán lại object\n```\n\n**Best Practices:**\n- Ưu tiên dùng `const` (mặc định)\n- Dùng `let` khi cần thay đổi giá trị\n- Tránh dùng `var`\n- Đặt tên biến rõ ràng, có nghĩa\n\n**Naming conventions:**\n```javascript\nconst userName = 'John'; // camelCase\nconst USER_ROLE = 'admin'; // UPPERCASE cho constants\nconst MAX_LENGTH = 100;\n```",
+    "category": "syntax",
+    "tags": [
+      "javascript",
+      "biến",
+      "var",
+      "let",
+      "const",
+      "variable",
+      "khai báo"
+    ],
+    "priority": 9
+  },
+  {
+    "question": "Cách viết hàm trong Python?",
+    "answer": "Trong Python, bạn sử dụng từ khóa `def` để định nghĩa hàm.\n\n**Cú pháp cơ bản:**\n```python\ndef greet(name):\n    return f\"Hello, {name}!\"\n\nresult = greet(\"John\")\nprint(result)  # Output: Hello, John!\n```\n\n**Hàm với nhiều tham số:**\n```python\ndef calculate(a, b, operation='add'):\n    if operation == 'add':\n        return a + b\n    elif operation == 'multiply':\n        return a * b\n    return 0\n\nprint(calculate(5, 3))  # 8 (default operation)\nprint(calculate(5, 3, 'multiply'))  # 15\n```\n\n**Hàm với default parameters:**\n```python\ndef greet(name=\"Guest\", greeting=\"Hello\"):\n    return f\"{greeting}, {name}!\"\n\nprint(greet())  # Hello, Guest!\nprint(greet(\"John\"))  # Hello, John!\nprint(greet(\"John\", \"Hi\"))  # Hi, John!\n```\n\n**Hàm với *args và **kwargs:**\n```python\ndef sum_all(*numbers):\n    return sum(numbers)\n\nprint(sum_all(1, 2, 3, 4))  # 10\n\ndef print_info(**kwargs):\n    for key, value in kwargs.items():\n        print(f\"{key}: {value}\")\n\nprint_info(name=\"John\", age=25)\n```\n\n**Lambda functions (anonymous):**\n```python\nsquare = lambda x: x ** 2\nprint(square(5))  # 25\n```\n\n**Best Practices:**\n- Đặt tên hàm rõ ràng, mô tả chức năng\n- Viết docstring để document hàm\n- Một hàm nên làm một việc duy nhất\n- Sử dụng type hints (Python 3.5+)",
+    "category": "syntax",
+    "tags": [
+      "python",
+      "function",
+      "hàm",
+      "def",
+      "cú pháp",
+      "syntax"
+    ],
+    "priority": 9
+  },
+  {
+    "question": "Sự khác biệt giữa == và === trong JavaScript?",
+    "answer": "Đây là một trong những câu hỏi quan trọng nhất về JavaScript!\n\n**== (Loose Equality - So sánh lỏng lẻo):**\n- So sánh giá trị sau khi **ép kiểu (type coercion)**\n- Có thể so sánh các kiểu dữ liệu khác nhau\n\n```javascript\n5 == '5'    // true (string '5' được chuyển thành number)\n0 == false  // true (false được chuyển thành 0)\nnull == undefined  // true\n'' == 0     // true (empty string được chuyển thành 0)\n```\n\n**=== (Strict Equality - So sánh chặt chẽ):**\n- So sánh **cả giá trị VÀ kiểu dữ liệu**\n- Không ép kiểu, phải giống nhau hoàn toàn\n\n```javascript\n5 === '5'   // false (number !== string)\n0 === false // false (number !== boolean)\nnull === undefined  // false (khác kiểu)\n'' === 0    // false (string !== number)\n5 === 5     // true (cùng kiểu và giá trị)\n```\n\n**Best Practice - Luôn dùng ===:**\n```javascript\n// ❌ Tránh\nif (value == null) { }\nif (count == 0) { }\n\n// ✅ Khuyến khích\nif (value === null || value === undefined) { }\nif (count === 0) { }\n```\n\n**Tương tự với != và !==:**\n```javascript\n5 != '5'   // false (sau khi ép kiểu)\n5 !== '5'  // true (khác kiểu)\n```\n\n**Lưu ý đặc biệt:**\n```javascript\nNaN === NaN  // false (!)\nObject.is(NaN, NaN)  // true\n\n+0 === -0    // true\nObject.is(+0, -0)  // false\n```\n\n**Tip**: ESLint có rule `eqeqeq` để enforce sử dụng `===`!",
+    "category": "syntax",
+    "tags": [
+      "javascript",
+      "equality",
+      "so sánh",
+      "==",
+      "===",
+      "comparison"
+    ],
+    "priority": 8
+  },
+  {
+    "question": "Thuật toán sắp xếp Bubble Sort?",
+    "answer": "**Bubble Sort** là thuật toán sắp xếp đơn giản, so sánh và đổi chỗ các phần tử kề nhau.\n\n**Cách hoạt động:**\n1. So sánh 2 phần tử kề nhau\n2. Nếu thứ tự sai, đổi chỗ\n3. Lặp lại cho đến khi không còn đổi chỗ\n\n**Implementation (JavaScript):**\n```javascript\nfunction bubbleSort(arr) {\n  const n = arr.length;\n  \n  for (let i = 0; i < n - 1; i++) {\n    let swapped = false;\n    \n    for (let j = 0; j < n - i - 1; j++) {\n      if (arr[j] > arr[j + 1]) {\n        // Swap\n        [arr[j], arr[j + 1]] = [arr[j + 1], arr[j]];\n        swapped = true;\n      }\n    }\n    \n    // Nếu không có swap, mảng đã sắp xếp\n    if (!swapped) break;\n  }\n  \n  return arr;\n}\n\nconst numbers = [64, 34, 25, 12, 22, 11, 90];\nconsole.log(bubbleSort(numbers));\n// [11, 12, 22, 25, 34, 64, 90]\n```\n\n**Python version:**\n```python\ndef bubble_sort(arr):\n    n = len(arr)\n    \n    for i in range(n - 1):\n        swapped = False\n        \n        for j in range(n - i - 1):\n            if arr[j] > arr[j + 1]:\n                arr[j], arr[j + 1] = arr[j + 1], arr[j]\n                swapped = True\n        \n        if not swapped:\n            break\n    \n    return arr\n```\n\n**Độ phức tạp:**\n- Time Complexity: O(n²) - Worst và Average case\n- Time Complexity: O(n) - Best case (mảng đã sắp xếp)\n- Space Complexity: O(1) - Sắp xếp tại chỗ\n\n**Ưu điểm:**\n- Đơn giản, dễ hiểu\n- Sắp xếp tại chỗ (không cần mảng phụ)\n- Stable sort (giữ thứ tự phần tử bằng nhau)\n\n**Nhược điểm:**\n- Chậm với mảng lớn (O(n²))\n- Không hiệu quả cho production\n\n**Khi nào sử dụng:**\n- Học thuật toán cơ bản\n- Mảng nhỏ (< 50 phần tử)\n- Mảng gần như đã sắp xếp",
+    "category": "algorithms",
+    "tags": [
+      "thuật toán",
+      "sorting",
+      "bubble sort",
+      "sắp xếp",
+      "algorithm"
+    ],
+    "priority": 8
+  },
+  {
+    "question": "Binary Search là gì và cách implement?",
+    "answer": "**Binary Search** (Tìm kiếm nhị phân) là thuật toán tìm kiếm hiệu quả trên mảng **đã sắp xếp**.\n\n**Cách hoạt động:**\n1. So sánh phần tử cần tìm với phần tử giữa mảng\n2. Nếu bằng nhau → Tìm thấy!\n3. Nếu nhỏ hơn → Tìm ở nửa trái\n4. Nếu lớn hơn → Tìm ở nửa phải\n5. Lặp lại cho đến khi tìm thấy hoặc hết mảng\n\n**Implementation (JavaScript - Iterative):**\n```javascript\nfunction binarySearch(arr, target) {\n  let left = 0;\n  let right = arr.length - 1;\n  \n  while (left <= right) {\n    const mid = Math.floor((left + right) / 2);\n    \n    if (arr[mid] === target) {\n      return mid; // Tìm thấy tại index mid\n    }\n    \n    if (arr[mid] < target) {\n      left = mid + 1; // Tìm bên phải\n    } else {\n      right = mid - 1; // Tìm bên trái\n    }\n  }\n  \n  return -1; // Không tìm thấy\n}\n\nconst numbers = [1, 3, 5, 7, 9, 11, 13, 15];\nconsole.log(binarySearch(numbers, 7));  // 3\nconsole.log(binarySearch(numbers, 6));  // -1\n```\n\n**Recursive version:**\n```javascript\nfunction binarySearchRecursive(arr, target, left = 0, right = arr.length - 1) {\n  if (left > right) return -1;\n  \n  const mid = Math.floor((left + right) / 2);\n  \n  if (arr[mid] === target) return mid;\n  \n  if (arr[mid] < target) {\n    return binarySearchRecursive(arr, target, mid + 1, right);\n  } else {\n    return binarySearchRecursive(arr, target, left, mid - 1);\n  }\n}\n```\n\n**Python version:**\n```python\ndef binary_search(arr, target):\n    left, right = 0, len(arr) - 1\n    \n    while left <= right:\n        mid = (left + right) // 2\n        \n        if arr[mid] == target:\n            return mid\n        elif arr[mid] < target:\n            left = mid + 1\n        else:\n            right = mid - 1\n    \n    return -1\n```\n\n**Độ phức tạp:**\n- Time Complexity: O(log n) - Rất nhanh!\n- Space Complexity: O(1) - Iterative, O(log n) - Recursive\n\n**Yêu cầu quan trọng:**\n- Mảng PHẢI được sắp xếp trước\n\n**Use cases:**\n- Tìm kiếm trong mảng/danh sách lớn đã sắp xếp\n- Dictionary, Phone book\n- Database indexing",
+    "category": "algorithms",
+    "tags": [
+      "binary search",
+      "tìm kiếm",
+      "thuật toán",
+      "algorithm",
+      "search"
+    ],
+    "priority": 9
+  },
+  {
+    "question": "Linked List là gì? Khác Array như thế nào?",
+    "answer": "**Linked List** là cấu trúc dữ liệu gồm các nodes liên kết với nhau qua pointers/references.\n\n**Cấu trúc Node:**\n```javascript\nclass Node {\n  constructor(data) {\n    this.data = data;     // Dữ liệu\n    this.next = null;     // Pointer đến node tiếp theo\n  }\n}\n```\n\n**Linked List Implementation:**\n```javascript\nclass LinkedList {\n  constructor() {\n    this.head = null;\n    this.size = 0;\n  }\n  \n  // Thêm node ở đầu\n  addFirst(data) {\n    const newNode = new Node(data);\n    newNode.next = this.head;\n    this.head = newNode;\n    this.size++;\n  }\n  \n  // Thêm node ở cuối\n  addLast(data) {\n    const newNode = new Node(data);\n    \n    if (!this.head) {\n      this.head = newNode;\n    } else {\n      let current = this.head;\n      while (current.next) {\n        current = current.next;\n      }\n      current.next = newNode;\n    }\n    this.size++;\n  }\n  \n  // Xóa node đầu\n  removeFirst() {\n    if (!this.head) return null;\n    \n    const removed = this.head.data;\n    this.head = this.head.next;\n    this.size--;\n    return removed;\n  }\n  \n  // In ra list\n  print() {\n    let current = this.head;\n    const values = [];\n    \n    while (current) {\n      values.push(current.data);\n      current = current.next;\n    }\n    \n    console.log(values.join(' -> '));\n  }\n}\n\n// Sử dụng\nconst list = new LinkedList();\nlist.addLast(1);\nlist.addLast(2);\nlist.addLast(3);\nlist.print(); // 1 -> 2 -> 3\n```\n\n**So sánh Array vs Linked List:**\n\n| Thao tác | Array | Linked List |\n|----------|-------|-------------|\n| Truy cập phần tử | O(1) - Nhanh | O(n) - Chậm |\n| Thêm đầu | O(n) - Chậm | O(1) - Nhanh |\n| Thêm cuối | O(1) - Nhanh | O(n) - Chậm |\n| Xóa đầu | O(n) - Chậm | O(1) - Nhanh |\n| Bộ nhớ | Liên tục | Rải rác |\n\n**Ưu điểm Linked List:**\n- Thêm/xóa đầu danh sách O(1)\n- Kích thước động, không cần resize\n- Không lãng phí bộ nhớ\n\n**Nhược điểm:**\n- Truy cập chậm O(n)\n- Tốn thêm bộ nhớ cho pointers\n- Không cache-friendly\n\n**Khi nào dùng:**\n- Thêm/xóa phần tử thường xuyên\n- Không cần truy cập random\n- Implement Stack, Queue, Graph",
+    "category": "data_structures",
+    "tags": [
+      "linked list",
+      "data structure",
+      "cấu trúc dữ liệu",
+      "node",
+      "pointer"
+    ],
+    "priority": 8
+  },
+  {
+    "question": "Lộ trình học lập trình cho người mới bắt đầu?",
+    "answer": "**Lộ trình học lập trình từ Zero to Hero:**\n\n**GIAI ĐOẠN 1: Nền tảng (2-3 tháng)**\n\n1. **Chọn ngôn ngữ đầu tiên** (chọn 1):\n   - Python: Dễ học, đa năng\n   - JavaScript: Web development\n   - Java/C#: Enterprise, mobile\n\n2. **Học cơ bản:**\n   - Variables, data types\n   - Operators, conditions (if/else)\n   - Loops (for, while)\n   - Functions\n   - Arrays/Lists\n\n3. **Practice**: Làm 50-100 bài tập cơ bản\n\n**GIAI ĐOẠN 2: Trung cấp (3-4 tháng)**\n\n1. **Concepts nâng cao:**\n   - OOP (Classes, Objects)\n   - Error handling\n   - File I/O\n   - Collections\n\n2. **Data Structures:**\n   - Arrays, Linked Lists\n   - Stacks, Queues\n   - Hash Tables\n   - Trees (Binary Tree)\n\n3. **Algorithms cơ bản:**\n   - Sorting (Bubble, Quick, Merge)\n   - Searching (Linear, Binary)\n   - Recursion\n\n**GIAI ĐOẠN 3: Chuyên môn hóa (6+ tháng)**\n\nChọn một hướng:\n\n**A. Web Development:**\n- Frontend: HTML, CSS, JavaScript\n- Framework: React, Vue, Angular\n- Backend: Node.js, Django, Flask\n- Database: SQL, MongoDB\n\n**B. Mobile Development:**\n- Android: Kotlin, Java\n- iOS: Swift\n- Cross-platform: React Native, Flutter\n\n**C. Data Science/AI:**\n- Python libraries: NumPy, Pandas\n- Machine Learning: Scikit-learn\n- Deep Learning: TensorFlow, PyTorch\n\n**D. Game Development:**\n- Unity (C#)\n- Unreal Engine (C++)\n- Godot\n\n**TIPS QUAN TRỌNG:**\n\n1. ✅ **Làm dự án thực tế**: Học qua project, không chỉ lý thuyết\n2. ✅ **Code mỗi ngày**: Ít nhất 1-2 giờ/ngày\n3. ✅ **Debug nhiều**: Học từ lỗi của mình\n4. ✅ **Đọc code người khác**: GitHub, Stack Overflow\n5. ✅ **Tham gia cộng đồng**: Discord, Reddit, Facebook groups\n6. ✅ **Build portfolio**: GitHub, personal website\n\n**Tài nguyên miễn phí:**\n- BugHunter (debug practice)\n- freeCodeCamp\n- Codecademy\n- CS50 (Harvard)\n- The Odin Project\n- YouTube channels\n\n**Timeline thực tế:**\n- Junior Developer: 6-12 tháng\n- Mid-level: 1-2 năm\n- Senior: 3-5 năm\n\nĐừng vội, học từng bước, practice nhiều!",
+    "category": "learning_path",
+    "tags": [
+      "lộ trình",
+      "học lập trình",
+      "roadmap",
+      "beginner",
+      "career"
+    ],
+    "priority": 10
+  },
+  {
+    "question": "Nên học ngôn ngữ lập trình nào đầu tiên?",
+    "answer": "Đây là câu hỏi phổ biến nhất! Câu trả lời phụ thuộc vào **MỤC TIÊU** của bạn:\n\n**🐍 PYTHON - Khuyến nghị cho người mới:**\n\n**Ưu điểm:**\n- Cú pháp đơn giản, dễ đọc như tiếng Anh\n- Đa năng: Web, AI, Data Science, Automation\n- Cộng đồng lớn, tài liệu phong phú\n- Thư viện phong phú\n\n**Phù hợp với:**\n- Người hoàn toàn mới\n- Muốn vào AI/Data Science\n- Automation, scripting\n\n**Ví dụ code:**\n```python\n# Python - Rất dễ đọc!\ndef greet(name):\n    return f\"Hello, {name}!\"\n\nprint(greet(\"World\"))\n```\n\n**💻 JAVASCRIPT - Cho Web Development:**\n\n**Ưu điểm:**\n- Chạy trên browser, dễ thấy kết quả\n- Frontend + Backend (Node.js)\n- Job opportunities nhiều nhất\n- Ecosystem phong phú (React, Vue, Angular)\n\n**Phù hợp với:**\n- Muốn làm web developer\n- Thích thấy kết quả trực quan\n- Muốn freelance\n\n**☕ JAVA/C# - Cho Enterprise:**\n\n**Ưu điểm:**\n- Strict typing, học tốt fundamentals\n- Enterprise, banking, big companies\n- Mobile: Android (Java/Kotlin), iOS (C#/Xamarin)\n- Lương cao, stable\n\n**Phù hợp với:**\n- Muốn vào big companies\n- Mobile development\n- Thích cấu trúc rõ ràng\n\n**⚡ C/C++ - Cho System Programming:**\n\n**Ưu điểm:**\n- Performance cao nhất\n- Hiểu sâu về computer science\n- Game development, embedded systems\n\n**Nhược điểm:**\n- Khó học nhất cho beginners\n- Quản lý memory phức tạp\n\n**KẾT LUẬN - TOP PICKS:**\n\n1. **Hoàn toàn mới, chưa biết gì:** 🐍 **PYTHON**\n2. **Muốn làm web:** 💻 **JAVASCRIPT**\n3. **Muốn vào big tech:** ☕ **JAVA hoặc C#**\n4. **Muốn làm game:** ⚡ **C++ hoặc C#**\n5. **Muốn mobile:** ☕ **Kotlin (Android) hoặc Swift (iOS)**\n\n**QUAN TRỌNG NHẤT:**\n- ✅ Ngôn ngữ là công cụ, logic mới là nền tảng\n- ✅ Học một ngôn ngữ tốt, các ngôn ngữ khác học nhanh\n- ✅ Đừng \"language hopping\" - stick với 1 ngôn ngữ 6-12 tháng\n- ✅ Practice > Theory\n\n**Gợi ý cho bạn:**\nBắt đầu với Python, sau 3-6 tháng, học thêm JavaScript nếu muốn làm web!",
+    "category": "learning_path",
+    "tags": [
+      "ngôn ngữ",
+      "language",
+      "python",
+      "javascript",
+      "java",
+      "chọn ngôn ngữ"
+    ],
+    "priority": 10
+  },
+  {
+    "question": "Làm sao để giỏi lập trình?",
+    "answer": "Đây là câu hỏi triệu đô! Để giỏi lập trình, bạn cần:\n\n**1. PRACTICE, PRACTICE, PRACTICE (Quan trọng nhất!)**\n\n- Code **MỖI NGÀY**, ít nhất 1-2 giờ\n- Làm bài tập trên:\n  - BugHunter (debug practice)\n  - LeetCode, HackerRank\n  - Codewars, Exercism\n  - Project Euler (math problems)\n\n**2. BUILD PROJECTS (Dự án thực tế)**\n\n```\nĐừng chỉ học lý thuyết!\nHọc qua làm project:\n\n- Week 1-2: Todo App\n- Week 3-4: Weather App\n- Month 2: Personal Blog\n- Month 3: E-commerce site\n- Month 4-6: Social Media clone\n```\n\n**3. READ CODE (Đọc code người khác)**\n\n- Explore GitHub repositories\n- Study open-source projects\n- Đọc code của developers giỏi\n- Hiểu tại sao họ code như vậy\n\n**4. LEARN FROM MISTAKES (Học từ lỗi)**\n\n- Debug là kỹ năng quan trọng nhất\n- Mỗi lỗi là cơ hội học hỏi\n- Hiểu **TẠI SAO** lỗi xảy ra\n- Document các lỗi đã gặp\n\n**5. UNDERSTAND FUNDAMENTALS**\n\n**Phải hiểu rõ:**\n- Data Structures (Arrays, Lists, Trees, Graphs)\n- Algorithms (Sorting, Searching)\n- Time/Space Complexity (Big O)\n- Design Patterns\n- Clean Code principles\n\n**6. COLLABORATE (Làm việc nhóm)**\n\n- Join coding communities\n- Contribute to Open Source\n- Code review với người khác\n- Pair programming\n- Học cách đọc và viết documentation\n\n**7. STAY UPDATED**\n\n- Follow tech blogs\n- Watch conferences (YouTube)\n- Listen to podcasts\n- Try new technologies\n- But don't chase every trend!\n\n**LỘ TRÌNH CỤ THỂ:**\n\n**Tháng 1-3: Fundamentals**\n- Master 1 ngôn ngữ\n- 100+ coding problems\n- 2-3 small projects\n\n**Tháng 4-6: Intermediate**\n- OOP, Design Patterns\n- Data Structures & Algorithms\n- 1 medium project\n- Start reading others' code\n\n**Tháng 7-12: Advanced**\n- System Design\n- Best Practices\n- 1-2 complex projects\n- Contribute to Open Source\n\n**Year 2+: Specialization**\n- Deep dive vào một lĩnh vực\n- Master advanced concepts\n- Build impressive portfolio\n- Network với developers\n\n**MINDSET QUAN TRỌNG:**\n\n✅ **Growth Mindset**: Tin rằng bạn có thể học được mọi thứ\n✅ **Consistency**: Code đều đặn, không bỏ cuộc\n✅ **Patience**: Không ai giỏi ngay từ đầu\n✅ **Curiosity**: Luôn tò mò, muốn hiểu sâu\n✅ **Resilience**: Không sợ bugs, errors\n\n**AVOID THESE MISTAKES:**\n\n❌ Tutorial hell (chỉ xem tutorial, không code)\n❌ Language hopping (nhảy liên tục giữa các ngôn ngữ)\n❌ Sợ bugs (bugs là bạn, không phải kẻ thù)\n❌ Copying code không hiểu (understand every line)\n❌ Học một mình (join communities)\n\n**QUOTE YÊU THÍCH:**\n> \"Everybody should learn to program a computer, because it teaches you how to think.\" - Steve Jobs\n\n**Remember:**\n- 10,000 hours rule (Malcolm Gladwell)\n- But quality > quantity\n- Deliberate practice is key\n- **Just start coding TODAY!**",
+    "category": "learning_path",
+    "tags": [
+      "học lập trình",
+      "tips",
+      "giỏi",
+      "improve",
+      "practice",
+      "career"
+    ],
+    "priority": 9
+  },
+  {
+    "question": "Cách sử dụng chatbot trong BugHunter?",
+    "answer": "**ChatBot AI trong BugHunter** giúp bạn học lập trình hiệu quả hơn!\n\n**🎯 TÍNH NĂNG CHÍNH:**\n\n**1. Hỏi về Lập Trình:**\nBạn có thể hỏi bất kỳ câu hỏi nào về:\n- Cú pháp ngôn ngữ lập trình\n- Giải thích concepts (loops, functions, OOP)\n- Debugging tips\n- Best practices\n- Thuật toán và cấu trúc dữ liệu\n\n**Ví dụ:**\n```\n\"Làm sao debug lỗi null pointer?\"\n\"React hooks là gì?\"\n\"Giải thích bubble sort cho tôi\"\n\"Sự khác biệt giữa let và const?\"\n```\n\n**2. Gợi Ý Challenges:**\nChatbot có thể gợi ý challenges phù hợp:\n```\n\"Gợi ý bài tập Python cho tôi\"\n\"Tìm challenges về sorting algorithms\"\n\"Bài tập nào phù hợp cho beginner?\"\n```\n\n**3. Giải Thích Lỗi:**\nKhi gặp lỗi trong challenge:\n```\n\"Tôi gặp lỗi TypeError, giải thích cho tôi\"\n\"Syntax error là gì?\"\n\"Làm sao fix lỗi này: [paste error]\"\n```\n\n**4. Lộ Trình Học:**\n```\n\"Lộ trình học Python cho người mới\"\n\"Nên học gì sau JavaScript?\"\n\"Cách trở thành web developer?\"\n```\n\n**5. Code Review & Tips:**\n```\n\"Code của tôi có tốt không?\"\n\"Cách optimize code này?\"\n\"Best practices cho function này?\"\n```\n\n**💡 TIPS SỬ DỤNG HIỆU QUẢ:**\n\n**1. Hỏi cụ thể:**\n- ✅ \"Làm sao fix lỗi 'undefined is not a function' trong JavaScript?\"\n- ❌ \"Tôi bị lỗi, giúp tôi\"\n\n**2. Cung cấp context:**\n- ✅ \"Tôi đang làm bài Array Sorting, gặp lỗi timeout. Code: [paste code]\"\n- ❌ \"Bài này khó quá\"\n\n**3. Follow-up questions:**\n- Đặt câu hỏi liên quan để hiểu sâu hơn\n- \"Còn cách nào khác không?\"\n- \"So sánh với phương pháp A thì sao?\"\n\n**4. Thử nghiệm:**\n- Áp dụng gợi ý của chatbot\n- Test và verify\n- Quay lại hỏi nếu không rõ\n\n**📱 CÁCH MỞ CHATBOT:**\n\n1. Click vào icon chat ở góc dưới bên phải màn hình\n2. Hoặc nhấn phím tắt (nếu có)\n3. Gõ câu hỏi và Enter\n\n**🎓 USE CASES THỰC TẾ:**\n\n**Scenario 1: Mắc kẹt ở Challenge**\n```\nBạn: \"Tôi đang làm bài 'Two Sum', không biết cách optimize\"\nBot: [Giải thích hash table approach]\nBạn: \"Hash table là gì?\"\nBot: [Giải thích chi tiết + code example]\n```\n\n**Scenario 2: Học Concept Mới**\n```\nBạn: \"Recursion là gì?\"\nBot: [Giải thích + ví dụ đơn giản]\nBạn: \"Cho tôi ví dụ với Fibonacci\"\nBot: [Code implementation]\n```\n\n**Scenario 3: Debug**\n```\nBạn: \"Code của tôi bị lỗi: [paste error]\"\nBot: [Phân tích lỗi + gợi ý fix]\nBạn: \"Tại sao lại lỗi vậy?\"\nBot: [Giải thích root cause]\n```\n\n**⚠️ LƯU Ý:**\n\n- Chatbot là **trợ lý**, không phải làm bài thay bạn\n- Hãy **tự suy nghĩ** trước, hỏi bot khi thật sự cần\n- **Practice** sau khi hiểu - đừng chỉ copy code\n- Sử dụng để **học**, không phải để gian lận\n\n**🌟 TÍNH NĂNG NÂNG CAO:**\n\n1. **Chat History**: Xem lại các câu hỏi cũ\n2. **Context Awareness**: Bot nhớ cuộc trò chuyện trước\n3. **Code Formatting**: Code được format đẹp, dễ đọc\n4. **Multi-language**: Hỗ trợ nhiều ngôn ngữ lập trình\n\n**Bắt đầu ngay bằng cách hỏi:**\n\"Xin chào! Tôi mới bắt đầu học lập trình, hướng dẫn tôi nhé!\"",
+    "category": "bughunter_features",
+    "tags": [
+      "chatbot",
+      "bughunter",
+      "hướng dẫn",
+      "ai",
+      "assistant",
+      "features"
+    ],
+    "priority": 10
+  },
+  {
+    "question": "Làm sao submit code trong BugHunter?",
+    "answer": "**Hướng dẫn submit code trong BugHunter:**\n\n**📝 BƯỚC 1: CHỌN CHALLENGE**\n1. Vào trang **Challenges** hoặc **Practice**\n2. Chọn một challenge phù hợp với level của bạn\n3. Đọc kỹ đề bài, requirements, và constraints\n\n**💻 BƯỚC 2: ĐỌC CODE CÓ LỖI**\n1. BugHunter cung cấp code có lỗi\n2. Đọc và hiểu code đang làm gì\n3. Chạy test cases để thấy lỗi\n4. Phân tích error message\n\n**🔍 BƯỚC 3: TÌM VÀ SỬA LỖI**\n1. **Tìm lỗi**: \n   - Đọc kỹ error message\n   - Debug từng phần code\n   - So sánh expected vs actual output\n   - Sử dụng console.log/print để debug\n\n2. **Sửa lỗi**:\n   - Chỉnh sửa code để fix bug\n   - Test lại với các test cases\n   - Đảm bảo logic đúng\n\n**✅ BƯỚC 4: TEST CODE**\n1. Click nút **\"Run Code\"** hoặc **\"Test\"**\n2. Xem output của các test cases:\n   - ✅ Passed: Test case đúng\n   - ❌ Failed: Test case sai\n3. Debug thêm nếu có test case fail\n\n**🚀 BƯỚC 5: SUBMIT**\n1. Khi tất cả test cases pass:\n   - Click nút **\"Submit\"** hoặc **\"Submit Solution\"**\n2. Hệ thống sẽ:\n   - Chạy full test suite (bao gồm hidden tests)\n   - Đánh giá code của bạn\n   - Tính điểm dựa trên:\n     - Correctness (độ chính xác)\n     - Time complexity\n     - Code quality\n\n**📊 BƯỚC 6: XEM KẾT QUẢ**\nSau khi submit, bạn sẽ thấy:\n- **Status**: Accepted, Wrong Answer, Time Limit Exceeded, etc.\n- **Test Results**: Chi tiết từng test case\n- **Points Earned**: Điểm bạn nhận được\n- **AI Analysis**: Phân tích code của bạn (nếu có)\n- **Leaderboard**: Vị trí của bạn\n\n**🎯 TIPS ĐỂ SUBMIT THÀNH CÔNG:**\n\n**1. Đọc kỹ đề bài:**\n```\n- Input format là gì?\n- Output format là gì?\n- Constraints (giới hạn) là gì?\n- Edge cases cần xử lý?\n```\n\n**2. Test kỹ trước khi submit:**\n```\n- Test với sample input\n- Test với edge cases:\n  - Empty input\n  - Maximum input\n  - Minimum input\n  - Special characters\n```\n\n**3. Kiểm tra common mistakes:**\n```javascript\n// ❌ Sai - Off-by-one error\nfor (let i = 0; i <= arr.length; i++) { }\n\n// ✅ Đúng\nfor (let i = 0; i < arr.length; i++) { }\n\n// ❌ Sai - Quên return\nfunction sum(a, b) {\n  a + b; // Thiếu return!\n}\n\n// ✅ Đúng\nfunction sum(a, b) {\n  return a + b;\n}\n```\n\n**4. Handle edge cases:**\n```python\n# Kiểm tra input hợp lệ\nif not arr or len(arr) == 0:\n    return []\n\n# Kiểm tra null/undefined\nif value is None:\n    return default_value\n```\n\n**5. Tối ưu code nếu cần:**\n```\n- Nếu bị Time Limit Exceeded (TLE):\n  - Giảm time complexity\n  - Tránh nested loops không cần thiết\n  - Sử dụng hash table thay vì array search\n  \n- Nếu bị Memory Limit Exceeded (MLE):\n  - Tối ưu space complexity\n  - Tránh tạo array/object không cần thiết\n```\n\n**⚠️ LỖI THƯỜNG GẶP:**\n\n**1. Wrong Answer:**\n- Lỗi logic trong code\n- Không handle edge cases\n- Hiểu sai đề bài\n\n**2. Time Limit Exceeded:**\n- Code chạy quá chậm\n- Time complexity quá cao (O(n²) thay vì O(n))\n- Infinite loop\n\n**3. Runtime Error:**\n- Array out of bounds\n- Null pointer exception\n- Division by zero\n\n**4. Compilation Error:**\n- Syntax error\n- Thiếu import/include\n- Sai tên function\n\n**🔄 SAU KHI SUBMIT:**\n\n**Nếu Accepted (AC):**\n- 🎉 Chúc mừng! Bạn đã giải đúng\n- Nhận điểm và badges\n- Xem solutions của người khác\n- Thử optimize code hơn nữa\n\n**Nếu Wrong Answer (WA):**\n- Đọc kỹ test case bị fail\n- Debug lại code\n- Hỏi chatbot nếu cần\n- Thử lại!\n\n**Nếu Time/Memory Limit:**\n- Tối ưu thuật toán\n- Giảm complexity\n- Sử dụng data structure phù hợp hơn\n\n**📚 TÀI NGUYÊN HỖ TRỢ:**\n\n1. **Chatbot AI**: Hỏi trực tiếp nếu bị stuck\n2. **Discussions**: Xem thảo luận của người khác\n3. **Hints**: Sử dụng gợi ý (nếu có)\n4. **Editorial**: Đọc lời giải chính thức sau khi AC\n\n**Remember**: \n- Đừng vội vàng submit\n- Test kỹ càng trước\n- Học từ mỗi submission\n- Practice makes perfect!\n\n**Bắt đầu ngay với challenge đầu tiên của bạn! 💪**",
+    "category": "bughunter_features",
+    "tags": [
+      "submit",
+      "bughunter",
+      "challenge",
+      "hướng dẫn",
+      "code",
+      "test"
+    ],
+    "priority": 9
+  },
+  {
+    "question": "Làm sao xem leaderboard và ranking trong BugHunter?",
+    "answer": "**Leaderboard & Ranking System trong BugHunter:**\n\n**🏆 CÁC LOẠI LEADERBOARD:**\n\n**1. Global Leaderboard (Toàn cầu):**\n- Xếp hạng tất cả users trên BugHunter\n- Dựa trên tổng điểm tích lũy\n- Cập nhật real-time\n\n**2. Challenge Leaderboard:**\n- Xếp hạng cho từng challenge cụ thể\n- Dựa trên:\n  - Độ chính xác\n  - Thời gian submit\n  - Code quality\n  - Time complexity\n\n**3. Language-specific Leaderboard:**\n- Xếp hạng theo ngôn ngữ lập trình\n- Python, JavaScript, Java, C++, etc.\n\n**4. Weekly/Monthly Leaderboard:**\n- Xếp hạng theo tuần/tháng\n- Reset mỗi kỳ\n- Top performers nhận rewards\n\n**📊 CÁCH XEM LEADERBOARD:**\n\n**Cách 1: Từ Dashboard**\n```\n1. Đăng nhập vào BugHunter\n2. Vào Dashboard\n3. Tìm section \"Leaderboard\" hoặc \"Rankings\"\n4. Xem vị trí của bạn và top users\n```\n\n**Cách 2: Từ Challenge Page**\n```\n1. Vào một challenge cụ thể\n2. Click tab \"Leaderboard\" hoặc \"Rankings\"\n3. Xem ai đã giải challenge nhanh/tốt nhất\n```\n\n**Cách 3: Từ Profile**\n```\n1. Vào Profile của bạn\n2. Xem:\n   - Current Rank: Hạng hiện tại\n   - Total Points: Tổng điểm\n   - Solved Challenges: Số bài đã giải\n   - Success Rate: Tỷ lệ thành công\n```\n\n**🎯 CÁCH TÍNH ĐIỂM:**\n\n**Công thức tính điểm:**\n```\nTotal Score = Σ (Challenge Points × Multipliers)\n\nMultipliers:\n- Difficulty Bonus:\n  - Easy: 1x\n  - Medium: 1.5x\n  - Hard: 2x\n  \n- Speed Bonus: +10% nếu submit trong top 10% nhanh nhất\n- First Solve Bonus: +20% nếu là người đầu tiên solve\n- Streak Bonus: +5% cho mỗi 7 ngày streak\n```\n\n**Ví dụ:**\n```\nEasy Challenge (100 points) → 100 points\nMedium Challenge (200 points) → 300 points (1.5x)\nHard Challenge (300 points) + Speed Bonus → 660 points (2x + 10%)\n```\n\n**📈 RANKING TIERS:**\n\n```\n🥉 Bronze Tier: 0 - 1,000 points\n🥈 Silver Tier: 1,001 - 5,000 points\n🥇 Gold Tier: 5,001 - 15,000 points\n💎 Platinum Tier: 15,001 - 50,000 points\n👑 Master Tier: 50,001+ points\n🏅 Grandmaster: Top 10 globally\n```\n\n**🎖️ BADGES & ACHIEVEMENTS:**\n\nKhi leo rank, bạn unlock các badges:\n- **First Blood**: Solve đầu tiên\n- **Speed Demon**: Top 3% fastest\n- **Bug Hunter**: Solve 50+ challenges\n- **Debug Master**: 100+ challenges\n- **Code Ninja**: 250+ challenges\n- **Language Master**: Master một ngôn ngữ\n- **Polyglot**: Solve bài bằng 5+ ngôn ngữ\n\n**💡 TIPS LEO RANK NHANH:**\n\n**1. Solve nhiều challenges:**\n```\n- Bắt đầu từ Easy\n- Dần dần tăng độ khó\n- Aim for 100% acceptance rate\n```\n\n**2. Tối ưu code:**\n```\n- Viết code clean, efficient\n- Giảm time complexity\n- Handle edge cases tốt\n```\n\n**3. Tham gia Contests:**\n```\n- Weekly contests: Bonus points\n- Monthly challenges: Special rewards\n- Speed coding events\n```\n\n**4. Daily Streak:**\n```\n- Code mỗi ngày để giữ streak\n- Streak bonus = Free points!\n- 30-day streak = Special badge\n```\n\n**5. Contribute:**\n```\n- Review others' code\n- Viết editorials\n- Help trong discussions\n- Report bugs → Bonus points\n```\n\n**📱 FEATURES CỦA LEADERBOARD:**\n\n**1. Search & Filter:**\n```\n- Tìm kiếm users theo username\n- Filter theo:\n  - Country\n  - University\n  - Language preference\n  - Tier\n```\n\n**2. Compare:**\n```\n- So sánh profile với friends\n- Xem gap points cần catch up\n- Head-to-head statistics\n```\n\n**3. Notifications:**\n```\n- Thông báo khi:\n  - Vượt mặt ai đó\n  - Ai đó vượt mặt bạn\n  - Lên tier mới\n  - Đạt milestone\n```\n\n**🏅 REWARDS:**\n\n**Top 10 Global:**\n- Featured trên homepage\n- Special badge\n- Priority support\n- Beta features access\n\n**Top 100:**\n- Certificate of Achievement\n- Profile highlight\n- Recruiter visibility\n\n**Monthly Winners:**\n- Gift cards\n- BugHunter Premium free\n- Interview opportunities\n\n**⚠️ RULES & FAIR PLAY:**\n\n**Không được:**\n- ❌ Cheat, copy code\n- ❌ Multiple accounts\n- ❌ Share solutions during contests\n- ❌ Use automated bots\n\n**Vi phạm → Penalties:**\n- Mất điểm\n- Temporary ban\n- Permanent ban (severe cases)\n\n**✅ SỬ DỤNG LEADERBOARD ĐỂ:**\n\n1. **Theo dõi tiến độ:**\n   - Xem mình đã tiến bộ thế nào\n   - Set goals (ví dụ: Top 100)\n\n2. **Học từ top users:**\n   - Xem profile của top users\n   - Study solutions của họ\n   - Học style và approach\n\n3. **Tìm bạn cùng học:**\n   - Add friends có level tương đương\n   - Cùng practice\n   - Healthy competition\n\n4. **Motivation:**\n   - Compete với bản thân\n   - Celebrate milestones\n   - Join the community\n\n**🎯 GOALS ĐỀ XUẤT:**\n\n**Beginner:**\n- Solve 10 Easy challenges\n- Reach Bronze Tier\n- Get first badge\n\n**Intermediate:**\n- Solve 50 challenges total\n- Reach Silver/Gold Tier\n- Top 1000 global\n\n**Advanced:**\n- Solve 100+ challenges\n- Reach Platinum Tier\n- Top 100 global\n- Win a contest\n\n**Remember:**\n- Leaderboard là để motivate, không phải để stress\n- Learn > Compete\n- Enjoy the journey!\n- Consistency > Sprint\n\n**Bắt đầu leo rank ngay hôm nay! 🚀**",
+    "category": "bughunter_features",
+    "tags": [
+      "leaderboard",
+      "ranking",
+      "bughunter",
+      "điểm",
+      "xếp hạng",
+      "points"
+    ],
+    "priority": 8
   }
 ]

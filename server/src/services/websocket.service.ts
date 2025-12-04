@@ -211,7 +211,7 @@ export class WebSocketService {
     this.io.on('connection', (socket: AuthenticatedSocket) => {
       if (!socket.user || !socket.userId) {
         console.error('Unauthenticated connection attempt');
-        socket.disconnect();
+        (socket as Socket).disconnect();
         return;
       }
 
@@ -243,7 +243,7 @@ export class WebSocketService {
         level: socket.user.level || 1,
         status: 'online',
         lastSeen: new Date().toISOString(),
-        socketId: socket.id
+        socketId: (socket as any).id
       };
 
       this.onlineUsers.set(socket.userId, onlineUser);

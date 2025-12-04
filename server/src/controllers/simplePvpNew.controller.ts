@@ -5,6 +5,7 @@ import Challenge from '../models/challenge.model';
 import User from '../models/user.model';
 import Submission from '../models/submission.model';
 import judge0Service from '../services/judge0Service';
+import { notifyPvPWin, notifyPvPLoss, notifyRankUp } from '../services/notification.service';
 
 interface AuthenticatedRequest extends Request {
   user?: any;
@@ -780,50 +781,120 @@ export class SimplePvPController {
       // Update user stats and XP
       if (match.winnerId) {
         // Có 1 người thắng rõ ràng
-        await User.findByIdAndUpdate(match.winnerId, {
+        const winner = match.participants.find(p => p.userId.toString() === match.winnerId?.toString());
+        const losers = match.participants.filter(p => p.userId.toString() !== match.winnerId?.toString());
+        
+        // Update winner
+        const winnerUser = await User.findByIdAndUpdate(match.winnerId, {
           $inc: {
             'pvpStats.wins': 1,
             'pvpStats.totalMatches': 1,
             experience: winnerXP
           }
-        });
+        }, { new: true });
 
-        // Update losers
-        for (const participant of match.participants) {
-          if (participant.userId.toString() !== match.winnerId?.toString()) {
-            await User.findByIdAndUpdate(participant.userId, {
-              $inc: {
-                'pvpStats.losses': 1,
-                'pvpStats.totalMatches': 1
-              }
-            });
+        if (winnerUser) {
+          // Check for rank up
+          const oldRank = winnerUser.rank || 'Newbie';
+          const xp = winnerUser.experience || 0;
+          let newRank = 'Newbie';
+          if (xp >= 1000) newRank = 'Expert';
+          else if (xp >= 500) newRank = 'Senior';
+          else if (xp >= 200) newRank = 'Intermediate';
+          else if (xp >= 50) newRank = 'Junior';
+          
+          if (oldRank !== newRank) {
+            winnerUser.rank = newRank as any;
+            await winnerUser.save();
+            await notifyRankUp(match.winnerId.toString(), oldRank, newRank);
           }
+
+          // Notify winner
+          const opponentName = losers.length > 0 ? losers[0].username : 'đối thủ';
+          await notifyPvPWin(
+            match.winnerId.toString(),
+            opponentName,
+            winnerXP,
+            (match._id as any).toString(),
+            match.difficulty || 'Medium'
+          );
+        }
+
+        // Update losers and notify them
+        for (const participant of losers) {
+          await User.findByIdAndUpdate(participant.userId, {
+            $inc: {
+              'pvpStats.losses': 1,
+              'pvpStats.totalMatches': 1
+            }
+          });
+
+          // Notify loser
+          await notifyPvPLoss(
+            participant.userId.toString(),
+            winner?.username || 'đối thủ',
+            (match._id as any).toString()
+          );
         }
       } else {
         // HÒA - tất cả winners nhận XP nhưng tính là hòa
         const winners = match.participants.filter(p => p.isWinner);
+        const losers = match.participants.filter(p => !p.isWinner);
         const drawXP = Math.floor(winnerXP / 2); // Chia đôi XP cho hòa
 
         for (const winner of winners) {
-          await User.findByIdAndUpdate(winner.userId, {
+          const winnerUser = await User.findByIdAndUpdate(winner.userId, {
             $inc: {
               'pvpStats.draws': 1,
               'pvpStats.totalMatches': 1,
               experience: drawXP
             }
-          });
+          }, { new: true });
+
+          if (winnerUser && drawXP > 0) {
+            // Check for rank up
+            const oldRank = winnerUser.rank || 'Newbie';
+            const xp = winnerUser.experience || 0;
+            let newRank = 'Newbie';
+            if (xp >= 1000) newRank = 'Expert';
+            else if (xp >= 500) newRank = 'Senior';
+            else if (xp >= 200) newRank = 'Intermediate';
+            else if (xp >= 50) newRank = 'Junior';
+            
+            if (oldRank !== newRank) {
+              winnerUser.rank = newRank as any;
+              await winnerUser.save();
+              await notifyRankUp(winner.userId.toString(), oldRank, newRank);
+            }
+
+            // Notify draw (treated as win with reduced XP)
+            const opponentName = losers.length > 0 ? losers[0].username : 'đối thủ';
+            await notifyPvPWin(
+              winner.userId.toString(),
+              opponentName,
+              drawXP,
+              (match._id as any).toString(),
+              match.difficulty || 'Medium'
+            );
+          }
         }
 
         // Non-winners vẫn tính là thua
-        for (const participant of match.participants) {
-          if (!participant.isWinner) {
-            await User.findByIdAndUpdate(participant.userId, {
-              $inc: {
-                'pvpStats.losses': 1,
-                'pvpStats.totalMatches': 1
-              }
-            });
-          }
+        for (const participant of losers) {
+          await User.findByIdAndUpdate(participant.userId, {
+            $inc: {
+              'pvpStats.losses': 1,
+              'pvpStats.totalMatches': 1
+            }
+          });
+
+          // Notify loser
+          const winnerName = winners.length > 0 ? winners[0].username : 'đối thủ';
+          await notifyPvPLoss(
+            participant.userId.toString(),
+            winnerName,
+            (match._id as any).toString()
+          );
         }
       }
 

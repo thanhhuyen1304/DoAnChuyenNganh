@@ -11,6 +11,9 @@ export interface IChallenge extends Document {
   title: string;
   description: string;
   problemStatement: string;
+  titleEn?: string;
+  descriptionEn?: string;
+  problemStatementEn?: string;
   language: string;
   difficulty: 'Easy' | 'Medium' | 'Hard';
   category: 'Syntax' | 'Logic' | 'Performance' | 'Security';
@@ -54,14 +57,27 @@ const challengeSchema = new Schema<IChallenge>(
       trim: true,
       maxlength: [200, 'Tiêu đề không được vượt quá 200 ký tự'],
     },
+    titleEn: {
+      type: String,
+      trim: true,
+      maxlength: 200,
+    },
     description: {
       type: String,
       required: [true, 'Mô tả bài tập là bắt buộc'],
       trim: true,
     },
+    descriptionEn: {
+      type: String,
+      trim: true,
+    },
     problemStatement: {
       type: String,
       required: [true, 'Đề bài là bắt buộc'],
+      trim: true,
+    },
+    problemStatementEn: {
+      type: String,
       trim: true,
     },
     language: {

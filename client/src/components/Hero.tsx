@@ -3,8 +3,6 @@ import { Code, Bug, Play, ArrowRight, CheckCircle, Trophy } from 'lucide-react'
 import { useLanguage } from './contexts/LanguageContext'
 import { CombinedLeaderboardModal } from './CombinedLeaderboardModal'
 
-const decoImg = new URL('./images/1.jpg', import.meta.url).href
-
 const Hero: React.FC = () => {
   const { language, t } = useLanguage()
   const [isVisible, setIsVisible] = useState(false)
@@ -23,12 +21,8 @@ const Hero: React.FC = () => {
   }, [])
 
   return (
-    <section className="min-h-screen flex items-center py-8 md:py-12 bg-gradient-to-br from-slate-300 via-slate-50 to-slate-100 dark:from-gray-900 dark:via-gray-850 dark:to-gray-800 overflow-hidden relative">
-      {/* Background */}
-      <div
-        className="fixed inset-0 z-0 bg-cover bg-center opacity-40 dark:opacity-30 filter blur-sm"
-        style={{ backgroundImage: `url(${decoImg})` }}
-      />
+    <section className="min-h-screen flex items-center py-8 md:py-12 overflow-hidden relative">
+      {/* Background is handled by BackgroundWrapper - only keep decorative overlays */}
       <div className="absolute inset-0 pointer-events-none bg-white/30 dark:bg-black/30 z-10" />
       <div className="absolute top-20 right-0 w-60 h-60 bg-yellow-400/5 rounded-full blur-3xl"></div>
       <div className="absolute bottom-4 left-6 w-60 h-60 bg-primary-400/5 rounded-full blur-3xl"></div>

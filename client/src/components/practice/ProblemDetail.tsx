@@ -16,6 +16,9 @@ import {
   Clock,
   HardDrive,
   ThumbsUp,
+  Lock,
+  Unlock,
+  Coins,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -163,6 +166,11 @@ export function ProblemDetail({ problemId, onSubmissionSuccess }: ProblemDetailP
   const [problem, setProblem] = useState<any>(null)
   const [loading, setLoading] = useState(false)
   const [submissionsLoading, setSubmissionsLoading] = useState(false)
+  const [solutions, setSolutions] = useState<any[]>([])
+  const [userTokens, setUserTokens] = useState(0)
+  const [loadingSolutions, setLoadingSolutions] = useState(false)
+  const [unlockingSolution, setUnlockingSolution] = useState<number | null>(null)
+  const [selectedSolution, setSelectedSolution] = useState<any>(null)
 
   useEffect(() => {
     if (problemId) {
@@ -177,6 +185,9 @@ export function ProblemDetail({ problemId, onSubmissionSuccess }: ProblemDetailP
   useEffect(() => {
     if (activeTab === "submissions" && problemId) {
       loadSubmissions()
+    }
+    if (activeTab === "solutions" && problemId) {
+      loadSolutions()
     }
   }, [activeTab, problemId])
 
@@ -236,9 +247,92 @@ export function ProblemDetail({ problemId, onSubmissionSuccess }: ProblemDetailP
     }
   }
 
+  const loadSolutions = async () => {
+    if (!problemId) return
+    try {
+      setLoadingSolutions(true)
+      const token = localStorage.getItem('token')
+      if (!token) return
+
+      const response = await fetch(buildApi(`/challenges/${problemId}/solutions`), {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+      const result = await response.json()
+
+      if (result.success) {
+        setSolutions(result.data.solutions || [])
+        setUserTokens(result.data.userTokens || 0)
+      }
+    } catch (error) {
+      console.error('Error loading solutions:', error)
+    } finally {
+      setLoadingSolutions(false)
+    }
+  }
+
+  const handleUnlockSolution = async (solutionIndex: number) => {
+    try {
+      setUnlockingSolution(solutionIndex)
+      const token = localStorage.getItem('token')
+      if (!token) return
+
+      const response = await fetch(
+        buildApi(`/challenges/${problemId}/solutions/${solutionIndex}/unlock`),
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      )
+      const result = await response.json()
+
+      if (result.success) {
+        // Reload solutions để cập nhật trạng thái
+        await loadSolutions()
+        // Hiển thị solution đã unlock
+        setSelectedSolution(result.data.solution)
+        alert(`Đã mở khóa lời giải! Còn lại ${result.data.remainingTokens} token`)
+      } else {
+        alert(result.message || 'Không thể mở khóa lời giải')
+      }
+    } catch (error: any) {
+      console.error('Error unlocking solution:', error)
+      alert('Lỗi khi mở khóa lời giải')
+    } finally {
+      setUnlockingSolution(null)
+    }
+  }
+
+  const loadSolutionDetail = async (solutionIndex: number) => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) return
+
+      const response = await fetch(
+        buildApi(`/challenges/${problemId}/solutions/${solutionIndex}`),
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      )
+      const result = await response.json()
+
+      if (result.success) {
+        setSelectedSolution(result.data)
+      }
+    } catch (error) {
+      console.error('Error loading solution detail:', error)
+    }
+  }
+
   const tabs = [
     { id: "description", label: "Mô tả" },
-    { id: "editorial", label: "Hướng dẫn" },
+    { id: "editorial", label: "Bình luận" },
     { id: "solutions", label: "Lời giải" },
     { id: "submissions", label: `Lịch sử nộp bài (${submissions.length})` },
   ]
@@ -424,13 +518,144 @@ export function ProblemDetail({ problemId, onSubmissionSuccess }: ProblemDetailP
 
           {activeTab === "editorial" && (
             <div className="text-center py-12">
-              <p className="text-muted-foreground">Nội dung hướng dẫn sẽ sớm có mặt</p>
+              <p className="text-muted-foreground">Nội dung bình luận sẽ có sau</p>
             </div>
           )}
 
           {activeTab === "solutions" && (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">Lời giải mẫu sẽ sớm có mặt</p>
+            <div className="space-y-4">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-foreground">Lời giải</h3>
+                <div className="flex items-center gap-2 bg-card border border-border rounded-lg px-3 py-1.5">
+                  <Coins className="w-4 h-4 text-amber-500" />
+                  <span className="text-sm text-muted-foreground">Tokens của bạn:</span>
+                  <Badge variant="outline" className="text-amber-500 border-amber-500">
+                    {userTokens}
+                  </Badge>
+                </div>
+              </div>
+
+              {/* Loading State */}
+              {loadingSolutions ? (
+                <div className="text-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                  <p className="text-muted-foreground mt-2">Đang tải lời giải...</p>
+                </div>
+              ) : solutions.length === 0 ? (
+                <div className="text-center py-12 bg-card border border-border rounded-lg">
+                  <Lightbulb className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                  <p className="text-muted-foreground">Chưa có lời giải cho bài này</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {solutions.map((solution, index) => (
+                    <div
+                      key={index}
+                      className="bg-card border border-border rounded-lg p-4 hover:border-primary/50 transition-colors"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <h4 className="font-semibold text-foreground">{solution.title}</h4>
+                            <Badge variant="outline" className="text-xs">
+                              {solution.language}
+                            </Badge>
+                          </div>
+                          
+                          {solution.isUnlocked ? (
+                            <div className="space-y-3">
+                              <div className="flex items-center gap-2 text-sm text-green-500">
+                                <Unlock className="w-4 h-4" />
+                                <span>Đã mở khóa</span>
+                              </div>
+                              
+                              {selectedSolution && selectedSolution.title === solution.title ? (
+                                <div className="mt-4 space-y-4">
+                                  <div>
+                                    <h5 className="font-medium text-foreground mb-2">Giải thích:</h5>
+                                    <p className="text-sm text-muted-foreground whitespace-pre-line">
+                                      {selectedSolution.explanation}
+                                    </p>
+                                  </div>
+                                  
+                                  <div>
+                                    <h5 className="font-medium text-foreground mb-2">Code mẫu:</h5>
+                                    <pre className="bg-muted p-4 rounded-lg overflow-x-auto text-sm">
+                                      <code>{selectedSolution.code}</code>
+                                    </pre>
+                                  </div>
+                                  
+                                  {selectedSolution.content && (
+                                    <div>
+                                      <h5 className="font-medium text-foreground mb-2">Chi tiết:</h5>
+                                      <div className="text-sm text-muted-foreground whitespace-pre-line">
+                                        {selectedSolution.content}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => loadSolutionDetail(index)}
+                                  className="mt-2"
+                                >
+                                  <Eye className="w-4 h-4 mr-2" />
+                                  Xem chi tiết
+                                </Button>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-3 mt-3">
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <Lock className="w-4 h-4" />
+                                <span>Cần {solution.tokenCost} token để mở khóa</span>
+                              </div>
+                              <Button
+                                size="sm"
+                                onClick={() => handleUnlockSolution(index)}
+                                disabled={userTokens < solution.tokenCost || unlockingSolution === index}
+                                className="bg-amber-500 hover:bg-amber-600 text-white"
+                              >
+                                {unlockingSolution === index ? (
+                                  <>
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                    Đang mở khóa...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Unlock className="w-4 h-4 mr-2" />
+                                    Mở khóa ({solution.tokenCost} 🪙)
+                                  </>
+                                )}
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Thông tin */}
+              {solutions.length > 0 && (
+                <div className="mt-6 p-4 bg-muted/50 border border-border rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <Lightbulb className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                    <div className="text-sm text-muted-foreground">
+                      <p className="font-medium text-foreground mb-1">Mẹo:</p>
+                      <ul className="space-y-1 list-disc list-inside">
+                        <li>Hoàn thành bài tập để nhận token</li>
+                        <li>Sử dụng token để mở khóa lời giải khi gặp khó khăn</li>
+                        <li>Mỗi lời giải chỉ cần mở khóa 1 lần</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -558,4 +783,3 @@ export function ProblemDetail({ problemId, onSubmissionSuccess }: ProblemDetailP
     </div>
   )
 }
-

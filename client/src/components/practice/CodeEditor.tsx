@@ -155,6 +155,8 @@ export function CodeEditor({ problemId, challenge, onSubmissionSuccess }: CodeEd
       if (result.success) {
         const submission = result.data.submission
         const xpEarned = result.data.xpEarned || 0
+        const tokensEarned = result.data.tokensEarned || 0
+        const isFirstCompletion = result.data.isFirstCompletion || false
         
         // Cập nhật test results với kết quả thực tế
         setTestResults({
@@ -183,16 +185,34 @@ export function CodeEditor({ problemId, challenge, onSubmissionSuccess }: CodeEd
           setConsoleTab("result")
         }
 
-        if (xpEarned > 0) {
+        // Hiển thị toast với thông tin token và XP
+        if (submission.status === "Accepted" && submission.score === challenge.points) {
+          if (isFirstCompletion && tokensEarned > 0) {
+            toast({
+              title: "🎉 Hoàn thành xuất sắc!",
+              description: `Bạn đã nhận: ${xpEarned} XP + ${tokensEarned} 🪙 Token! (Tổng XP: ${result.data.newXP}, Token: ${result.data.newTokenBalance})`,
+            })
+          } else if (xpEarned > 0) {
+            toast({
+              title: "Thành công!",
+              description: `Bạn đã nhận được ${xpEarned} XP! (Tổng XP: ${result.data.newXP})`,
+            })
+          } else {
+            toast({
+              title: "Đã nộp bài",
+              description: "Bài làm của bạn đã được lưu. Token chỉ được trao lần đầu hoàn thành.",
+            })
+          }
+        } else if (submission.status === "Accepted") {
           toast({
-            title: "Thành công!",
-            description: `Bạn đã nhận được ${xpEarned} XP! Tổng XP: ${result.data.newXP}`,
+            title: "Đã nộp bài",
+            description: `Điểm: ${submission.score}/${challenge.points}. Hoàn thành 100% để nhận token!`,
           })
         } else {
           toast({
-            title: submission.status === "Accepted" ? "Đã nộp bài" : "Chưa đúng",
-            description: submission.status === "Accepted" ? "Bài làm của bạn đã được lưu" : "Vui lòng kiểm tra lại code",
-            variant: submission.status === "Accepted" ? "default" : "destructive"
+            title: "Chưa đúng",
+            description: "Vui lòng kiểm tra lại code",
+            variant: "destructive"
           })
         }
 
@@ -200,13 +220,16 @@ export function CodeEditor({ problemId, challenge, onSubmissionSuccess }: CodeEd
           onSubmissionSuccess(submission, xpEarned)
         }
 
-        // Cập nhật user info trong localStorage
+        // Cập nhật user info trong localStorage (bao gồm tokens)
         if (result.data.newXP !== undefined) {
           const userData = localStorage.getItem('user')
           if (userData) {
             const user = JSON.parse(userData)
             user.experience = result.data.newXP
             user.rank = result.data.newRank
+            if (result.data.newTokenBalance !== undefined) {
+              user.tokens = result.data.newTokenBalance
+            }
             localStorage.setItem('user', JSON.stringify(user))
           }
         }
@@ -457,4 +480,3 @@ export function CodeEditor({ problemId, challenge, onSubmissionSuccess }: CodeEd
     </div>
   )
 }
-

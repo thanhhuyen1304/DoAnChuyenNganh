@@ -23,13 +23,57 @@ export const getMyProgress = async (req: Request, res: Response) => {
     const completedDistinct = await Submission.distinct('challenge', { user: userObjectId, status: 'Accepted' })
     const completedCount = Array.isArray(completedDistinct) ? completedDistinct.length : 0
 
-    // Learning time: sum executionTime (ms) for accepted submissions
-    const agg = await Submission.aggregate([
-      { $match: { user: userObjectId, status: 'Accepted', executionTime: { $exists: true } } },
-      { $group: { _id: null, totalExecutionTimeMs: { $sum: '$executionTime' } } }
-    ])
-    const totalExecutionTimeMs = agg[0]?.totalExecutionTimeMs || 0
-    const learningTimeMinutes = Math.round(totalExecutionTimeMs / 60000)
+    // Learning time: Calculate actual time spent on submissions
+    // Get all submissions sorted by time to calculate time gaps
+    const allSubmissions = await Submission.find({ user: userObjectId })
+      .select('submittedAt')
+      .sort({ submittedAt: 1 })
+      .lean()
+    
+    let learningTimeMinutes = 0
+    
+    if (allSubmissions.length > 0) {
+      // Group submissions by day and calculate learning time per session
+      // A session is defined as submissions within 30 minutes of each other
+      const MAX_SESSION_GAP_MS = 30 * 60 * 1000 // 30 minutes
+      const MAX_SESSION_DURATION_MS = 3 * 60 * 60 * 1000 // 3 hours max per session
+      
+      let sessionStartTime: Date | null = null
+      let lastSubmissionTime: Date | null = null
+      let totalLearningTimeMs = 0
+      
+      for (const submission of allSubmissions) {
+        const currentTime = new Date(submission.submittedAt)
+        
+        if (!lastSubmissionTime) {
+          // First submission - start new session
+          sessionStartTime = currentTime
+          lastSubmissionTime = currentTime
+        } else {
+          const timeSinceLastSubmission = currentTime.getTime() - lastSubmissionTime.getTime()
+          
+          if (timeSinceLastSubmission > MAX_SESSION_GAP_MS) {
+            // Gap is too large - end previous session and start new one
+            if (sessionStartTime) {
+              const sessionDuration = lastSubmissionTime.getTime() - sessionStartTime.getTime()
+              // Cap session duration at maximum
+              totalLearningTimeMs += Math.min(sessionDuration, MAX_SESSION_DURATION_MS)
+            }
+            sessionStartTime = currentTime
+          }
+          
+          lastSubmissionTime = currentTime
+        }
+      }
+      
+      // Add the last session
+      if (sessionStartTime && lastSubmissionTime) {
+        const sessionDuration = lastSubmissionTime.getTime() - sessionStartTime.getTime()
+        totalLearningTimeMs += Math.min(sessionDuration, MAX_SESSION_DURATION_MS)
+      }
+      
+      learningTimeMinutes = Math.round(totalLearningTimeMs / 60000)
+    }
 
     // Ranking: compute completedCount per user and derive percentile
     const perUser = await Submission.aggregate([
@@ -79,13 +123,50 @@ export const getProgressByUsername = async (req: Request, res: Response) => {
     const completedDistinct = await Submission.distinct('challenge', { user: userObjectId, status: 'Accepted' })
     const completedCount = Array.isArray(completedDistinct) ? completedDistinct.length : 0
 
-    // Learning time
-    const agg = await Submission.aggregate([
-      { $match: { user: userObjectId, status: 'Accepted', executionTime: { $exists: true } } },
-      { $group: { _id: null, totalExecutionTimeMs: { $sum: '$executionTime' } } }
-    ])
-    const totalExecutionTimeMs = agg[0]?.totalExecutionTimeMs || 0
-    const learningTimeMinutes = Math.round(totalExecutionTimeMs / 60000)
+    // Learning time: Calculate actual time spent on submissions
+    const allSubmissions = await Submission.find({ user: userObjectId })
+      .select('submittedAt')
+      .sort({ submittedAt: 1 })
+      .lean()
+    
+    let learningTimeMinutes = 0
+    
+    if (allSubmissions.length > 0) {
+      const MAX_SESSION_GAP_MS = 30 * 60 * 1000 // 30 minutes
+      const MAX_SESSION_DURATION_MS = 3 * 60 * 60 * 1000 // 3 hours max per session
+      
+      let sessionStartTime: Date | null = null
+      let lastSubmissionTime: Date | null = null
+      let totalLearningTimeMs = 0
+      
+      for (const submission of allSubmissions) {
+        const currentTime = new Date(submission.submittedAt)
+        
+        if (!lastSubmissionTime) {
+          sessionStartTime = currentTime
+          lastSubmissionTime = currentTime
+        } else {
+          const timeSinceLastSubmission = currentTime.getTime() - lastSubmissionTime.getTime()
+          
+          if (timeSinceLastSubmission > MAX_SESSION_GAP_MS) {
+            if (sessionStartTime) {
+              const sessionDuration = lastSubmissionTime.getTime() - sessionStartTime.getTime()
+              totalLearningTimeMs += Math.min(sessionDuration, MAX_SESSION_DURATION_MS)
+            }
+            sessionStartTime = currentTime
+          }
+          
+          lastSubmissionTime = currentTime
+        }
+      }
+      
+      if (sessionStartTime && lastSubmissionTime) {
+        const sessionDuration = lastSubmissionTime.getTime() - sessionStartTime.getTime()
+        totalLearningTimeMs += Math.min(sessionDuration, MAX_SESSION_DURATION_MS)
+      }
+      
+      learningTimeMinutes = Math.round(totalLearningTimeMs / 60000)
+    }
 
     // Ranking percentile (based on completed counts)
     const perUser = await Submission.aggregate([
@@ -112,6 +193,37 @@ export const getProgressByUsername = async (req: Request, res: Response) => {
     })
   } catch (err) {
     console.error('getProgressByUsername error', err)
+    return res.status(500).json({ success: false, message: 'Lỗi máy chủ' })
+  }
+}
+
+// GET /api/users/me/completed-challenges
+export const getMyCompletedChallenges = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.id
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Chưa xác thực' })
+    }
+
+    const userObjectId = new mongoose.Types.ObjectId(userId)
+
+    // Get distinct challenge IDs where user has Accepted submissions
+    const completedChallengeIds = await Submission.distinct('challenge', {
+      user: userObjectId,
+      status: 'Accepted'
+    })
+
+    // Convert ObjectIds to strings
+    const challengeIds = completedChallengeIds.map((id: any) => id.toString())
+
+    return res.json({
+      success: true,
+      data: {
+        challengeIds
+      }
+    })
+  } catch (error: any) {
+    console.error('Error getting completed challenges:', error)
     return res.status(500).json({ success: false, message: 'Lỗi máy chủ' })
   }
 }
@@ -148,20 +260,53 @@ export const getTodayStats = async (req: Request, res: Response) => {
       submittedAt: { $gte: todayStart, $lte: todayEnd }
     })
 
-    // Calculate total learning time today (sum of all submission execution times)
-    const learningTimeAgg = await Submission.aggregate([
-      {
-        $match: {
-          user: userObjectId,
-          submittedAt: { $gte: todayStart, $lte: todayEnd },
-          executionTime: { $exists: true }
+    // Calculate total learning time today (based on submission times, not execution times)
+    const todaySubmissionsForTime = await Submission.find({
+      user: userObjectId,
+      submittedAt: { $gte: todayStart, $lte: todayEnd }
+    })
+      .select('submittedAt')
+      .sort({ submittedAt: 1 })
+      .lean()
+    
+    let learningTimeMinutes = 0
+    
+    if (todaySubmissionsForTime.length > 0) {
+      const MAX_SESSION_GAP_MS = 30 * 60 * 1000 // 30 minutes
+      const MAX_SESSION_DURATION_MS = 3 * 60 * 60 * 1000 // 3 hours max per session
+      
+      let sessionStartTime: Date | null = null
+      let lastSubmissionTime: Date | null = null
+      let totalLearningTimeMs = 0
+      
+      for (const submission of todaySubmissionsForTime) {
+        const currentTime = new Date(submission.submittedAt)
+        
+        if (!lastSubmissionTime) {
+          sessionStartTime = currentTime
+          lastSubmissionTime = currentTime
+        } else {
+          const timeSinceLastSubmission = currentTime.getTime() - lastSubmissionTime.getTime()
+          
+          if (timeSinceLastSubmission > MAX_SESSION_GAP_MS) {
+            if (sessionStartTime) {
+              const sessionDuration = lastSubmissionTime.getTime() - sessionStartTime.getTime()
+              totalLearningTimeMs += Math.min(sessionDuration, MAX_SESSION_DURATION_MS)
+            }
+            sessionStartTime = currentTime
+          }
+          
+          lastSubmissionTime = currentTime
         }
-      },
-      { $group: { _id: null, totalTimeMs: { $sum: '$executionTime' } } }
-    ])
-
-    const totalLearningTimeMs = learningTimeAgg[0]?.totalTimeMs || 0
-    const learningTimeMinutes = Math.round(totalLearningTimeMs / 60000)
+      }
+      
+      if (sessionStartTime && lastSubmissionTime) {
+        const sessionDuration = lastSubmissionTime.getTime() - sessionStartTime.getTime()
+        totalLearningTimeMs += Math.min(sessionDuration, MAX_SESSION_DURATION_MS)
+      }
+      
+      learningTimeMinutes = Math.round(totalLearningTimeMs / 60000)
+    }
 
     // Get list of challenges attempted today with their status
     const challengesAttempted = todaySubmissions.reduce((acc: any[], sub: any) => {
@@ -319,10 +464,15 @@ export const getMyPreferences = async (req: Request, res: Response) => {
       }
     }
 
+    // Get background preference from User model settings field
+    const user = await User.findById(userId).select('settings')
+    const backgroundPreference = user?.settings?.background || null
+
     return res.json({
       success: true,
       data: {
         favoriteLanguages: languagePreference?.languages || [],
+        background: backgroundPreference,
       }
     })
   } catch (err) {
@@ -331,73 +481,136 @@ export const getMyPreferences = async (req: Request, res: Response) => {
   }
 }
 
-// PATCH /api/users/me/preferences  (update language preferences)
+// PATCH /api/users/me/preferences  (update language preferences and background)
 export const updateMyPreferences = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id
     if (!userId) return res.status(401).json({ success: false, message: 'Chưa xác thực' })
 
-    const { favoriteLanguages } = req.body
-
-    // Validate favoriteLanguages
-    if (!Array.isArray(favoriteLanguages)) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'favoriteLanguages phải là một mảng' 
-      })
-    }
-
-    // Validate each language
-    const validLanguages = ['Python', 'JavaScript', 'Java', 'C++', 'C#', 'C']
-    const invalidLanguages = favoriteLanguages.filter(
-      (lang: string) => !validLanguages.includes(lang)
-    )
-
-    if (invalidLanguages.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: `Ngôn ngữ không hợp lệ: ${invalidLanguages.join(', ')}. Các ngôn ngữ hợp lệ: ${validLanguages.join(', ')}`,
-      })
-    }
-
-    // Remove duplicates
-    const uniqueLanguages = [...new Set(favoriteLanguages)]
+    const { favoriteLanguages, background } = req.body
 
     const userObjectId = new mongoose.Types.ObjectId(userId)
+    const updatePromises: Promise<any>[] = []
 
-    // Update or create in LanguagePreference collection (favorite table)
-    const updated = await LanguagePreference.findOneAndUpdate(
-      { 
-        user_id: userObjectId,
-        type: 'language_preference'
-      },
-      {
-        user_id: userObjectId,
-        type: 'language_preference',
-        languages: uniqueLanguages,
-        updated_at: new Date(),
-      },
-      {
-        upsert: true, // Create if doesn't exist
-        new: true, // Return updated document
-        setDefaultsOnInsert: true,
+    // Update language preferences if provided
+    if (favoriteLanguages !== undefined) {
+      // Validate favoriteLanguages
+      if (!Array.isArray(favoriteLanguages)) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'favoriteLanguages phải là một mảng' 
+        })
       }
-    )
 
-    // Also update User model for backward compatibility (optional)
-    await User.findByIdAndUpdate(
-      userId,
-      { $set: { favoriteLanguages: uniqueLanguages } },
-      { new: true }
-    )
+      // Validate each language
+      const validLanguages = ['Python', 'JavaScript', 'Java', 'C++', 'C#', 'C']
+      const invalidLanguages = favoriteLanguages.filter(
+        (lang: string) => !validLanguages.includes(lang)
+      )
 
-    console.log(`[Language Preferences] Updated preferences in favorite collection for user ${userId}:`, uniqueLanguages)
+      if (invalidLanguages.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: `Ngôn ngữ không hợp lệ: ${invalidLanguages.join(', ')}. Các ngôn ngữ hợp lệ: ${validLanguages.join(', ')}`,
+        })
+      }
+
+      // Remove duplicates
+      const uniqueLanguages = [...new Set(favoriteLanguages)]
+
+      // Update or create in LanguagePreference collection (favorite table)
+      const langUpdatePromise = LanguagePreference.findOneAndUpdate(
+        { 
+          user_id: userObjectId,
+          type: 'language_preference'
+        },
+        {
+          user_id: userObjectId,
+          type: 'language_preference',
+          languages: uniqueLanguages,
+          updated_at: new Date(),
+        },
+        {
+          upsert: true,
+          new: true,
+          setDefaultsOnInsert: true,
+        }
+      )
+      updatePromises.push(langUpdatePromise)
+
+      // Also update User model for backward compatibility
+      const userLangUpdatePromise = User.findByIdAndUpdate(
+        userId,
+        { $set: { favoriteLanguages: uniqueLanguages } },
+        { new: true }
+      )
+      updatePromises.push(userLangUpdatePromise)
+
+      console.log(`[Language Preferences] Updated preferences for user ${userId}:`, uniqueLanguages)
+    }
+
+    // Update background preference if provided
+    if (background !== undefined) {
+      // Validate background structure
+      if (typeof background !== 'object' || background === null) {
+        return res.status(400).json({
+          success: false,
+          message: 'background phải là một object',
+        })
+      }
+
+      if (!background.id || typeof background.id !== 'string') {
+        return res.status(400).json({
+          success: false,
+          message: 'background.id là bắt buộc và phải là string',
+        })
+      }
+
+      if (!background.url || typeof background.url !== 'string') {
+        return res.status(400).json({
+          success: false,
+          message: 'background.url là bắt buộc và phải là string',
+        })
+      }
+
+      // Update User model with background in settings field
+      const user = await User.findById(userId)
+      if (!user) {
+        return res.status(404).json({ success: false, message: 'Không tìm thấy người dùng' })
+      }
+
+      // Initialize settings if it doesn't exist
+      if (!user.settings) {
+        user.settings = {}
+      }
+
+      user.settings.background = {
+        id: background.id,
+        url: background.url,
+        label: background.label || background.id,
+      }
+
+      await user.save()
+      console.log(`[Background Preference] Updated background for user ${userId}:`, background.id)
+    }
+
+    // Wait for all updates to complete
+    await Promise.all(updatePromises)
+
+    // Get updated preferences to return
+    const updatedLangPref = favoriteLanguages !== undefined 
+      ? await LanguagePreference.findOne({ user_id: userObjectId, type: 'language_preference' })
+      : null
+
+    const updatedUser = await User.findById(userId).select('settings')
+    const updatedBackground = updatedUser?.settings?.background || null
 
     return res.json({
       success: true,
-      message: 'Cập nhật language preferences thành công',
+      message: 'Cập nhật preferences thành công',
       data: {
-        favoriteLanguages: updated.languages,
+        favoriteLanguages: updatedLangPref?.languages || undefined,
+        background: updatedBackground || undefined,
       }
     })
   } catch (err: any) {
@@ -407,7 +620,7 @@ export const updateMyPreferences = async (req: Request, res: Response) => {
     if (err.code === 11000) {
       return res.status(409).json({ 
         success: false, 
-        message: 'Language preference đã tồn tại cho user này' 
+        message: 'Preference đã tồn tại cho user này' 
       })
     }
     

@@ -1,8 +1,8 @@
 import passport from 'passport';
 import { Strategy as JwtStrategy, ExtractJwt } from 'passport-jwt';
-import { Strategy as GoogleStrategy, Profile as GoogleProfile } from 'passport-google-oauth20';
-import { Strategy as GitHubStrategy, Profile as GitHubProfile } from 'passport-github2';
-import { Strategy as FacebookStrategy, Profile as FacebookProfile } from 'passport-facebook';
+import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
+import { Strategy as GitHubStrategy } from 'passport-github2';
+import { Strategy as FacebookStrategy } from 'passport-facebook';
 import User, { IUser } from '../models/user.model';
 
 // JWT Strategy
@@ -44,7 +44,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && process.
                 clientSecret: process.env.GOOGLE_CLIENT_SECRET,
                 callbackURL: GOOGLE_CALLBACK_URL
             },
-            async (_accessToken: string, _refreshToken: string, profile: GoogleProfile, done: any) => {
+            async (_accessToken: string, _refreshToken: string, profile: any, done: any) => {
                 try {
                     console.log('Google OAuth callback - Profile:', {
                         id: profile.id,
@@ -123,7 +123,7 @@ if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET && process.
                 tokenURL: 'https://github.com/login/oauth/access_token',
                 userProfileURL: 'https://api.github.com/user'
             },
-            async (_accessToken: string, _refreshToken: string, profile: GitHubProfile, done: any) => {
+            async (_accessToken: string, _refreshToken: string, profile: any, done: any) => {
                 try {
                     console.log('GitHub OAuth callback - Profile:', {
                         id: profile.id,
@@ -201,7 +201,7 @@ if (process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET && process.en
                 callbackURL: FACEBOOK_CALLBACK_URL,
                 profileFields: ['id', 'emails', 'name', 'picture']
             },
-            async (_accessToken: string, _refreshToken: string, profile: FacebookProfile, done: any) => {
+            async (_accessToken: string, _refreshToken: string, profile: any, done: any) => {
                 try {
                     console.log('Facebook OAuth callback - Profile:', {
                         id: profile.id,

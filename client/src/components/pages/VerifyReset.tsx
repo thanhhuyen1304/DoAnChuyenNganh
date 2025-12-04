@@ -8,12 +8,9 @@ const decoImg = new URL('../images/1.jpg', import.meta.url).href;
 
 export default function VerifyReset() {
   return (
-    <div className="w-full min-h-screen fixed inset-0 flex items-center justify-center py-12 px-4 bg-white/10 overflow-hidden">
+    <div className="w-full min-h-screen fixed inset-0 flex items-center justify-center py-12 px-4 overflow-hidden">
+      {/* Background is handled by BackgroundWrapper - only keep overlay decoration */}
       <div className="absolute inset-0 w-full h-full overflow-hidden -z-10">
-        <div
-          className="fixed inset-0 z-0 bg-cover bg-center opacity-40 dark:opacity-30 filter blur-sm"
-          style={{ backgroundImage: `url(${decoImg})` }}
-        />
         <div className="absolute inset-0 bg-black/10 dark:bg-black/30 backdrop-blur-sm" />
       </div>
 

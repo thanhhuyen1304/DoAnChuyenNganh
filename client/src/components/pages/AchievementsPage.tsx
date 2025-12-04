@@ -4,7 +4,7 @@ import Header from '../Header';
 
 const AchievementsPage = () => {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen">
       <Header />
       <Achievements />
     </div>
