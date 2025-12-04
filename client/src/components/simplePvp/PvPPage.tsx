@@ -16,7 +16,6 @@ import simplePvpApi, { Room, RoomSettings } from '@/services/simplePvpApi';
 import { useToastActions } from '@/components/ui/toast';
 import { getWebSocketService } from '@/services/websocket.service';
 import { useLanguage } from '@/components/contexts/LanguageContext';
-import Header from '../Header';
 import {
   Users,
   Swords,
@@ -425,7 +424,6 @@ export function PvPPage({ currentUser: currentUserProp }: PvPPageProps) {
 
   return (
     <>
-      {/* Add Header */}
       <Header />
       <section className="min-h-screen flex pt-20 md:pt-24 pb-8 md:pb-12 overflow-hidden relative">
         {/* Nền giống Hero: overlay + blobs */}
@@ -451,41 +449,6 @@ export function PvPPage({ currentUser: currentUserProp }: PvPPageProps) {
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-3">
-      <Header />
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-4">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-            <div>
-              <h1 className="text-4xl font-bold text-slate-900 dark:text-slate-100 mb-2">
-                Đấu Đối Kháng
-              </h1>
-              <p className="text-slate-600 dark:text-slate-400">
-                Thách đấu với các lập trình viên khác và nâng cao kỹ năng của bạn
-              </p>
-            </div>
-            
-            <div className="flex gap-3">
-              <Button
-                variant="outline"
-                onClick={() => setShowLeaderboard(true)}
-                disabled={showArena}
-                className="border-yellow-300 text-yellow-700 hover:bg-yellow-50"
-              >
-                <Trophy className="w-4 h-4 mr-2" />
-                Xếp hạng
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setShowFriendsAndUsers(true)}
-                disabled={showArena}
-                className="border-blue-300 text-blue-700 hover:bg-blue-50"
-              >
-                <UserPlus className="w-4 h-4 mr-2" />
-                Bạn bè
-              </Button>
-              <CreateRoomModal onRoomCreated={handleCreateRoom}>
                 <Button
                   variant="outline"
                   onClick={() => setShowLeaderboard(true)}
@@ -494,6 +457,15 @@ export function PvPPage({ currentUser: currentUserProp }: PvPPageProps) {
                 >
                   <Trophy className="w-4 h-4 mr-2" />
                   {language === 'vi' ? 'Xếp hạng' : 'Leaderboard'}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowFriendsAndUsers(true)}
+                  disabled={showArena}
+                  className="bg-white/20 text-white border border-white/40 hover:bg-white/30 transition-all duration-200"
+                >
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  {language === 'vi' ? 'Bạn bè' : 'Friends'}
                 </Button>
                 <CreateRoomModal onRoomCreated={handleCreateRoom}>
                   <Button
@@ -649,7 +621,7 @@ export function PvPPage({ currentUser: currentUserProp }: PvPPageProps) {
                               <span className="text-xs text-muted-foreground">{room.hostUsername}</span>
                             </div>
                           </div>
-                              <Badge
+                          <Badge
                             variant={room.status === 'waiting' ? "secondary" : room.status === 'in-progress' ? "destructive" : "outline"}
                             className="text-xs"
                           >
@@ -723,169 +695,11 @@ export function PvPPage({ currentUser: currentUserProp }: PvPPageProps) {
                   </div>
                 )}
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Rooms List */}
-          {isLoadingRooms ? (
-            <div className="flex justify-center items-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-              <span className="ml-2">Đang tải phòng...</span>
-            </div>
-          ) : rooms.length === 0 ? (
-            <Card>
-              <CardContent className="text-center py-8">
-                <Users className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-lg font-medium mb-2">Không có phòng nào</h3>
-                <p className="text-muted-foreground mb-4">
-                  {searchQuery ? 'Không tìm thấy phòng phù hợp với tìm kiếm của bạn' : 'Hãy tạo phòng mới hoặc đợi người khác tạo phòng'}
-                </p>
-                <CreateRoomModal onRoomCreated={handleCreateRoom}>
-                  <Button>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Tạo phòng mới
-                  </Button>
-                </CreateRoomModal>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {rooms.map((room) => (
-                <Card key={room._id} className="hover:shadow-lg transition-shadow cursor-pointer border-2">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between mb-2">
-                      <CardTitle className="text-lg truncate flex items-center gap-2">
-                        {room.settings.isPrivate ? (
-                          <Lock className="w-4 h-4 text-orange-500" />
-                        ) : (
-                          <Globe className="w-4 h-4 text-green-500" />
-                        )}
-                        {room.name}
-                      </CardTitle>
-                      <Badge
-                        variant={room.status === 'waiting' ? "secondary" : room.status === 'in-progress' ? "destructive" : "outline"}
-                      >
-                        {room.status === 'waiting' ? 'Đang chờ' : room.status === 'in-progress' ? 'Đang diễn ra' : 'Hoàn thành'}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Avatar className="w-6 h-6">
-                        <AvatarImage src="" />
-                        <AvatarFallback>{room.hostUsername[0]}</AvatarFallback>
-                      </Avatar>
-                      <span className="text-sm text-slate-600 dark:text-slate-400">
-                        Host: {room.hostUsername}
-                      </span>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex items-center justify-between text-sm">
-                      <Badge className={simplePvpApi.getDifficultyColor(room.settings.difficulty)}>
-                        {simplePvpApi.getDifficultyText(room.settings.difficulty)}
-                      </Badge>
-                      <span className="text-muted-foreground">
-                        {simplePvpApi.formatTimeLimit(room.settings.timeLimit)}
-                      </span>
-                    </div>
-                    
-                    <div className="flex items-center justify-between text-sm">
-                      <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
-                        <Users className="w-4 h-4" />
-                        <span>{room.participants.length}/{room.settings.maxParticipants || 2} người chơi</span>
-                      </div>
-                      <div className="flex items-center gap-1 text-blue-600 dark:text-blue-400">
-                        <Code2 className="w-4 h-4" />
-                        <span className="font-medium">{room.settings.language || 'JavaScript'}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Clock className="w-4 h-4" />
-                      <span>{new Date(room.createdAt).toLocaleTimeString()}</span>
-                    </div>
-
-                    <div className="flex gap-2">
-                      {room.hostId === currentUserId ? (
-                        <>
-                          <Button
-                            onClick={() => handleDeleteRoom(room._id)}
-                            variant="destructive"
-                            className="flex-1"
-                            disabled={showArena}
-                          >
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Xóa phòng
-                          </Button>
-                          <Button
-                            onClick={() => handleJoinRoom(room._id, room.roomCode)}
-                            className="flex-1"
-                            disabled={room.status !== 'waiting' || showArena}
-                          >
-                            Vào phòng
-                          </Button>
-                        </>
-                      ) : (
-                        <Button
-                          onClick={() => handleJoinRoom(room._id, room.roomCode)}
-                          className="w-full"
-                          disabled={
-                            room.status !== 'waiting' ||
-                            room.participants.length >= (room.settings.maxParticipants || 2) ||
-                            showArena ||
-                            room.settings.isPrivate
-                          }
-                        >
-                          {room.status !== 'waiting' ? 'Không khả dụng' :
-                           room.participants.length >= (room.settings.maxParticipants || 2) ? 'Đầy' :
-                           room.settings.isPrivate ? 'Phòng riêng tư' :
-                           'Tham gia'}
-                        </Button>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
             </div>
           </div>
         </div>
-
-        {/* Modals */}
-        <WaitingRoom
-          open={showWaitingRoom}
-          room={currentRoom}
-          currentUserId={currentUserId}
-          onLeaveRoom={handleLeaveWaitingRoom}
-          onMatchStart={handleMatchStart}
-          onRoomUpdate={handleRoomUpdate}
-        />
-
-        <PvPArena
-          open={showArena}
-          match={currentMatch}
-          currentUserId={currentUserId}
-          onMatchEnd={handleMatchEnd}
-          onLeaveArena={handleLeaveArena}
-        />
-
-        <PvPDuelResult
-          open={showResult}
-          matchResult={matchResult}
-          isCurrentUserWinner={matchResult?.winner === currentUserProp?.username}
-          currentUserXP={matchResult?.winnerXP}
-          onClose={handleCloseResult}
-          onPlayAgain={handlePlayAgain}
-        />
-
-        <LeaderboardModal
-          open={showLeaderboard}
-          onClose={() => setShowLeaderboard(false)}
-        />
-
-        <FriendsAndUsersModal
-          open={showFriendsAndUsers}
-          onClose={() => setShowFriendsAndUsers(false)}
-        />
       </section>
+
       {/* Modals */}
       <WaitingRoom
         open={showWaitingRoom}
@@ -897,7 +711,7 @@ export function PvPPage({ currentUser: currentUserProp }: PvPPageProps) {
         onRoomUpdate={handleRoomUpdate}
       />
 
-      {/* Minimized Waiting Room Widget */}
+      {/* Minimized Waiting Room Widget (FROM MAIN - KEEP THIS!) */}
       {isWaitingRoomMinimized && currentRoom && (
         <div className="fixed bottom-4 right-4 z-50 animate-in slide-in-from-bottom-5 duration-300">
           <Card className="w-80 shadow-2xl border-2 border-blue-500 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950">
@@ -998,7 +812,6 @@ export function PvPPage({ currentUser: currentUserProp }: PvPPageProps) {
             />
           ))}
         </div>
-      </div>
       </div>
     </>
   );
