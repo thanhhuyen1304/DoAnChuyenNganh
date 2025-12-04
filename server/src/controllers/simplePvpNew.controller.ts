@@ -138,6 +138,16 @@ export class SimplePvPController {
         return;
       }
 
+      // Check if room is private and user is not the host
+      // Private rooms can only be joined via roomCode (from invite) or if user is host
+      if (room.settings.isPrivate && room.hostId.toString() !== userId && !roomCode) {
+        res.status(403).json({
+          success: false,
+          message: 'Cannot join private room without invitation'
+        });
+        return;
+      }
+
       if (room.status !== 'waiting') {
         res.status(400).json({
           success: false,
@@ -1112,7 +1122,7 @@ export class SimplePvPController {
         .limit(Number(limit))
         .skip(Number(offset));
 
-      let leaderboardData = leaderboard.map((user, index) => ({
+      const leaderboardData = leaderboard.map((user, index) => ({
         rank: Number(offset) + index + 1,
         userId: user._id,
         username: user.username,
@@ -1125,34 +1135,6 @@ export class SimplePvPController {
         winRate: user.pvpStats?.totalMatches
           ? Math.round((user.pvpStats.wins / user.pvpStats.totalMatches) * 100)
           : 0
-      }));
-
-      // Tìm admin và thêm vào bảng xếp hạng
-      const admin = await User.findOne({ role: 'admin' })
-        .select('username avatar experience pvpStats');
-
-      if (admin && Number(offset) === 0) {
-        const adminEntry = {
-          rank: 0, // Sẽ được cập nhật sau
-          userId: admin._id,
-          username: admin.username,
-          avatar: admin.avatar,
-          totalXP: admin.experience || 999999,
-          wins: 999, // Đảm bảo admin luôn ở top
-          losses: admin.pvpStats?.losses || 0,
-          draws: admin.pvpStats?.draws || 0,
-          totalMatches: admin.pvpStats?.totalMatches || 999,
-          winRate: 100 // Tỷ lệ thắng 100%
-        };
-
-        // Luôn đặt admin ở vị trí đầu tiên
-        leaderboardData.unshift(adminEntry);
-      }
-
-      // Cập nhật lại rank sau khi thêm admin
-      leaderboardData = leaderboardData.map((entry, index) => ({
-        ...entry,
-        rank: Number(offset) + index + 1
       }));
 
       res.json({
@@ -1239,6 +1221,113 @@ export class SimplePvPController {
       res.status(500).json({
         success: false,
         message: error.message || 'Không thể lấy thống kê'
+      });
+    }
+  };
+
+  // Gửi lời mời vào phòng
+  sendRoomInvite = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const userId = req.user?.id;
+      const username = req.user?.username;
+      const { roomId } = req.params;
+      const { targetUserId } = req.body;
+
+      if (!userId || !username) {
+        res.status(401).json({
+          success: false,
+          message: 'Unauthorized'
+        });
+        return;
+      }
+
+      if (!targetUserId) {
+        res.status(400).json({
+          success: false,
+          message: 'Target user ID is required'
+        });
+        return;
+      }
+
+      // Kiểm tra phòng tồn tại
+      const room = await PVPRoom.findById(roomId);
+      if (!room) {
+        res.status(404).json({
+          success: false,
+          message: 'Room not found'
+        });
+        return;
+      }
+
+      // Kiểm tra người gửi có phải là chủ phòng
+      if (room.hostId.toString() !== userId) {
+        res.status(403).json({
+          success: false,
+          message: 'Only room host can send invites'
+        });
+        return;
+      }
+
+      // Kiểm tra phòng còn chỗ trống
+      if (room.participants.length >= (room.settings.maxParticipants || 8)) {
+        res.status(400).json({
+          success: false,
+          message: 'Room is full'
+        });
+        return;
+      }
+
+      // Kiểm tra người được mời đã ở trong phòng chưa
+      if (room.participants.some(p => p.userId.toString() === targetUserId)) {
+        res.status(400).json({
+          success: false,
+          message: 'User is already in the room'
+        });
+        return;
+      }
+
+      // Kiểm tra người được mời có tồn tại
+      const targetUser = await User.findById(targetUserId).select('username');
+      if (!targetUser) {
+        res.status(404).json({
+          success: false,
+          message: 'Target user not found'
+        });
+        return;
+      }
+
+      // Gửi lời mời qua WebSocket
+      if ((req as any).wsService) {
+        (req as any).wsService.sendToUser(targetUserId, 'room_invite_received', {
+          inviteId: `${roomId}_${Date.now()}`,
+          roomId: (room._id as any).toString(),
+          roomCode: room.roomCode,
+          roomName: room.name,
+          hostUsername: username,
+          hostId: userId,
+          language: room.settings.language || 'javascript',
+          difficulty: room.settings.difficulty,
+          timeLimit: room.settings.timeLimit,
+          maxParticipants: room.settings.maxParticipants,
+          currentParticipants: room.participants.length,
+          expiresAt: Date.now() + 60000 // 1 phút từ bây giờ
+        });
+      }
+
+      res.json({
+        success: true,
+        message: `Đã gửi lời mời đến ${targetUser.username}`,
+        data: {
+          targetUsername: targetUser.username,
+          roomName: room.name,
+          expiresIn: 60000
+        }
+      });
+    } catch (error: any) {
+      console.error('Send room invite error:', error);
+      res.status(500).json({
+        success: false,
+        message: error.message || 'Failed to send room invite'
       });
     }
   };

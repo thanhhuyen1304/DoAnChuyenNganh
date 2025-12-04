@@ -218,11 +218,7 @@ export function PvPArena({
       const result = await simplePvpApi.finishMatch(match.matchId);
       
       if (result.success) {
-        handleMatchCompleted({
-          ...matchStatus.status!,
-          status: 'completed',
-          ...result.data
-        } as Match);
+        handleMatchCompleted(result.data as unknown as Match);
       }
     } catch (error: any) {
       error('Lỗi', error.response?.data?.message || 'Không thể kết thúc trận đấu');
@@ -247,11 +243,7 @@ export function PvPArena({
         success('Thông báo', result.message || 'Bạn đã rời trận đấu');
         
         // Handle match completed with forfeit
-        handleMatchCompleted({
-          ...matchStatus.status!,
-          status: 'completed',
-          ...result.data
-        } as Match);
+        handleMatchCompleted(result.data as unknown as Match);
       }
     } catch (err: any) {
       error('Lỗi', err.response?.data?.message || 'Không thể rời trận đấu');
@@ -273,7 +265,7 @@ export function PvPArena({
   return (
     <Dialog open={open} onOpenChange={() => onLeaveArena?.()}>
       <DialogContent
-        className="sm:max-w-[1200px] h-[90vh] flex flex-col"
+        className="sm:max-w-[1200px] max-h-[85vh] flex flex-col overflow-hidden top-[8%] translate-y-0 sm:translate-y-0"
         onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >

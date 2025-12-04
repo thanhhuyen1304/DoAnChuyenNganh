@@ -392,6 +392,7 @@ export const submitSolution = async (req: AuthenticatedRequest, res: Response, n
     // 1. Score > 0 (có điểm)
     // 2. Chưa từng đạt điểm tối đa trước đó, HOẶC đạt điểm cao hơn lần trước (cải thiện)
     let xpEarned = 0;
+    let tokensEarned = 0;
     let shouldAwardXP = false;
     
     if (score > 0) {
@@ -399,8 +400,8 @@ export const submitSolution = async (req: AuthenticatedRequest, res: Response, n
       // - Chưa từng submit trước đó, HOẶC
       // - Chưa từng đạt điểm tối đa trước đó, HOẶC
       // - Đạt điểm cao hơn lần trước (cải thiện)
-      const shouldAward = !hasPreviousAccepted || 
-                         (!hasReachedMaxBefore && score >= challenge.points) || 
+      const shouldAward = !hasPreviousAccepted ||
+                         (!hasReachedMaxBefore && score >= challenge.points) ||
                          (hasPreviousAccepted && score > previousMaxScore);
       
       if (shouldAward) {
@@ -411,6 +412,52 @@ export const submitSolution = async (req: AuthenticatedRequest, res: Response, n
         if (user) {
           const oldRank = user.rank || 'Newbie';
           user.experience = (user.experience || 0) + xpEarned;
+          
+          // Logic trao token: CHỈ khi hoàn thành bài lần đầu tiên (đạt điểm tối đa)
+          const isFirstCompletion = status === 'Accepted' && score === challenge.points && !hasReachedMaxBefore;
+          
+          if (isFirstCompletion) {
+            // Kiểm tra xem đã từng nhận token cho bài này chưa
+            const alreadyCompletedIndex = user.completedChallenges.findIndex(
+              (c: any) => c.challengeId.equals(challengeId) && c.tokenAwarded
+            );
+            
+            if (alreadyCompletedIndex === -1) {
+              // Lần đầu hoàn thành - trao token
+              tokensEarned = challenge.tokenReward || 1;
+              user.tokens = (user.tokens || 0) + tokensEarned;
+              
+              user.completedChallenges.push({
+                challengeId,
+                completedAt: new Date(),
+                maxScoreAchieved: score,
+                tokenAwarded: true
+              } as any);
+              
+              console.log(`🎁 Trao ${tokensEarned} token cho user ${userId} khi hoàn thành bài ${challengeId}`);
+            } else {
+              // Đã nhận token rồi, chỉ cập nhật điểm
+              user.completedChallenges[alreadyCompletedIndex].maxScoreAchieved = score;
+              console.log(`ℹ️ User ${userId} đã nhận token cho bài ${challengeId} trước đó`);
+            }
+          } else if (status === 'Accepted' && score > previousMaxScore) {
+            // Cải thiện điểm nhưng không trao token
+            const completedIndex = user.completedChallenges.findIndex(
+              (c: any) => c.challengeId.equals(challengeId)
+            );
+            
+            if (completedIndex !== -1) {
+              user.completedChallenges[completedIndex].maxScoreAchieved = score;
+            } else {
+              user.completedChallenges.push({
+                challengeId,
+                completedAt: new Date(),
+                maxScoreAchieved: score,
+                tokenAwarded: false
+              } as any);
+            }
+          }
+          
           await user.save();
           await updateUserRank(userId);
           
@@ -434,7 +481,9 @@ export const submitSolution = async (req: AuthenticatedRequest, res: Response, n
           
           // Tạo message phù hợp
           let message = 'Nộp bài thành công';
-          if (hasPreviousAccepted && score > previousMaxScore) {
+          if (tokensEarned > 0) {
+            message = `Chúc mừng! Bạn nhận được ${tokensEarned} token 🎉`;
+          } else if (hasPreviousAccepted && score > previousMaxScore) {
             message = 'Nộp bài thành công! Bạn đã cải thiện điểm số.';
           } else if (!hasPreviousAccepted && score >= challenge.points) {
             message = 'Nộp bài thành công! Chúc mừng bạn đã giải được bài này.';
@@ -446,12 +495,15 @@ export const submitSolution = async (req: AuthenticatedRequest, res: Response, n
             data: {
               submission,
               xpEarned,
+              tokensEarned,
               newXP: user.experience,
               newRank: user.rank,
+              newTokenBalance: user.tokens,
               previousSubmission: hasPreviousAccepted ? previousAcceptedSubmission : null,
               isImprovement: hasPreviousAccepted && score > previousMaxScore,
               hasReachedMaxBefore: hasReachedMaxBefore,
-              message: hasPreviousAccepted 
+              isFirstCompletion,
+              message: hasPreviousAccepted
                 ? `Bạn đã submit bài này trước đó (${previousMaxScore}/${challenge.points} điểm). Lần này bạn đạt ${score}/${challenge.points} điểm.`
                 : undefined
             }

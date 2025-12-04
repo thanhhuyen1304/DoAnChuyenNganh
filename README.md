@@ -39,7 +39,15 @@ cd DoAnChuyenNganh
 
 # 2. Install dependencies
 cd server && npm install
+
+# 2.1. Cài đặt socket.io và types cho server (nếu thiếu)
+cd server && npm install socket.io @types/socket.io
+
+# 2.2. Install client dependencies
 cd ../client && npm install
+
+# 2.3. Cài đặt socket.io-client cho client (nếu thiếu)
+cd client && npm install socket.io-client
 
 # 3. Start MongoDB
 net start MongoDB  # Windows

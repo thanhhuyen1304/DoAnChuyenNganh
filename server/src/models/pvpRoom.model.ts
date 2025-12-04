@@ -11,6 +11,8 @@ export interface IPVPRoomSettings {
   timeLimit: number; // minutes
   difficulty: 'Easy' | 'Medium' | 'Hard';
   maxParticipants: number;
+  isPrivate?: boolean;
+  language?: string;
 }
 
 export interface IPVPRoom extends Document {
@@ -65,6 +67,14 @@ const roomSettingsSchema = new Schema<IPVPRoomSettings>({
     min: 2,
     max: 8,
     default: 2
+  },
+  isPrivate: {
+    type: Boolean,
+    default: false
+  },
+  language: {
+    type: String,
+    default: 'javascript'
   }
 });
 

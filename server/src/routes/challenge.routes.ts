@@ -8,7 +8,10 @@ import {
   updateChallenge,
   deleteChallenge,
   toggleChallengeStatus,
-  getChallengeStats
+  getChallengeStats,
+  getSolutionsStatus,
+  unlockSolution,
+  getSolution
 } from '../controllers/challenge.controller';
 import { authenticateToken } from '../middleware/auth';
 import { isAdmin } from '../middleware/auth';
@@ -167,5 +170,23 @@ router.patch('/:id/toggle-status', [
 router.get('/admin/stats', [
   isAdmin
 ], getChallengeStats);
+
+// Solution routes (require authentication)
+// Lấy danh sách lời giải với trạng thái unlock
+router.get('/:id/solutions', [
+  param('id').isMongoId().withMessage('ID không hợp lệ')
+], getSolutionsStatus);
+
+// Mở khóa lời giải
+router.post('/:id/solutions/:solutionIndex/unlock', [
+  param('id').isMongoId().withMessage('ID không hợp lệ'),
+  param('solutionIndex').isInt({ min: 0 }).withMessage('Solution index phải là số nguyên không âm')
+], unlockSolution);
+
+// Lấy chi tiết lời giải đã unlock
+router.get('/:id/solutions/:solutionIndex', [
+  param('id').isMongoId().withMessage('ID không hợp lệ'),
+  param('solutionIndex').isInt({ min: 0 }).withMessage('Solution index phải là số nguyên không âm')
+], getSolution);
 
 export default router;

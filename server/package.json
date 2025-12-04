@@ -18,6 +18,7 @@
     "test-email": "ts-node scripts/test-email.ts",
     "test-sms": "ts-node scripts/test-sms.ts",
     "seed-admin": "ts-node scripts/seed-admin-data.ts",
+    "seed-leaderboard": "ts-node scripts/seed-leaderboard-data.ts",
     "check-training-data": "ts-node scripts/check-training-data.ts",
     "check-chat-history": "ts-node scripts/check-chat-history.ts",
     "create-sample-chat-rating": "ts-node scripts/create-sample-chat-with-rating.ts",

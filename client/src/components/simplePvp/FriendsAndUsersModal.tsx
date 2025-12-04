@@ -4,36 +4,47 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { 
-  Users, 
-  UserPlus, 
-  UserMinus, 
-  UserCheck, 
-  X, 
+import { Card } from '@/components/ui/card';
+import {
+  Users,
+  UserPlus,
+  UserMinus,
+  UserCheck,
+  X,
   Check,
   Heart,
-  Wifi
+  Wifi,
+  Send,
+  Copy,
+  Clock
 } from 'lucide-react';
 import friendApi, { Friend, FriendRequest, OnlineUser } from '@/services/friendApi';
+import simplePvpApi from '@/services/simplePvpApi';
 import { useToastActions } from '@/components/ui/toast';
 
 interface FriendsAndUsersModalProps {
   open: boolean;
   onClose: () => void;
+  inviteMode?: boolean;
+  roomCode?: string;
+  roomId?: string;
 }
 
-export function FriendsAndUsersModal({ open, onClose }: FriendsAndUsersModalProps) {
+export function FriendsAndUsersModal({ open, onClose, inviteMode = false, roomCode = '', roomId }: FriendsAndUsersModalProps) {
   const [friends, setFriends] = useState<Friend[]>([]);
   const [pendingRequests, setPendingRequests] = useState<FriendRequest[]>([]);
   const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('friends');
+  const [inviteCooldowns, setInviteCooldowns] = useState<{ [userId: string]: number }>({});
+  const [invitingUserId, setInvitingUserId] = useState<string | null>(null);
   const { success, error } = useToastActions();
 
   useEffect(() => {
@@ -138,6 +149,75 @@ export function FriendsAndUsersModal({ open, onClose }: FriendsAndUsersModalProp
     }
   };
 
+  // Cooldown effect
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setInviteCooldowns(prev => {
+        const updated = { ...prev };
+        let hasChanges = false;
+        
+        Object.keys(updated).forEach(userId => {
+          const remaining = Math.max(0, updated[userId] - 1000);
+          if (remaining !== updated[userId]) {
+            hasChanges = true;
+            if (remaining <= 0) {
+              delete updated[userId];
+            } else {
+              updated[userId] = remaining;
+            }
+          }
+        });
+        
+        return hasChanges ? updated : prev;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleInviteUser = async (userId: string, username: string) => {
+    if (!roomCode && !roomId) {
+      error('Lỗi', 'Không có mã phòng để mời');
+      return;
+    }
+
+    // Check cooldown
+    if (inviteCooldowns[userId]) {
+      const secondsLeft = Math.ceil(inviteCooldowns[userId] / 1000);
+      error('Vui lòng chờ', `Bạn có thể mời ${username} lại sau ${secondsLeft} giây`);
+      return;
+    }
+    
+    setInvitingUserId(userId);
+    try {
+      // Nếu có roomId, gửi lời mời thực qua API
+      if (roomId && inviteMode) {
+        const result = await simplePvpApi.sendRoomInvite(roomId, userId);
+        if (result.success) {
+          success('Thành công', `Đã gửi lời mời đến ${username}`);
+          // Set cooldown 60 seconds
+          setInviteCooldowns(prev => ({ ...prev, [userId]: 60000 }));
+        }
+      } else {
+        // Fallback: Copy room code
+        await navigator.clipboard.writeText(roomCode);
+        success('Đã sao chép mã phòng', `Gửi mã "${roomCode}" cho ${username} để mời họ vào phòng`);
+        setInviteCooldowns(prev => ({ ...prev, [userId]: 60000 }));
+      }
+    } catch (err: any) {
+      error('Lỗi', err.response?.data?.message || 'Không thể gửi lời mời');
+    } finally {
+      setInvitingUserId(null);
+    }
+  };
+
+  const getCooldownText = (userId: string) => {
+    const cooldown = inviteCooldowns[userId];
+    if (!cooldown) return null;
+    const seconds = Math.ceil(cooldown / 1000);
+    return `${seconds}s`;
+  };
+
   const getFriendshipLevelText = (level: number) => {
     switch (level) {
       case 5: return 'Tri kỷ';
@@ -160,12 +240,47 @@ export function FriendsAndUsersModal({ open, onClose }: FriendsAndUsersModalProp
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl max-h-[80vh]">
+      <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto top-[10%] translate-y-0 sm:translate-y-0">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-2xl">
-            <Users className="w-6 h-6" />
-            Bạn Bè & Người Dùng
+            {inviteMode ? (
+              <>
+                <Send className="w-6 h-6" />
+                Mời Bạn Bè Vào Phòng
+              </>
+            ) : (
+              <>
+                <Users className="w-6 h-6" />
+                Bạn Bè & Người Dùng
+              </>
+            )}
           </DialogTitle>
+          {inviteMode && roomCode && (
+            <div className="mt-2">
+              <Card className="p-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white border-0">
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <div className="text-sm font-medium text-blue-100">Mã phòng của bạn:</div>
+                    <div className="text-xl font-bold font-mono tracking-wider">{roomCode}</div>
+                  </div>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(roomCode);
+                        success('Thành công', 'Đã sao chép mã phòng');
+                      } catch (err) {
+                        error('Lỗi', 'Không thể sao chép');
+                      }
+                    }}
+                  >
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                </div>
+              </Card>
+            </div>
+          )}
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -218,18 +333,46 @@ export function FriendsAndUsersModal({ open, onClose }: FriendsAndUsersModalProp
                         </div>
                       </div>
 
-                      <Badge className={getFriendshipLevelColor(friend.friendshipLevel)}>
-                        {getFriendshipLevelText(friend.friendshipLevel)}
-                      </Badge>
+                      {!inviteMode ? (
+                        <>
+                          <Badge className={getFriendshipLevelColor(friend.friendshipLevel)}>
+                            {getFriendshipLevelText(friend.friendshipLevel)}
+                          </Badge>
 
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleRemoveFriend(friend.userId)}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                      >
-                        <UserMinus className="w-4 h-4" />
-                      </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRemoveFriend(friend.userId)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <UserMinus className="w-4 h-4" />
+                          </Button>
+                        </>
+                      ) : (
+                        <Button
+                          size="sm"
+                          onClick={() => handleInviteUser(friend.userId, friend.username)}
+                          disabled={!!inviteCooldowns[friend.userId] || invitingUserId === friend.userId}
+                          className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 disabled:opacity-50"
+                        >
+                          {invitingUserId === friend.userId ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-1" />
+                              Đang gửi...
+                            </>
+                          ) : inviteCooldowns[friend.userId] ? (
+                            <>
+                              <Clock className="w-4 h-4 mr-1" />
+                              {getCooldownText(friend.userId)}
+                            </>
+                          ) : (
+                            <>
+                              <Send className="w-4 h-4 mr-1" />
+                              Mời
+                            </>
+                          )}
+                        </Button>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -335,14 +478,40 @@ export function FriendsAndUsersModal({ open, onClose }: FriendsAndUsersModalProp
                         Online
                       </Badge>
 
-                      <Button
-                        size="sm"
-                        onClick={() => handleSendFriendRequest(user.userId)}
-                        className="bg-blue-600 hover:bg-blue-700"
-                      >
-                        <UserPlus className="w-4 h-4 mr-1" />
-                        Kết bạn
-                      </Button>
+                      {!inviteMode ? (
+                        <Button
+                          size="sm"
+                          onClick={() => handleSendFriendRequest(user.userId)}
+                          className="bg-blue-600 hover:bg-blue-700"
+                        >
+                          <UserPlus className="w-4 h-4 mr-1" />
+                          Kết bạn
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          onClick={() => handleInviteUser(user.userId, user.username)}
+                          disabled={!!inviteCooldowns[user.userId] || invitingUserId === user.userId}
+                          className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 disabled:opacity-50"
+                        >
+                          {invitingUserId === user.userId ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-1" />
+                              Đang gửi...
+                            </>
+                          ) : inviteCooldowns[user.userId] ? (
+                            <>
+                              <Clock className="w-4 h-4 mr-1" />
+                              {getCooldownText(user.userId)}
+                            </>
+                          ) : (
+                            <>
+                              <Send className="w-4 h-4 mr-1" />
+                              Mời
+                            </>
+                          )}
+                        </Button>
+                      )}
                     </div>
                   ))}
                 </div>

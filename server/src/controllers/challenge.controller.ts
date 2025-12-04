@@ -438,3 +438,192 @@ export const getChallengeStats = async (req: AuthenticatedRequest, res: Response
     next(error);
   }
 };
+
+// Lấy danh sách lời giải với trạng thái unlock
+export const getSolutionsStatus = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<any> => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.id;
+
+    const challenge = await Challenge.findById(id);
+    if (!challenge) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy bài tập'
+      });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy người dùng'
+      });
+    }
+
+    // Map solutions với trạng thái unlock
+    const solutionsStatus = challenge.solutions.map((solution, index) => {
+      const isUnlocked = user.unlockedSolutions.some(
+        (u: any) => u.challengeId.equals(id) && u.solutionIndex === index
+      );
+
+      return {
+        index,
+        title: solution.title,
+        tokenCost: solution.tokenCost,
+        language: solution.language,
+        isUnlocked,
+        order: solution.order
+      };
+    });
+
+    // Sắp xếp theo order
+    solutionsStatus.sort((a, b) => a.order - b.order);
+
+    res.json({
+      success: true,
+      data: {
+        solutions: solutionsStatus,
+        userTokens: user.tokens || 0,
+        totalSolutions: solutionsStatus.length,
+        unlockedCount: solutionsStatus.filter(s => s.isUnlocked).length
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Mở khóa lời giải bằng token
+export const unlockSolution = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<any> => {
+  try {
+    const { id, solutionIndex } = req.params;
+    const userId = req.user?.id;
+
+    const challenge = await Challenge.findById(id);
+    if (!challenge) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy bài tập'
+      });
+    }
+
+    const index = Number(solutionIndex);
+    if (index < 0 || index >= challenge.solutions.length) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy lời giải'
+      });
+    }
+
+    const solution = challenge.solutions[index];
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy người dùng'
+      });
+    }
+
+    // Kiểm tra đã unlock chưa
+    const alreadyUnlocked = user.unlockedSolutions.some(
+      (u: any) => u.challengeId.equals(id) && u.solutionIndex === index
+    );
+
+    if (alreadyUnlocked) {
+      return res.status(400).json({
+        success: false,
+        message: 'Bạn đã mở khóa lời giải này rồi'
+      });
+    }
+
+    // Kiểm tra token
+    const currentTokens = user.tokens || 0;
+    if (currentTokens < solution.tokenCost) {
+      return res.status(400).json({
+        success: false,
+        message: `Không đủ token. Cần ${solution.tokenCost} token, bạn có ${currentTokens} token`
+      });
+    }
+
+    // Trừ token và unlock
+    user.tokens = currentTokens - solution.tokenCost;
+    user.unlockedSolutions.push({
+      challengeId: id,
+      solutionIndex: index,
+      unlockedAt: new Date()
+    } as any);
+
+    await user.save();
+
+    console.log(`🔓 User ${userId} đã mở khóa lời giải ${index} của bài ${id} với ${solution.tokenCost} token`);
+
+    res.json({
+      success: true,
+      message: 'Đã mở khóa lời giải thành công',
+      data: {
+        solution,
+        remainingTokens: user.tokens,
+        tokensSpent: solution.tokenCost
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Lấy chi tiết lời giải đã unlock
+export const getSolution = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<any> => {
+  try {
+    const { id, solutionIndex } = req.params;
+    const userId = req.user?.id;
+
+    const challenge = await Challenge.findById(id);
+    if (!challenge) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy bài tập'
+      });
+    }
+
+    const index = Number(solutionIndex);
+    if (index < 0 || index >= challenge.solutions.length) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy lời giải'
+      });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Không tìm thấy người dùng'
+      });
+    }
+
+    // Kiểm tra quyền truy cập
+    const isUnlocked = user.unlockedSolutions.some(
+      (u: any) => u.challengeId.equals(id) && u.solutionIndex === index
+    );
+
+    const isAdmin = req.user?.role === 'admin';
+
+    if (!isUnlocked && !isAdmin) {
+      return res.status(403).json({
+        success: false,
+        message: 'Bạn chưa mở khóa lời giải này'
+      });
+    }
+
+    const solution = challenge.solutions[index];
+
+    res.json({
+      success: true,
+      data: solution
+    });
+  } catch (error) {
+    next(error);
+  }
+};

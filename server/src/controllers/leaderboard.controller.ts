@@ -42,9 +42,6 @@ export const getTopLearners = async (req: Request, res: Response) => {
     ]
 
     const results = await Submission.aggregate(pipeline)
-
-    // Tìm admin để thêm vào bảng xếp hạng
-    const admin = await User.findOne({ role: 'admin' })
     
     // Tính thời gian hoạt động và thêm huy chương
     const withDetails = results.map((r: any) => {
@@ -61,27 +58,8 @@ export const getTopLearners = async (req: Request, res: Response) => {
       }
     })
 
-    // Thêm admin vào đầu danh sách nếu tồn tại
-    let finalResults = withDetails
-    if (admin) {
-      const adminEntry = {
-        userId: admin._id,
-        username: admin.username,
-        avatar: admin.avatar,
-        completedCount: 999, // Đảm bảo admin luôn ở top
-        totalPoints: 999999, // Điểm cao nhất
-        activityDays: 0,
-        highestBadge: admin.badges && admin.badges.length > 0 ? admin.badges[admin.badges.length - 1] : '👑',
-        userRank: admin.rank || 'Expert',
-        experience: admin.experience || 999999
-      }
-      
-      // Luôn đặt admin ở vị trí đầu tiên
-      finalResults.unshift(adminEntry)
-    }
-
-    // Attach rank sau khi đã thêm admin
-    const withRank = finalResults.map((r: any, idx: number) => ({ rank: idx + 1, ...r }))
+    // Attach rank
+    const withRank = withDetails.map((r: any, idx: number) => ({ rank: idx + 1, ...r }))
 
     return res.json({ success: true, data: withRank })
   } catch (err) {
@@ -139,9 +117,6 @@ export const getPracticeLeaderboard = async (req: Request, res: Response) => {
 
     const results = await Submission.aggregate(pipeline)
 
-    // Tìm admin
-    const admin = await User.findOne({ role: 'admin' })
-
     // Thêm thông tin chi tiết
     const withDetails = results.map((r: any) => {
       const createdDate = r.createdAt ? new Date(r.createdAt) : new Date()
@@ -164,34 +139,8 @@ export const getPracticeLeaderboard = async (req: Request, res: Response) => {
       }
     })
 
-    // Thêm admin vào danh sách
-    let finalResults = withDetails
-    if (admin) {
-      const adminCreatedDate = admin.createdAt ? new Date(admin.createdAt) : new Date()
-      const now = new Date()
-      const diffTime = Math.abs(now.getTime() - adminCreatedDate.getTime())
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-
-      const adminEntry = {
-        userId: admin._id,
-        username: admin.username,
-        avatar: admin.avatar,
-        completedCount: 999,
-        highestScore: 100,
-        totalPoints: 999999, // Điểm cao nhất
-        activityDays: diffDays,
-        badges: admin.badges || ['👑'],
-        highestBadge: '👑',
-        userRank: admin.rank || 'Expert',
-        experience: admin.experience || 999999
-      }
-      
-      // Luôn đặt admin ở vị trí đầu tiên
-      finalResults.unshift(adminEntry)
-    }
-
     // Gán rank
-    const withRank = finalResults.map((r: any, idx: number) => ({
+    const withRank = withDetails.map((r: any, idx: number) => ({
       rank: idx + 1,
       ...r
     }))

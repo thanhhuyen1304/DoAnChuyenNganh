@@ -23,6 +23,16 @@ interface TestCase {
   points: number;
 }
 
+interface Solution {
+  title: string;
+  content: string;
+  language: string;
+  code: string;
+  explanation: string;
+  tokenCost: number;
+  order: number;
+}
+
 interface Challenge {
   title: string;
   description: string;
@@ -36,6 +46,8 @@ interface Challenge {
   timeLimit: number;
   memoryLimit: number;
   isActive: boolean;
+  tokenReward: number;
+  solutions: Solution[];
 }
 
 export const EditChallenge: React.FC<EditChallengeProps> = ({
@@ -91,6 +103,9 @@ export const EditChallenge: React.FC<EditChallengeProps> = ({
         input: decodeHtml(tc.input),
         expectedOutput: decodeHtml(tc.expectedOutput)
       }));
+      // Ensure solutions and tokenReward exist
+      data.solutions = data.solutions || [];
+      data.tokenReward = data.tokenReward || 1;
       setChallenge(data);
       setLoading(false);
     } catch (error: any) {
@@ -157,6 +172,51 @@ export const EditChallenge: React.FC<EditChallengeProps> = ({
     setChallenge({
       ...challenge,
       testCases: newTestCases
+    });
+  };
+
+  const handleSolutionChange = (index: number, field: keyof Solution, value: any) => {
+    if (!challenge) return;
+    const newSolutions = [...challenge.solutions];
+    newSolutions[index] = {
+      ...newSolutions[index],
+      [field]: value
+    };
+    setChallenge({
+      ...challenge,
+      solutions: newSolutions
+    });
+  };
+
+  const handleAddSolution = () => {
+    if (!challenge) return;
+    setChallenge({
+      ...challenge,
+      solutions: [
+        ...challenge.solutions,
+        {
+          title: '',
+          content: '',
+          language: challenge.language,
+          code: '',
+          explanation: '',
+          tokenCost: 1,
+          order: challenge.solutions.length + 1
+        }
+      ]
+    });
+  };
+
+  const handleRemoveSolution = (index: number) => {
+    if (!challenge) return;
+    const newSolutions = challenge.solutions.filter((_, i) => i !== index);
+    // Re-order remaining solutions
+    newSolutions.forEach((sol, i) => {
+      sol.order = i + 1;
+    });
+    setChallenge({
+      ...challenge,
+      solutions: newSolutions
     });
   };
 
@@ -410,6 +470,155 @@ export const EditChallenge: React.FC<EditChallengeProps> = ({
             Đang hoạt động
           </label>
         </div>
+      </div>
+
+      {/* Token Reward */}
+      <div className="space-y-2 p-4 border rounded bg-amber-50">
+        <Label htmlFor="tokenReward" className="flex items-center gap-2">
+          <span>🪙</span>
+          Token thưởng khi hoàn thành
+        </Label>
+        <Input
+          id="tokenReward"
+          type="number"
+          value={challenge.tokenReward || 1}
+          onChange={(e) => setChallenge({...challenge, tokenReward: Number(e.target.value) || 1})}
+          min={1}
+          max={10}
+          required
+        />
+        <p className="text-sm text-muted-foreground">
+          Số token học sinh nhận được khi hoàn thành bài lần đầu
+        </p>
+      </div>
+
+      {/* Solutions Section */}
+      <div className="space-y-4 p-4 border rounded bg-blue-50">
+        <div className="flex justify-between items-center">
+          <div>
+            <Label className="text-lg">Lời giải mẫu</Label>
+            <p className="text-sm text-muted-foreground">
+              Quản lý các lời giải mà học sinh có thể mở khóa bằng token
+            </p>
+          </div>
+          <Button
+            type="button"
+            onClick={handleAddSolution}
+            variant="outline"
+          >
+            Thêm Lời Giải
+          </Button>
+        </div>
+
+        {challenge.solutions.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            Chưa có lời giải. Nhấn "Thêm Lời Giải" để bắt đầu.
+          </div>
+        ) : (
+          challenge.solutions.map((solution, index) => (
+            <div key={index} className="space-y-3 p-4 border rounded bg-white">
+              <div className="flex justify-between items-center">
+                <h4 className="font-semibold">Lời giải #{solution.order}</h4>
+                <Button
+                  type="button"
+                  onClick={() => handleRemoveSolution(index)}
+                  variant="outline"
+                  size="sm"
+                >
+                  Xóa
+                </Button>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Tiêu đề</Label>
+                <Input
+                  type="text"
+                  value={solution.title}
+                  onChange={(e) => handleSolutionChange(index, 'title', e.target.value)}
+                  placeholder="VD: Solution sử dụng HashMap"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Ngôn ngữ</Label>
+                  <Select.Root
+                    value={solution.language}
+                    onValueChange={(value) => handleSolutionChange(index, 'language', value)}
+                  >
+                    <Select.Trigger className="w-full flex items-center justify-between border rounded-md px-3 py-2 bg-white">
+                      <Select.Value />
+                      <Select.Icon>
+                        <CaretSortIcon />
+                      </Select.Icon>
+                    </Select.Trigger>
+                    <Select.Portal>
+                      <Select.Content className="bg-white border rounded-md shadow-lg z-50">
+                        <Select.Viewport>
+                          {['Python', 'JavaScript', 'Java', 'C++', 'C#', 'C'].map((lang) => (
+                            <Select.Item key={lang} value={lang} className="flex items-center px-3 py-2 hover:bg-gray-100 cursor-pointer">
+                              <Select.ItemText>{lang}</Select.ItemText>
+                              <Select.ItemIndicator className="ml-2">
+                                <CheckIcon />
+                              </Select.ItemIndicator>
+                            </Select.Item>
+                          ))}
+                        </Select.Viewport>
+                      </Select.Content>
+                    </Select.Portal>
+                  </Select.Root>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Chi phí mở khóa (Token)</Label>
+                  <Input
+                    type="number"
+                    value={solution.tokenCost}
+                    onChange={(e) => handleSolutionChange(index, 'tokenCost', Number(e.target.value) || 1)}
+                    min={1}
+                    max={5}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Giải thích</Label>
+                <Textarea
+                  value={solution.explanation}
+                  onChange={(e) => handleSolutionChange(index, 'explanation', e.target.value)}
+                  placeholder="Giải thích cách tiếp cận, thuật toán, độ phức tạp..."
+                  rows={3}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Code mẫu</Label>
+                <div className="border rounded-md overflow-hidden">
+                  <CodePreview
+                    code={solution.code}
+                    language={solution.language.toLowerCase()}
+                    height="200px"
+                    readOnly={false}
+                    onChange={(value) => handleSolutionChange(index, 'code', value || '')}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Nội dung bổ sung (Tùy chọn)</Label>
+                <Textarea
+                  value={solution.content}
+                  onChange={(e) => handleSolutionChange(index, 'content', e.target.value)}
+                  placeholder="Thêm thông tin chi tiết, ví dụ, lưu ý..."
+                  rows={3}
+                />
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
       {/* Actions */}
