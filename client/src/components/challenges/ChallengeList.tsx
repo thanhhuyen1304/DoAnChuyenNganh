@@ -10,6 +10,8 @@ interface Challenge {
   _id: string;
   title: string;
   description: string;
+  titleEn?: string;
+  descriptionEn?: string;
   language: string;
   difficulty: 'Easy' | 'Medium' | 'Hard';
   category: 'Syntax' | 'Logic' | 'Performance' | 'Security';
@@ -97,30 +99,51 @@ const ChallengeList: React.FC<ChallengeListProps> = ({ selectedLanguage, favorit
   const fetchChallenges = React.useCallback(async () => {
     try {
       setLoading(true);
+      setError('');
       const API_BASE = getApiBase();
       const base = API_BASE.replace(/\/$/, '');
       
-      // Fetch all challenges by using a large limit
-      // First, get total count to determine how many to fetch
+      // Fetch all challenges by using a large limit and looping through pages
       let allChallenges: Challenge[] = [];
       let page = 1;
       const limit = 100; // Fetch 100 items per request
       let hasMore = true;
       
+      console.log('[ChallengeList] Fetching challenges with language:', selectedLanguage);
+      
       while (hasMore) {
-        const url = selectedLanguage
-          ? `${base}/challenges?language=${encodeURIComponent(selectedLanguage)}&page=${page}&limit=${limit}`
-          : `${base}/challenges?page=${page}&limit=${limit}`;
+        // Build URL with proper query params
+        let url = `${base}/challenges?page=${page}&limit=${limit}`;
+        
+        // IMPORTANT: Only add language filter if it's not empty
+        if (selectedLanguage && selectedLanguage.trim() !== '' && selectedLanguage !== 'All') {
+          url += `&language=${encodeURIComponent(selectedLanguage.trim())}`;
+          console.log('[ChallengeList] Adding language filter:', selectedLanguage.trim());
+        } else {
+          console.log('[ChallengeList] No language filter (fetching all languages)');
+        }
 
+        console.log('[ChallengeList] Fetching from URL:', url);
+        
         const response = await fetch(url);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
         const data = await response.json();
 
         if (data.success) {
-          const challenges = data.data.challenges as Challenge[];
-          if (challenges.length > 0) {
-            allChallenges = [...allChallenges, ...challenges];
+          const fetchedChallenges = data.data.challenges as Challenge[];
+          console.log(`[ChallengeList] Page ${page}: Fetched ${fetchedChallenges.length} challenges`);
+          
+          if (fetchedChallenges.length > 0) {
+            allChallenges = [...allChallenges, ...fetchedChallenges];
+            
             // Check if there are more pages
             const pagination = data.data.pagination;
+            console.log('[ChallengeList] Pagination:', pagination);
+            
             if (pagination && page < pagination.pages) {
               page++;
             } else {
@@ -130,22 +153,26 @@ const ChallengeList: React.FC<ChallengeListProps> = ({ selectedLanguage, favorit
             hasMore = false;
           }
         } else {
+          console.error('[ChallengeList] API returned success=false:', data.message);
           setError(data.message || 'Failed to fetch challenges');
           hasMore = false;
         }
       }
 
-      // Filter by favoriteIds if provided
+      console.log(`[ChallengeList] Total challenges fetched: ${allChallenges.length}`);
+
+      // Filter by favoriteIds if provided (can be used for favorites or completed challenges)
       if (Array.isArray(favoriteIds) && favoriteIds.length > 0) {
         const idSet = new Set(favoriteIds);
         allChallenges = allChallenges.filter((c) => idSet.has(c._id));
+        console.log(`[ChallengeList] After filter: ${allChallenges.length} challenges`);
       }
       
       setChallenges(allChallenges);
       setCurrentPage(1); // reset to first page on new data
-    } catch (err) {
-      console.error('Error fetching challenges:', err);
-      setError('Error connecting to server');
+    } catch (err: any) {
+      console.error('[ChallengeList] Error fetching challenges:', err);
+      setError(err.message || 'Error connecting to server');
     } finally {
       setLoading(false);
     }
@@ -158,15 +185,21 @@ const ChallengeList: React.FC<ChallengeListProps> = ({ selectedLanguage, favorit
   const toggleFavorite = async (id: string) => {
     const token = localStorage.getItem('token');
     
-    // Optimistic update
+    // Check current state
     const isCurrentlyFavorite = myFavIds.includes(id);
-    const newFavIds = isCurrentlyFavorite
-      ? myFavIds.filter(favId => favId !== id)
-      : [...myFavIds, id];
+    console.log(`[ToggleFavorite] Challenge ${id} is currently ${isCurrentlyFavorite ? 'favorite' : 'not favorite'}`);
     
+    // Optimistic update - update UI immediately
+    const newFavIds = isCurrentlyFavorite
+      ? myFavIds.filter(favId => favId !== id) // Remove from favorites
+      : [...myFavIds, id]; // Add to favorites
+    
+    // Update state immediately for instant UI feedback
     setMyFavIds(newFavIds);
     // Update localStorage immediately
     localStorage.setItem('favoriteChallenges', JSON.stringify(newFavIds));
+    
+    console.log(`[ToggleFavorite] Updated favorites:`, newFavIds);
 
     // If user is logged in, sync with server
     if (token) {
@@ -183,6 +216,7 @@ const ChallengeList: React.FC<ChallengeListProps> = ({ selectedLanguage, favorit
 
         if (!response.ok) {
           // Revert optimistic update on error
+          console.error(`[ToggleFavorite] Server error, reverting...`);
           setMyFavIds((prev) => {
             const set = new Set(prev);
             if (isCurrentlyFavorite) set.add(id);
@@ -197,11 +231,17 @@ const ChallengeList: React.FC<ChallengeListProps> = ({ selectedLanguage, favorit
         } else {
           // Update state with server response to ensure sync
           const data = await response.json();
+          console.log(`[ToggleFavorite] Server response:`, data);
           if (data.isFavorite !== undefined) {
             setMyFavIds((prev) => {
               const set = new Set(prev);
-              if (data.isFavorite) set.add(id);
-              else set.delete(id);
+              if (data.isFavorite) {
+                set.add(id);
+                console.log(`[ToggleFavorite] Added ${id} to favorites`);
+              } else {
+                set.delete(id);
+                console.log(`[ToggleFavorite] Removed ${id} from favorites`);
+              }
               const arr = Array.from(set);
               localStorage.setItem('favoriteChallenges', JSON.stringify(arr));
               return arr;
@@ -220,6 +260,9 @@ const ChallengeList: React.FC<ChallengeListProps> = ({ selectedLanguage, favorit
           return revertedIds;
         });
       }
+    } else {
+      // If not logged in, just use localStorage
+      console.log(`[ToggleFavorite] Not logged in, using localStorage only`);
     }
   };
 
@@ -282,30 +325,64 @@ const ChallengeList: React.FC<ChallengeListProps> = ({ selectedLanguage, favorit
       {paginated.map((challenge) => (
         <Card
             key={challenge._id}
-            className="!bg-white dark:!bg-gray-900 transform transition-all duration-300 cursor-pointer hover:scale-105 hover:-translate-y-1 hover:shadow-xl will-change-transform"
-            onClick={() => window.location.href = `/challenge/${challenge._id}`}
+            className="!bg-white dark:!bg-gray-900 transform transition-all duration-300 cursor-pointer hover:scale-105 hover:-translate-y-1 hover:shadow-xl will-change-transform relative"
+            onClick={(e) => {
+              // Only navigate if click is not on a button or interactive element
+              const target = e.target as HTMLElement;
+              if (target.closest('button') || target.closest('[role="button"]')) {
+                return;
+              }
+              window.location.href = `/practice?challengeId=${challenge._id}`;
+            }}
           >
-          <CardHeader>
-            <div className="flex justify-between items-start">
-              <div>
-                <CardTitle className="text-xl">{challenge.title}</CardTitle>
-                <CardDescription>{challenge.description}</CardDescription>
+          <CardHeader className="p-6">
+            <div className="flex justify-between items-start gap-3">
+              <div className="min-w-0">
+                <CardTitle className="text-xl">
+                  {language === 'vi'
+                    ? challenge.title
+                    : challenge.titleEn || challenge.title}
+                </CardTitle>
+                <CardDescription className="text-sm line-clamp-2">
+                  {language === 'vi'
+                    ? challenge.description
+                    : challenge.descriptionEn || challenge.description}
+                </CardDescription>
               </div>
               <div className="flex items-center gap-3">
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 relative">
                   <button
-                    onClick={(e) => { e.stopPropagation(); toggleFavorite(challenge._id); }}
+                    onClick={(e) => { 
+                      e.preventDefault();
+                      e.stopPropagation(); 
+                      toggleFavorite(challenge._id); 
+                    }}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    onTouchStart={(e) => {
+                      e.stopPropagation();
+                    }}
                     aria-label="Toggle favorite"
-                    className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200"
+                    className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200 relative z-50"
+                    type="button"
                   >
-                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full transition-colors duration-200">
+                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full transition-all duration-300 pointer-events-none">
                       {myFavIds.includes(challenge._id) ? (
-                        // Larger filled star with yellow stroke (viền vàng) and subtle shadow
-                        <svg className="w-5 h-5 text-yellow-400 drop-shadow-md" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        // Filled star - yellow when favorited
+                        <svg 
+                          className="w-5 h-5 text-yellow-400 drop-shadow-md transition-all duration-300 animate-in fade-in zoom-in-95" 
+                          viewBox="0 0 24 24" 
+                          fill="currentColor" 
+                          xmlns="http://www.w3.org/2000/svg" 
+                          aria-hidden="true"
+                        >
                           <path d="M12 .587l3.668 7.431 8.2 1.192-5.934 5.787 1.402 8.168L12 18.896l-7.336 3.869 1.402-8.168L.132 9.21l8.2-1.192L12 .587z" stroke="#F59E0B" strokeWidth="1.5" strokeLinejoin="round" />
                         </svg>
                       ) : (
-                        <Star className="w-4 h-4 text-gray-400" />
+                        // Empty star - gray when not favorited
+                        <Star className="w-4 h-4 text-gray-400 transition-all duration-300 animate-in fade-in zoom-in-95" />
                       )}
                     </span>
                   </button>
@@ -335,16 +412,16 @@ const ChallengeList: React.FC<ChallengeListProps> = ({ selectedLanguage, favorit
             </div>
             
             <div className="flex flex-wrap gap-2 mt-2">
-              <Badge variant="outline" className="bg-primary-50/50">
+              <Badge variant="outline" className="bg-primary-50/50 text-xs px-2 py-0.5">
                 {challenge.language}
               </Badge>
               <Badge 
                 variant="outline" 
-                className={`${getCategoryColor(challenge.category)} bg-opacity-50`}
+                className={`${getCategoryColor(challenge.category)} bg-opacity-50 text-xs px-2 py-0.5`}
               >
                 {challenge.category}
               </Badge>
-              <Badge variant="outline" className="bg-green-50/50">
+              <Badge variant="outline" className="bg-green-50/50 text-xs px-2 py-0.5">
                 {challenge.points} {language === 'vi' ? 'điểm' : 'points'}
               </Badge>
             </div>
@@ -375,7 +452,7 @@ const ChallengeList: React.FC<ChallengeListProps> = ({ selectedLanguage, favorit
               <button
                 key={page}
                 onClick={(e) => { e.stopPropagation(); setCurrentPage(page); }}
-                className={`px-3 py-1 rounded-md text-sm ${currentPage === page ? 'bg-gradient-to-r from-[#FF007A] via-[#C77DFF] to-[#A259FF] text-white' : 'bg-gradient-to-r from-[#FF007A] via-[#C77DFF] to-[#A259FF] dark:bg-gray-800'}`}
+                className={`px-3 py-1 rounded-md text-sm ${currentPage === page ? 'bg-gradient-to-r from-[#FF007A] via-[#C77DFF] to-[#A259FF] text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
               >
                 {page}
               </button>

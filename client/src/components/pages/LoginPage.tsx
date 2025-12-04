@@ -4,7 +4,7 @@ import Login from '../auth/Login';
 
 const LoginPage = () => {
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold">Đăng nhập</CardTitle>

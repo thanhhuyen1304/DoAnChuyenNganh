@@ -6,6 +6,7 @@ import User from '../models/user.model';
 import aiAnalysisService from '../services/aiAnalysisService';
 import judge0Service from '../services/judge0Service';
 import { ENV } from '../../config/environment';
+import { notifyChallengeCompleted, notifyRankUp } from '../services/notification.service';
 
 // Extend Request interface
 interface AuthenticatedRequest extends Request {
@@ -38,11 +39,12 @@ const calculateXP = (challenge: any, score: number, totalPoints: number): number
   return xpEarned;
 };
 
-// Cập nhật rank dựa trên XP
+// Cập nhật rank dựa trên XP và thông báo nếu rank up
 const updateUserRank = async (userId: string) => {
   const user = await User.findById(userId);
   if (!user) return;
   
+  const oldRank = user.rank || 'Newbie';
   const xp = user.experience || 0;
   let newRank = 'Newbie';
   
@@ -51,9 +53,12 @@ const updateUserRank = async (userId: string) => {
   else if (xp >= 200) newRank = 'Intermediate';
   else if (xp >= 50) newRank = 'Junior';
   
-  if (user.rank !== newRank) {
+  if (oldRank !== newRank) {
     user.rank = newRank as any;
     await user.save();
+    
+    // Notify user about rank up
+    await notifyRankUp(userId, oldRank, newRank);
   }
 };
 
@@ -350,43 +355,40 @@ export const submitSolution = async (req: AuthenticatedRequest, res: Response, n
       submittedAt: new Date() // Đảm bảo submittedAt được set đúng
     });
 
-    // Phân tích với AI để cung cấp feedback chi tiết
-    // Tự động dùng Gemini Pro nếu có API key, fallback về rule-based
-    console.log('🤖 Starting AI analysis...');
-    try {
-      const aiAnalysis = await aiAnalysisService.analyzeWithAI({
-        userCode: code,
-        // Không cần correctCode và buggyCode nữa - chỉ phân tích code user submit
-        correctCode: undefined,
-        buggyCode: undefined,
-        language,
-        problemStatement: challenge.problemStatement,
-        executionResults: executionResults.map(r => ({
-          testCaseIndex: r.testCaseIndex,
-          input: r.input,
-          expectedOutput: r.expectedOutput,
-          actualOutput: r.actualOutput,
-          passed: r.passed,
-          errorMessage: r.errorMessage
-        })),
-        errorMessage,
-        status
-      });
-
-      submission.aiAnalysis = aiAnalysis;
-      console.log('✅ AI analysis completed');
-    } catch (error: any) {
-      // Nếu AI analysis fail, vẫn tiếp tục với submission bình thường
-      console.error('❌ AI Analysis failed:', error.message);
-      console.error('Error stack:', error.stack);
-    }
-
     console.log('💾 Saving submission to database...');
     await submission.save();
     console.log('✅ Submission saved:', submission._id);
 
-    // Cập nhật XP và Token nếu đạt điểm
-    // CHỈ tính XP và Token nếu:
+    // Phân tích với AI không đồng bộ (fire-and-forget) để không làm chậm response
+    // Tự động dùng Gemini Pro nếu có API key, fallback về rule-based
+    console.log('🤖 Starting AI analysis (async)...');
+    aiAnalysisService.analyzeWithAI({
+      userCode: code,
+      correctCode: undefined,
+      buggyCode: undefined,
+      language,
+      problemStatement: challenge.problemStatement,
+      executionResults: executionResults.map(r => ({
+        testCaseIndex: r.testCaseIndex,
+        input: r.input,
+        expectedOutput: r.expectedOutput,
+        actualOutput: r.actualOutput,
+        passed: r.passed,
+        errorMessage: r.errorMessage
+      })),
+      errorMessage,
+      status
+    }).then(async (aiAnalysis) => {
+      // Cập nhật submission với AI analysis sau khi có kết quả
+      submission.aiAnalysis = aiAnalysis;
+      await submission.save();
+      console.log('✅ AI analysis completed and saved');
+    }).catch((error: any) => {
+      console.error('❌ AI Analysis failed:', error.message);
+    });
+
+    // Cập nhật XP nếu đạt điểm
+    // CHỈ tính XP nếu:
     // 1. Score > 0 (có điểm)
     // 2. Chưa từng đạt điểm tối đa trước đó, HOẶC đạt điểm cao hơn lần trước (cải thiện)
     let xpEarned = 0;
@@ -408,6 +410,7 @@ export const submitSolution = async (req: AuthenticatedRequest, res: Response, n
         
         const user = await User.findById(userId);
         if (user) {
+          const oldRank = user.rank || 'Newbie';
           user.experience = (user.experience || 0) + xpEarned;
           
           // Logic trao token: CHỈ khi hoàn thành bài lần đầu tiên (đạt điểm tối đa)
@@ -458,9 +461,23 @@ export const submitSolution = async (req: AuthenticatedRequest, res: Response, n
           await user.save();
           await updateUserRank(userId);
           
-          // Populate user để trả về XP và tokens mới
-          await submission.populate('user', 'username experience rank tokens');
-          await submission.populate('challenge', 'title difficulty tokenReward');
+          // Create notification for challenge completion (async - không chờ)
+          const isFirstTime = !hasPreviousAccepted;
+          notifyChallengeCompleted(
+            userId,
+            challenge.title,
+            xpEarned,
+            score,
+            challenge.points,
+            challengeId,
+            isFirstTime
+          ).catch(error => {
+            console.error('❌ Failed to create notification:', error.message);
+          });
+          
+          // Populate user để trả về XP mới
+          await submission.populate('user', 'username experience rank');
+          await submission.populate('challenge', 'title difficulty');
           
           // Tạo message phù hợp
           let message = 'Nộp bài thành công';

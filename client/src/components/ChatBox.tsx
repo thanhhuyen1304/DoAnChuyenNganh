@@ -41,6 +41,7 @@ const ChatBox: React.FC = () => {
   const [ratings, setRatings] = useState<Record<string, 'good' | 'bad'>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   
   // Resize state
   const defaultWidth = 380;
@@ -438,6 +439,23 @@ const ChatBox: React.FC = () => {
     e.target.style.height = `${Math.min(e.target.scrollHeight, 200)}px`;
   };
 
+  // Đóng chat khi click ra ngoài
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!containerRef.current) return;
+      if (!containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
+
   // Handle rating message
   const handleRateMessage = async (messageId: string, rating: 'good' | 'bad') => {
     if (!chatId) {
@@ -527,11 +545,17 @@ const ChatBox: React.FC = () => {
         {isOpen ? <X size={24} /> : <MessageCircle size={24} />}
       </button>
 
-      {/* Chat Window */}
+      {/* Chat Window - hiển thị cao hơn header, phủ lên vùng trên */}
       {isOpen && (
-        <div 
+        <div
+          ref={containerRef}
+          className="fixed inset-0 z-[9998] flex items-start justify-end pointer-events-none"
+        >
+          {/* Wrapper để đặt chatbox ở gần header (góc phải trên) */}
+          <div className="mt-20 mr-6 pointer-events-auto">
+            <div 
           ref={chatboxRef}
-          className="fixed bottom-24 right-6 z-[9999] bg-white dark:bg-gray-900 rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200 dark:border-gray-700"
+          className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200 dark:border-gray-700"
           style={{
             width: `${chatboxSize.width}px`,
             height: `${chatboxSize.height}px`,
@@ -647,10 +671,10 @@ const ChatBox: React.FC = () => {
             )}
 
             {/* Main Chat Area */}
-            <div className="flex-1 flex flex-col">
+            <div className="flex-1 flex flex-col overflow-hidden">
               {/* Messages Container */}
-              <ScrollArea className="flex-1 p-4">
-                <div className="space-y-6">
+              <ScrollArea className="flex-1 overflow-y-auto p-4">
+                <div className="space-y-4">
                   {messages.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full text-center py-12">
                       <MessageCircle size={48} className="text-gray-400 dark:text-gray-500 mb-4" />
@@ -677,14 +701,17 @@ const ChatBox: React.FC = () => {
                           </div>
                         )}
                         <div
-                          className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                          className={`rounded-lg px-3 py-2 ${
                             message.role === 'user'
                               ? 'bg-blue-500 text-white'
                               : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100'
                           }`}
+                          style={{
+                            maxWidth: chatboxSize.width > 500 ? '85%' : chatboxSize.width > 400 ? '80%' : '95%'
+                          }}
                         >
                           {message.role === 'assistant' ? (
-                            <div className="prose prose-sm dark:prose-invert max-w-none">
+                            <div className="prose prose-sm dark:prose-invert">
                               <ReactMarkdown
                                 remarkPlugins={[remarkGfm]}
                                 components={{
@@ -766,8 +793,8 @@ const ChatBox: React.FC = () => {
                       <div className="w-8 h-8 rounded-full bg-gradient-to-r from-[#FF007A] to-[#A259FF] flex items-center justify-center flex-shrink-0">
                         <span className="text-white text-sm font-bold">AI</span>
                       </div>
-                      <div className="bg-gray-100 dark:bg-gray-800 rounded-2xl px-4 py-3">
-                        <Loader2 size={20} className="animate-spin text-gray-400" />
+                      <div className="bg-gray-100 dark:bg-gray-800 rounded-lg px-3 py-2">
+                        <Loader2 size={16} className="animate-spin text-gray-400" />
                 </div>
               </div>
             )}
@@ -786,7 +813,7 @@ const ChatBox: React.FC = () => {
                   </p>
                 </div>
               ) : (
-                <div className="border-t border-gray-200 dark:border-gray-700 p-4">
+                <div className="border-t border-gray-200 dark:border-gray-700 p-3">
             <form onSubmit={handleFormSubmit} className="flex gap-2">
                     <textarea
                 ref={inputRef}
@@ -798,19 +825,19 @@ const ChatBox: React.FC = () => {
                           ? 'Nhập tin nhắn...'
                           : 'Type a message...'
                       }
-                      className="flex-1 px-4 py-3 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none max-h-[200px] text-sm"
+                      className="flex-1 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none max-h-[120px] text-sm"
                 disabled={isLoading}
                       rows={1}
               />
                     <Button
                 type="submit"
                 disabled={isLoading || !inputValue.trim()}
-                      className="bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-xl px-4 py-3"
+                      className="bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg px-3 py-2"
                     >
                       {isLoading ? (
-                        <Loader2 size={20} className="animate-spin" />
+                        <Loader2 size={16} className="animate-spin" />
                       ) : (
-                        <Send size={20} />
+                        <Send size={16} />
                       )}
                     </Button>
             </form>
@@ -838,6 +865,8 @@ const ChatBox: React.FC = () => {
                 <div className={`w-1 h-0.5 ${isResizing ? 'bg-white' : 'bg-gray-400 dark:bg-gray-500 group-hover:bg-blue-600 dark:group-hover:bg-blue-400'} transition-colors`}></div>
               </div>
             </div>
+          </div>
+        </div>
           </div>
         </div>
       )}

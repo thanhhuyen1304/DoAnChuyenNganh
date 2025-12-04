@@ -249,7 +249,7 @@ const Profile: React.FC = () => {
   return (
     <>
       <Header />
-      <div className="min-h-screen flex items-center py-8 md:py-12 overflow-visible relative bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm">
+      <div className="min-h-screen flex items-center py-8 md:py-12 overflow-visible relative">
         {user?.isBanned && (
           <div className="w-full max-w-4xl mx-auto p-4 mb-4 rounded border border-red-200 bg-red-50 dark:bg-red-900/30 dark:border-red-700 text-red-800 dark:text-red-200">
             <div className="font-semibold">

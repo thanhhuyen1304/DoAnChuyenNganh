@@ -8,85 +8,85 @@ export const BackgroundWrapper: React.FC<{ children: React.ReactNode }> = ({ chi
   // Force re-render when background changes
   useEffect(() => {
     setRenderKey(prev => prev + 1)
-  }, [background.id, background.url])
+  }, [background?.id, background?.url])
 
-  // Create a unique key that includes both id and a hash of url to force re-render
+  // Safe-guard: background or background.url might be temporarily undefined if
+  // localStorage data is malformed or context hasn't hydrated yet.
+  const safeUrl = typeof background?.url === 'string' ? background.url : ''
+  const hasBackground = background && background.id !== 'gradient' && safeUrl
+
   // Use a simple hash for long base64 strings
-  const urlHash = background.url.length > 100 
-    ? `${background.url.substring(0, 50)}-${background.url.length}` 
-    : background.url
+  const urlHash = safeUrl.length > 100 
+    ? `${safeUrl.substring(0, 50)}-${safeUrl.length}` 
+    : safeUrl
 
   // Apply background to document body and html to ensure it covers everything
+  // This ensures background is applied globally across all pages
   useEffect(() => {
     const html = document.documentElement
     const body = document.body
     
-    if (background.id === 'gradient') {
+    if (!background || background.id === 'gradient' || !safeUrl) {
       html.style.setProperty('background-image', 'none', 'important')
       html.style.setProperty('background-color', 'transparent', 'important')
       body.style.setProperty('background-image', 'none', 'important')
       body.style.setProperty('background-color', 'transparent', 'important')
-      body.classList.remove('bg-background')
+      // Remove any background classes that might interfere
+      body.classList.remove('bg-background', 'bg-white', 'bg-gray-50', 'bg-gray-100')
     } else {
-      html.style.setProperty('background-image', `url(${background.url})`, 'important')
+      // Apply background image with high priority to override any page-specific backgrounds
+      html.style.setProperty('background-image', `url(${safeUrl})`, 'important')
       html.style.setProperty('background-size', 'cover', 'important')
       html.style.setProperty('background-position', 'center', 'important')
       html.style.setProperty('background-repeat', 'no-repeat', 'important')
       html.style.setProperty('background-attachment', 'fixed', 'important')
       
-      body.style.setProperty('background-image', `url(${background.url})`, 'important')
+      body.style.setProperty('background-image', `url(${safeUrl})`, 'important')
       body.style.setProperty('background-size', 'cover', 'important')
       body.style.setProperty('background-position', 'center', 'important')
       body.style.setProperty('background-repeat', 'no-repeat', 'important')
       body.style.setProperty('background-attachment', 'fixed', 'important')
-      body.classList.remove('bg-background')
+      // Remove any background classes that might interfere
+      body.classList.remove('bg-background', 'bg-white', 'bg-gray-50', 'bg-gray-100')
     }
     
     return () => {
-      html.style.removeProperty('background-image')
-      html.style.removeProperty('background-color')
-      html.style.removeProperty('background-size')
-      html.style.removeProperty('background-position')
-      html.style.removeProperty('background-repeat')
-      html.style.removeProperty('background-attachment')
-      
-      body.style.removeProperty('background-image')
-      body.style.removeProperty('background-color')
-      body.style.removeProperty('background-size')
-      body.style.removeProperty('background-position')
-      body.style.removeProperty('background-repeat')
-      body.style.removeProperty('background-attachment')
+      // Cleanup is handled by next effect run
     }
-  }, [background.id, background.url])
+  }, [background?.id, background?.url, safeUrl])
 
   return (
     <div className="min-h-screen relative">
-      {/* Fixed background with smooth transition */}
-      {background.id !== 'gradient' && (
+      {/* Fixed background layer - highest priority, covers entire viewport */}
+      {hasBackground && (
         <div
           key={`bg-${background.id}-${renderKey}-${urlHash.substring(0, 50)}`}
-          className="fixed inset-0 z-0 bg-cover bg-center opacity-80 dark:opacity-60 transition-all duration-700 ease-in-out"
+          className="fixed inset-0 z-0 bg-cover bg-center transition-all duration-700 ease-in-out"
           style={{ 
-            backgroundImage: `url(${background.url})`,
+            backgroundImage: `url(${safeUrl})`,
             backgroundPosition: 'center',
             backgroundRepeat: 'no-repeat',
-            backgroundSize: 'cover'
+            backgroundSize: 'cover',
+            backgroundAttachment: 'fixed',
+            opacity: 0.85, // Slightly more visible
+            zIndex: -1 // Ensure it's behind everything
           }}
         />
       )}
       
       {/* Gradient overlay with smooth transition - reduced opacity for better visibility */}
       <div 
-        key={`overlay-${background.id}-${renderKey}`}
-        className={`fixed inset-0 z-0 transition-all duration-700 ease-in-out ${
-          background.id === 'gradient' 
+        key={`overlay-${background?.id || 'default'}-${renderKey}`}
+        className={`fixed inset-0 z-0 transition-all duration-700 ease-in-out pointer-events-none ${
+          !hasBackground || background?.id === 'gradient'
             ? 'bg-gradient-to-br from-slate-300 via-slate-50 to-slate-100 dark:from-gray-900 dark:via-gray-850 dark:to-gray-800'
             : 'bg-gradient-to-br from-white/30 to-white/20 dark:from-gray-900/40 dark:to-gray-800/30'
-        }`} 
+        }`}
+        style={{ zIndex: -1 }}
       />
 
-      {/* Content */}
-      <div className="relative z-10">
+      {/* Content - all pages render here */}
+      <div className="relative z-10 min-h-screen">
         {children}
       </div>
     </div>

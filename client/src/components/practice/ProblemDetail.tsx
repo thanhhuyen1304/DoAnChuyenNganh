@@ -783,4 +783,3 @@ export function ProblemDetail({ problemId, onSubmissionSuccess }: ProblemDetailP
     </div>
   )
 }
-

@@ -10,7 +10,6 @@ import {
   ChevronDown,
   Bug,
   Search,
-  Bell,
   ClipboardList,
   Settings,
   Swords,
@@ -18,6 +17,7 @@ import {
 } from 'lucide-react'
 import { useLanguage } from './contexts/LanguageContext'
 import { CombinedLeaderboardModal } from './CombinedLeaderboardModal'
+import NotificationBell from './NotificationBell'
 
 interface HeaderProps {
   // Props không còn cần thiết cho toggle theme; giữ để tương thích nếu nơi khác có truyền
@@ -92,32 +92,32 @@ const Header: React.FC<HeaderProps> = () => {
       className={`sticky top-0 w-full z-[10000] transition-all duration-300 ${isScrolled ? 'bg-white/95 dark:bg-gray-900/95 backdrop-blur-lg shadow-md' : 'bg-white dark:bg-gray-900'}`}
     >
       <div className="container mx-auto px-4 py-4 flex justify-between items-center relative z-[10001]">
-        {/* Logo */}
-        <div className="flex items-center">
-          <div className="relative group">
+        {/* Logo -> click để về trang chủ */}
+        <Link to="/" className="flex items-center group cursor-pointer">
+          <div className="relative">
             <div className="absolute -inset-1 bg-gradient-to-r from-primary-600 to-primary-400 rounded-lg blur opacity-25 group-hover:opacity-75 transition duration-300 z-0"></div>
             <div className="relative flex items-center bg-gradient-to-r from-[#FF007A] via-[#C77DFF] to-[#A259FF] text-white p-2 rounded-lg mr-2 shadow-lg group-hover:shadow-xl transition-all duration-300 z-0">
-              <Bug size={24} className="animate-pulse" />
+              <Bug size={24} className="group-hover:scale-110 transition-transform duration-200" />
             </div>
           </div>
           <div>
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#FF007A] to-[#A259FF] text-2xl font-bold tracking-tight">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#FF007A] to-[#A259FF] text-2xl font-bold tracking-tight group-hover:opacity-90">
               Bug
               <span className="text-gray-800 dark:text-white">Hunter</span>
             </span>
           </div>
-        </div>
+        </Link>
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center space-x-8">
           <Link
-            to="/practice"
+            to="/"
             className="text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200 font-medium relative after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary-500 after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:duration-300"
           >
-            {t("nav.courses")}
+            {t("nav.home")}
           </Link>
           <Link
-            to="/practice"
+            to="/challenges"
             className="text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200 font-medium relative after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary-500 after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:duration-300"
           >
             {t("nav.challenges")}
@@ -192,12 +192,7 @@ const Header: React.FC<HeaderProps> = () => {
           {user ? (
             <div className="flex items-center space-x-3">
               {/* Notification bell */}
-              <div className="relative">
-                <button className="p-2 text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200">
-                  <Bell size={20} />
-                  <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
-                </button>
-              </div>
+              <NotificationBell />
 
               {/* User dropdown */}
               <div className="relative group">
@@ -222,15 +217,13 @@ const Header: React.FC<HeaderProps> = () => {
                     </p>
                   </div>
                   <div className="py-3 border-b border-gray-100 dark:border-gray-700">
-                    {user?.role === 'admin' && (
-                      <Link
-                            to="/admin/dashboard"
-                            className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                          >
-                            <ClipboardList size={16} className="mr-2 text-gray-500 dark:text-gray-300" />
-                            Kho bài tập
-                          </Link>
-                    )}
+                    <Link
+                          to={user?.role === 'admin' ? '/admin/dashboard' : '/dashboard'}
+                          className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                        >
+                          <ClipboardList size={16} className="mr-2 text-gray-500 dark:text-gray-300" />
+                          {user?.role === 'admin' ? 'Quản lý' : 'Kho bài tập'}
+                        </Link>
                   </div>
                   <div className="py-3 border-b border-gray-100 dark:border-gray-700">
                     <Link
@@ -300,13 +293,13 @@ const Header: React.FC<HeaderProps> = () => {
         <div className="md:hidden bg-white dark:bg-gray-900 px-4 py-4 shadow-lg border-t border-gray-100 dark:border-gray-800 animate-fadeIn z-[10001]">
           <nav className="flex flex-col space-y-4 pb-6">
             <Link
-              to="/practice"
+              to="/challenges"
               className="text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-400 font-medium py-2 border-b border-gray-100 dark:border-gray-800"
             >
               {t("nav.courses")}
             </Link>
             <Link
-              to="/practice"
+              to="/challenges"
               className="text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-400 font-medium py-2 border-b border-gray-100 dark:border-gray-800"
             >
               {t("nav.challenges")}

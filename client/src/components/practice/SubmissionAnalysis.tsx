@@ -384,4 +384,3 @@ function Section({ title, icon, expanded, onToggle, children }: SectionProps) {
     </div>
   );
 }
-

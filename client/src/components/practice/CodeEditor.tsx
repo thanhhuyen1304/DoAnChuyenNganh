@@ -480,4 +480,3 @@ export function CodeEditor({ problemId, challenge, onSubmissionSuccess }: CodeEd
     </div>
   )
 }
-

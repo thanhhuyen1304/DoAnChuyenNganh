@@ -2,6 +2,9 @@ import { Request, Response, NextFunction } from 'express';
 import { validationResult } from 'express-validator';
 import Challenge, { IChallenge } from '../models/challenge.model';
 import User from '../models/user.model';
+import { Favorite } from '../models/favorite.model';
+import Submission from '../models/submission.model';
+import mongoose from 'mongoose';
 
 // Extend Request interface để có user property
 interface AuthenticatedRequest extends Request {
@@ -21,6 +24,8 @@ export const getChallenges = async (req: Request, res: Response, next: NextFunct
       isActive
     } = req.query;
 
+    console.log('[getChallenges] Query params:', { page, limit, language, difficulty, category, search, isActive });
+
     // Parse isActive - default to true if not provided
     let isActiveFilter = true;
     if (isActive !== undefined) {
@@ -33,7 +38,12 @@ export const getChallenges = async (req: Request, res: Response, next: NextFunct
 
     const filter: any = { isActive: isActiveFilter };
     
-    if (language) filter.language = language;
+    // Lọc theo ngôn ngữ - trim và kiểm tra kỹ
+    if (language && typeof language === 'string' && language.trim() !== '') {
+      filter.language = language.trim();
+      console.log('[getChallenges] Filtering by language:', filter.language);
+    }
+    
     if (difficulty) filter.difficulty = difficulty;
     if (category) filter.category = category;
     if (search) {
@@ -44,6 +54,8 @@ export const getChallenges = async (req: Request, res: Response, next: NextFunct
       ];
     }
 
+    console.log('[getChallenges] Final filter:', JSON.stringify(filter, null, 2));
+
     const challenges = await Challenge.find(filter)
       .populate('createdBy', 'username email')
       .select('-buggyCode -correctCode -testCases')
@@ -53,10 +65,59 @@ export const getChallenges = async (req: Request, res: Response, next: NextFunct
 
     const total = await Challenge.countDocuments(filter);
 
+    console.log('[getChallenges] Found', challenges.length, 'challenges out of', total, 'total');
+
+    // Enrich challenges with favorites count and submission stats
+    const challengeIds = challenges.map(c => c._id);
+    
+    // Get favorites count for each challenge
+    const favoritesCount = await Favorite.aggregate([
+      { $match: { exercise_id: { $in: challengeIds } } },
+      { $group: { _id: '$exercise_id', count: { $sum: 1 } } }
+    ]);
+    
+    const favoritesMap = new Map(
+      favoritesCount.map((f: any) => [f._id.toString(), f.count])
+    );
+    
+    // Get submission stats for each challenge
+    const submissionStats = await Submission.aggregate([
+      { $match: { challenge: { $in: challengeIds } } },
+      {
+        $group: {
+          _id: '$challenge',
+          totalAttempts: { $sum: 1 },
+          successfulAttempts: {
+            $sum: { $cond: [{ $eq: ['$status', 'Accepted'] }, 1, 0] }
+          }
+        }
+      }
+    ]);
+    
+    const statsMap = new Map(
+      submissionStats.map((s: any) => [
+        s._id.toString(),
+        { totalAttempts: s.totalAttempts, successfulAttempts: s.successfulAttempts }
+      ])
+    );
+    
+    // Enrich challenges with the computed data
+    const enrichedChallenges = challenges.map((challenge: any) => {
+      const challengeObj = challenge.toObject();
+      const challengeId = challenge._id.toString();
+      
+      return {
+        ...challengeObj,
+        favorites: favoritesMap.get(challengeId) || 0,
+        totalAttempts: statsMap.get(challengeId)?.totalAttempts || 0,
+        successfulAttempts: statsMap.get(challengeId)?.successfulAttempts || 0
+      };
+    });
+
     res.json({
       success: true,
       data: {
-        challenges,
+        challenges: enrichedChallenges,
         pagination: {
           current: Number(page),
           pages: Math.ceil(total / Number(limit)),

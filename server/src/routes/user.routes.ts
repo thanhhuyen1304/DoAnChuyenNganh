@@ -5,7 +5,8 @@ import {
   getProgressByUsername, 
   updateMe,
   getMyPreferences,
-  updateMyPreferences
+  updateMyPreferences,
+  getMyCompletedChallenges
 } from '../controllers/user.controller'
 import { authenticateToken } from '../middleware/auth'
 import { uploadRateLimit } from '../middleware/rateLimit'
@@ -19,6 +20,9 @@ router.get('/me/progress', authenticateToken, getMyProgress)
 
 // Protected: get today's stats
 router.get('/me/today-stats', authenticateToken, getTodayStats)
+
+// Protected: get completed challenges
+router.get('/me/completed-challenges', authenticateToken, getMyCompletedChallenges)
 
 // Update profile
 router.patch('/me', authenticateToken, updateMe)

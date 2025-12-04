@@ -20,6 +20,7 @@ interface Problem {
 interface ProblemsListProps {
   selectedId: string | null
   onSelect: (id: string) => void
+  refreshKey?: number
 }
 
 function getDifficultyColor(difficulty: string) {
@@ -35,7 +36,7 @@ function getDifficultyColor(difficulty: string) {
   }
 }
 
-export function ProblemsList({ selectedId, onSelect }: ProblemsListProps) {
+export function ProblemsList({ selectedId, onSelect, refreshKey }: ProblemsListProps) {
   const [search, setSearch] = useState("")
   const [filter, setFilter] = useState<"All" | "Easy" | "Medium" | "Hard">("All")
   const [problems, setProblems] = useState<Problem[]>([])
@@ -46,6 +47,13 @@ export function ProblemsList({ selectedId, onSelect }: ProblemsListProps) {
     loadProblems()
     loadSolvedProblems()
   }, [])
+
+  // Reload danh sách khi refreshKey thay đổi (sau khi submit thành công)
+  useEffect(() => {
+    if (refreshKey !== undefined && refreshKey > 0) {
+      loadSolvedProblems()
+    }
+  }, [refreshKey])
 
   const loadProblems = async () => {
     try {
@@ -106,10 +114,10 @@ export function ProblemsList({ selectedId, onSelect }: ProblemsListProps) {
         const submissionsResult = await submissionsResponse.json()
 
         if (submissionsResult.success) {
-          const solved = new Set(
+          const solved = new Set<string>(
             submissionsResult.data.submissions
               .map((s: any) => s.challenge?._id || s.challenge)
-              .filter((id: any) => id)
+              .filter((id: any) => id && typeof id === 'string')
           )
           setSolvedIds(solved)
         }
@@ -237,4 +245,3 @@ export function ProblemsList({ selectedId, onSelect }: ProblemsListProps) {
     </div>
   )
 }
-

@@ -480,8 +480,98 @@ async function getUserRecentErrors(userId: string): Promise<{
   }
 }
 
-// Generate AI response (wrapper) with training data context
-async function generateAIResponse(messages: ChatMessage[], userMessage?: string, userId?: string): Promise<string> {
+// Build user context (profile + basic stats) để nhúng vào system prompt
+async function buildUserContext(userId: string) {
+  try {
+    const user = await User.findById(userId)
+      .select('email username avatar favoriteLanguages experience rank badges rating level pvpStats createdAt')
+      .lean();
+
+    if (!user) {
+      return '';
+    }
+
+    const joinedAt = user.createdAt
+      ? new Date(user.createdAt).toLocaleDateString('vi-VN')
+      : '';
+
+    let context = '=== THÔNG TIN NGƯỜI DÙNG HIỆN TẠI (CHỈ DÙNG LÀM NGỮ CẢNH, KHÔNG CÓ MẬT KHẨU) ===\n';
+    context += `• Tên người dùng: ${user.username}\n`;
+    context += `• Email: ${user.email}\n`;
+    if (user.avatar) {
+      context += `• Avatar: ${user.avatar}\n`;
+    }
+    if (Array.isArray(user.favoriteLanguages) && user.favoriteLanguages.length > 0) {
+      context += `• Ngôn ngữ ưa thích: ${user.favoriteLanguages.join(', ')}\n`;
+    }
+    context += `• XP: ${user.experience ?? 0}\n`;
+    context += `• Rank: ${user.rank ?? 'Newbie'}\n`;
+    if (Array.isArray(user.badges) && user.badges.length > 0) {
+      context += `• Badges: ${user.badges.join(', ')}\n`;
+    }
+    if (typeof (user as any).rating === 'number') {
+      context += `• PvP rating: ${(user as any).rating}\n`;
+    }
+    if (typeof (user as any).level === 'number') {
+      context += `• Level: ${(user as any).level}\n`;
+    }
+    if ((user as any).pvpStats) {
+      const p = (user as any).pvpStats;
+      context += `• PvP: ${p.wins ?? 0} thắng / ${p.losses ?? 0} thua / ${p.draws ?? 0} hòa\n`;
+    }
+    if (joinedAt) {
+      context += `• Tham gia từ: ${joinedAt}\n`;
+    }
+    context += '=== HẾT THÔNG TIN NGƯỜI DÙNG ===\n\n';
+
+    return context;
+  } catch (error) {
+    console.error('[Chat] buildUserContext error:', error);
+    return '';
+  }
+}
+
+// Build global challenges overview (không lộ test case, code đúng)
+async function buildChallengesContext(limit: number = 20) {
+  try {
+    const challenges = await Challenge.find({ isActive: true })
+      .select('title language difficulty category tags points')
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .lean();
+
+    if (!challenges || challenges.length === 0) {
+      return '';
+    }
+
+    let context = '=== DANH SÁCH BÀI TẬP TRÊN HỆ THỐNG (TÓM TẮT) ===\n';
+    challenges.forEach((c: any, index: number) => {
+      context += `[#${index + 1}] ${c.title}\n`;
+      context += `   • Ngôn ngữ: ${c.language}\n`;
+      context += `   • Độ khó: ${c.difficulty}\n`;
+      context += `   • Loại: ${c.category}\n`;
+      context += `   • Điểm: ${c.points}\n`;
+      if (Array.isArray(c.tags) && c.tags.length > 0) {
+        context += `   • Tags: ${c.tags.join(', ')}\n`;
+      }
+      context += '\n';
+    });
+    context += '=== HẾT DANH SÁCH BÀI TẬP TÓM TẮT ===\n\n';
+    context += '⚠️ LƯU Ý CHO AI: Khi người dùng hỏi về bài tập hoặc muốn gợi ý luyện tập, hãy ưu tiên sử dụng danh sách trên để tư vấn.\n';
+
+    return context;
+  } catch (error) {
+    console.error('[Chat] buildChallengesContext error:', error);
+    return '';
+  }
+}
+
+// Generate AI response (wrapper) with training data + user + challenges context
+async function generateAIResponse(
+  messages: ChatMessage[],
+  userMessage?: string,
+  userId?: string
+): Promise<string> {
   const startTime = Date.now();
   console.log('[Chat] generateAIResponse called');
   console.log(`[Chat] AI_PROVIDER: ${ENV.AI_PROVIDER}`);
@@ -491,6 +581,8 @@ async function generateAIResponse(messages: ChatMessage[], userMessage?: string,
   let trainingContext = '';
   let challengesContext = '';
   let errorBasedContext = '';
+  let userContext = '';
+  let globalChallengesContext = '';
   
   if (userMessage) {
     try {
@@ -582,7 +674,22 @@ async function generateAIResponse(messages: ChatMessage[], userMessage?: string,
     }
   }
 
-  // Enhance system message với context từ keyword extraction
+  // Luôn cố gắng lấy thêm context về user + danh sách bài tập hệ thống
+  if (userId) {
+    try {
+      userContext = await buildUserContext(userId);
+    } catch (error) {
+      console.error('[Chat] Error building user context:', error);
+    }
+  }
+
+  try {
+    globalChallengesContext = await buildChallengesContext(20);
+  } catch (error) {
+    console.error('[Chat] Error building global challenges context:', error);
+  }
+
+  // Enhance system message với đầy đủ context
   let enhancedMessages = [...messages];
   const systemMessageIndex = enhancedMessages.findIndex(msg => msg.role === 'system');
   
@@ -611,15 +718,37 @@ async function generateAIResponse(messages: ChatMessage[], userMessage?: string,
     }
   } else {
     // Fallback: sử dụng context cũ nếu không có responseContext
-    const additionalContext = trainingContext + challengesContext + errorBasedContext;
+    const additionalContext =
+      trainingContext + challengesContext + errorBasedContext + userContext + globalChallengesContext;
     
     if (systemMessageIndex >= 0 && additionalContext) {
-      enhancedMessages[systemMessageIndex].content += additionalContext;
+      enhancedMessages[systemMessageIndex].content += '\n\n' + additionalContext;
     } else if (additionalContext) {
       enhancedMessages.unshift({
         role: 'system',
-        content: 'Bạn là trợ lý AI thông minh của BugHunter - một nền tảng học lập trình thông qua việc sửa lỗi code. Hãy trả lời một cách thân thiện, chính xác và hữu ích. Bạn có thể giúp người dùng học lập trình, debug code, giải thích các khái niệm, và trả lời các câu hỏi về lập trình.' + additionalContext,
+        content:
+          'Bạn là trợ lý AI thông minh của BugHunter - một nền tảng học lập trình thông qua việc sửa lỗi code. ' +
+          'Hãy trả lời một cách thân thiện, chính xác và hữu ích. Bạn có thể giúp người dùng học lập trình, debug code, ' +
+          'giải thích các khái niệm, và trả lời các câu hỏi về lập trình.\n\n' +
+          additionalContext,
       });
+    }
+  }
+
+  // Nếu đã có responseContext, vẫn bổ sung thêm userContext + globalChallengesContext
+  if (responseContext) {
+    const extra = userContext + globalChallengesContext;
+    if (extra) {
+      if (systemMessageIndex >= 0) {
+        enhancedMessages[systemMessageIndex].content += '\n\n' + extra;
+      } else {
+        enhancedMessages.unshift({
+          role: 'system',
+          content:
+            'Bạn là trợ lý AI thông minh của BugHunter - một nền tảng học lập trình thông qua việc sửa lỗi code.\n\n' +
+            extra,
+        });
+      }
     }
   }
   
@@ -698,12 +827,7 @@ export class ChatController {
       const contextMessages: ChatMessage[] = [
         {
           role: 'system',
-          content:
-            'Bạn là trợ lý AI thông minh của BugHunter - một nền tảng học lập trình thông qua việc sửa lỗi code. ' +
-            'Hãy trả lời một cách thân thiện, chính xác và hữu ích. Bạn có thể giúp người dùng học lập trình, debug code, ' +
-            'giải thích các khái niệm, và trả lời các câu hỏi về lập trình. ' +
-            '⚠️ QUAN TRỌNG: Bạn KHÔNG có quyền truy cập thời gian thực (ngày, giờ hiện tại, thời lượng chính xác). ' +
-            'Nếu người dùng hỏi về ngày/giờ hiện tại hoặc thời lượng tính theo thời gian thực, hãy trả lời rằng bạn không thể xem đồng hồ hoặc thời gian hệ thống và KHÔNG được tự đoán ngày/giờ.',
+          content: 'Bạn là trợ lý AI thông minh của BugHunter - một nền tảng học lập trình thông qua việc sửa lỗi code. Hãy trả lời một cách thân thiện, chính xác và hữu ích. Bạn có thể giúp người dùng học lập trình, debug code, giải thích các khái niệm, và trả lời các câu hỏi về lập trình.',
         },
         ...recentMessages.map(msg => ({
           role: msg.role as 'user' | 'assistant',
@@ -943,26 +1067,115 @@ export class ChatController {
         });
       }
 
-      if (messageIndex < 0 || messageIndex >= chatHistory.messages.length) {
+      // messageIndex được tính theo "thứ tự message của assistant" (0,1,2,...), không phải index trong mảng tổng
+      if (messageIndex < 0) {
         return res.status(400).json({
           success: false,
           message: 'Message index không hợp lệ',
         });
       }
 
-      const message = chatHistory.messages[messageIndex];
-      if (message.role !== 'assistant') {
+      let assistantCounter = 0;
+      let targetIndex = -1;
+
+      chatHistory.messages.forEach((msg, idx) => {
+        if (msg.role === 'assistant') {
+          if (assistantCounter === messageIndex) {
+            targetIndex = idx;
+          }
+          assistantCounter += 1;
+        }
+      });
+
+      if (targetIndex === -1) {
         return res.status(400).json({
           success: false,
-          message: 'Chỉ có thể rate message của AI',
+          message: 'Không tìm thấy message của AI tương ứng với chỉ số đã gửi',
         });
       }
 
-      // Cập nhật rating
-      chatHistory.messages[messageIndex].rating = rating as 'good' | 'bad';
+      const message = chatHistory.messages[targetIndex];
+
+      // Cập nhật rating cho message AI
+      chatHistory.messages[targetIndex].rating = rating as 'good' | 'bad';
       await chatHistory.save();
 
-      console.log(`[Rating] User ${userId} rated message ${messageIndex} in chat ${chatId} as ${rating}`);
+      console.log(
+        `[Rating] User ${userId} rated AI messageIndex=${messageIndex} (arrayIndex=${targetIndex}) in chat ${chatId} as ${rating}`,
+      );
+
+      // Nếu rating tốt, tự động sinh TrainingData từ Q&A tương ứng
+      if (rating === 'good') {
+        try {
+          // Tìm câu hỏi gần nhất trước đó của user
+          let questionContent = '';
+          for (let i = targetIndex - 1; i >= 0; i--) {
+            if (chatHistory.messages[i].role === 'user') {
+              questionContent = chatHistory.messages[i].content;
+              break;
+            }
+          }
+
+          const answerContent = message.content;
+
+          if (questionContent && answerContent) {
+            // Tránh lưu trùng hệt question + answer
+            const existing = await TrainingData.findOne({
+              question: questionContent,
+              answer: answerContent,
+            }).lean();
+
+            if (!existing) {
+              // Dùng keywordExtractionService để gợi ý category/tags
+              let category = 'general';
+              let tags: string[] = [];
+
+              try {
+                const extracted = keywordExtractionService.extractKeywords(questionContent);
+                tags = [
+                  ...extracted.concepts,
+                  ...extracted.languages,
+                  ...extracted.topics,
+                  ...extracted.errorTypes,
+                ].map(t => t.toLowerCase());
+
+                if (extracted.intent === 'exercise') {
+                  category = 'exercise';
+                } else if (extracted.intent === 'error') {
+                  category = 'debugging';
+                } else if (extracted.intent === 'learning') {
+                  category = 'learning';
+                } else {
+                  category = 'programming';
+                }
+              } catch (extractErr) {
+                console.error('[Rating] extractKeywords error, fallback to generic category:', extractErr);
+              }
+
+              const training = new TrainingData({
+                question: questionContent,
+                answer: answerContent,
+                category,
+                tags,
+                priority: 2, // Ưu tiên vừa
+                usageCount: 0,
+                rating: 5,
+                isActive: true,
+                createdBy: userId,
+              });
+
+              await training.save();
+              console.log(
+                `[Rating] Created TrainingData from rated chat. chatId=${chatId}, userId=${userId}, trainingId=${training._id}`,
+              );
+            } else {
+              console.log('[Rating] TrainingData for this Q&A already exists, skip creating new one');
+            }
+          }
+        } catch (tdError) {
+          console.error('[Rating] Error creating TrainingData from rating:', tdError);
+        }
+      }
 
       return res.json({
         success: true,

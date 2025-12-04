@@ -193,7 +193,7 @@ const LanguageCards: React.FC<LanguageCardsProps> = ({ onSelectLanguage }) => {
                         if (onSelectLanguage) {
                           onSelectLanguage(lang.name)
                         } else {
-                          const target = `/challenges?lang=${encodeURIComponent(lang.name)}`
+                          const target = `/challenges?language=${encodeURIComponent(lang.name)}`
                           window.location.href = target
                         }
                       }}

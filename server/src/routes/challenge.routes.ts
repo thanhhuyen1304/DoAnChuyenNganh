@@ -123,7 +123,7 @@ const updateChallengeValidation = [
 router.get('/', [
   query('page').optional().isInt({ min: 1 }).withMessage('Page phải là số nguyên dương'),
   query('limit').optional().isInt({ min: 1, max: 50 }).withMessage('Limit phải từ 1 đến 50'),
-  query('language').optional().isIn(['Python', 'JavaScript', 'Java', 'C++', 'C#', 'C']),
+  query('language').optional().isString().trim().withMessage('Language phải là chuỗi'),
   query('difficulty').optional().isIn(['Easy', 'Medium', 'Hard']),
   query('category').optional().isIn(['Syntax', 'Logic', 'Performance', 'Security']),
   query('search').optional().trim().isLength({ max: 100 }).withMessage('Từ khóa tìm kiếm không được vượt quá 100 ký tự')
@@ -140,7 +140,7 @@ router.get('/:id', [
 router.get('/admin/all', [
   query('page').optional().isInt({ min: 1 }).withMessage('Page phải là số nguyên dương'),
   query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit phải từ 1 đến 100'),
-  query('language').optional().isIn(['Python', 'JavaScript', 'Java', 'C++', 'C#', 'C']),
+  query('language').optional().isString().trim().withMessage('Language phải là chuỗi'),
   query('difficulty').optional().isIn(['Easy', 'Medium', 'Hard']),
   query('category').optional().isIn(['Syntax', 'Logic', 'Performance', 'Security']),
   query('search').optional().trim().isLength({ max: 100 }).withMessage('Từ khóa tìm kiếm không được vượt quá 100 ký tự'),
