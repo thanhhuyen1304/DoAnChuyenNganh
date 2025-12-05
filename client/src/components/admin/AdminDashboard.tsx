@@ -31,6 +31,7 @@ import TrainingDataManagement from './TrainingDataManagement';
 import KnowledgeGraphCanvas from './KnowledgeGraphCanvas';
 import CommentReportManagement from './CommentReportManagement';
 import AllCommentsManagement from './AllCommentsManagement';
+import ChallengeManagement from './ChallengeManagement';
 import Header from '../Header';
 import ErrorBoundary from '../ui/ErrorBoundary';
 
@@ -98,8 +99,7 @@ const OTHER_TABS = [
   // { id: 'database', icon: Database, label: { vi: 'Database', en: 'Database' }, color: 'text-blue-500' },
   // { id: 'api', icon: Webhook, label: { vi: 'API Test', en: 'API Test' }, color: 'text-purple-500' },
   // { id: 'guide', icon: FileQuestion, label: { vi: 'Hướng dẫn', en: 'Guide' }, color: 'text-green-500' },
-  { id: 'reports', icon: Flag, label: { vi: 'Báo cáo vi phạm', en: 'Reports' }, color: 'text-red-500' },
-  { id: 'achievements', icon: Award, label: { vi: 'Thành tích', en: 'Achievements' }, color: 'text-amber-500' },
+  // { id: 'reports', icon: Flag, label: { vi: 'Báo cáo vi phạm', en: 'Reports' }, color: 'text-red-500' },
   // { id: 'training-data', icon: Brain, label: { vi: 'Training Data AI', en: 'Training Data AI' }, color: 'text-purple-500' },
   // { id: 'knowledge-graph', icon: Network, label: { vi: 'Knowledge Graph', en: 'Knowledge Graph' }, color: 'text-indigo-500' },
   { id: 'stats', icon: BarChart, label: { vi: 'Thống kê', en: 'Stats' }, color: 'text-orange-500' }
@@ -115,115 +115,6 @@ const SidebarToggle: React.FC<{ isVisible: boolean; onClick: () => void }> = ({ 
     <Code2 className="w-6 h-6 text-primary-500 flex-shrink-0" />
   </button>
 );
-
-// Challenge list card component
-const ChallengeList: React.FC<{
-  challenges: Challenge[];
-  onEdit: (challenge: Challenge) => void;
-  onDelete: (id: string) => void;
-  language: string;
-}> = ({ challenges, onEdit, onDelete, language }) => {
-  const [currentPage, setCurrentPage] = React.useState(1);
-  const ITEMS_PER_PAGE = 8;
-  const totalPages = Math.ceil(challenges.length / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const paginatedChallenges = challenges.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-
-  if (challenges.length === 0) {
-    return (
-      <div className="text-center py-12">
-        <div className="flex flex-col items-center gap-4 text-gray-500">
-          <Code2 className="w-12 h-12 text-primary-400" />
-          <p className="text-lg">
-            {language === 'vi'
-              ? 'Chưa có bài tập nào. Hãy tạo bài tập mới hoặc scrape từ các nguồn online!'
-              : 'No challenges yet. Create new ones or scrape from online sources!'}
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-6">
-      <div className="grid gap-4">
-        {paginatedChallenges.map((challenge) => (
-          <Card key={challenge._id} className="bg-white/80 dark:bg-gray-900/70 backdrop-blur-xl">
-            <CardHeader>
-              <div className="flex justify-between items-start">
-                <div>
-                  <CardTitle>{challenge.title}</CardTitle>
-                  <CardDescription>{challenge.description}</CardDescription>
-                </div>
-                <Badge variant={challenge.isActive ? 'default' : 'secondary'}>
-                  {challenge.isActive 
-                    ? (language === 'vi' ? 'Hoạt động' : 'Active')
-                    : (language === 'vi' ? 'Tạm dừng' : 'Inactive')}
-                </Badge>
-              </div>
-              <div className="flex flex-wrap gap-2 mt-2">
-                <Badge variant="outline" className="bg-blue-50">{challenge.language}</Badge>
-                <Badge variant="outline" className="bg-yellow-50">{challenge.difficulty}</Badge>
-                <Badge variant="outline" className="bg-purple-50">{challenge.category}</Badge>
-                <Badge variant="outline" className="bg-green-50">
-                  {challenge.points} {language === 'vi' ? 'điểm' : 'points'}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="flex gap-2">
-                <Button size="sm" onClick={() => onEdit(challenge)}>
-                  ✏️ {language === 'vi' ? 'Chỉnh sửa' : 'Edit'}
-                </Button>
-                <Button size="sm" variant="destructive" onClick={() => onDelete(challenge._id)}>
-                  🗑️ {language === 'vi' ? 'Xóa' : 'Delete'}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 mt-6 flex-wrap">
-          <button
-            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-            disabled={currentPage === 1}
-            className="px-3 py-2 rounded-md bg-gray-100 dark:bg-gray-800 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-          >
-            {language === 'vi' ? 'Trang trước' : 'Prev'}
-          </button>
-
-          {Array.from({ length: totalPages }).map((_, idx) => {
-            const pageNum = idx + 1;
-            return (
-              <button
-                key={pageNum}
-                onClick={() => setCurrentPage(pageNum)}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  currentPage === pageNum
-                    ? 'bg-gradient-to-r from-[#FF007A] via-[#C77DFF] to-[#A259FF] text-white shadow-lg'
-                    : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-                }`}
-              >
-                {pageNum}
-              </button>
-            );
-          })}
-
-          <button
-            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-            disabled={currentPage === totalPages}
-            className="px-3 py-2 rounded-md bg-gray-100 dark:bg-gray-800 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-          >
-            {language === 'vi' ? 'Trang sau' : 'Next'}
-          </button>
-        </div>
-      )}
-    </div>
-  );
-};
 
 // Main component
 const AdminDashboard: React.FC = () => {
@@ -499,12 +390,7 @@ const AdminDashboard: React.FC = () => {
           <div className="space-y-6">
             {/* Tab content */}
             {activeChallengeTab === 'challenges' && (
-              <ChallengeList
-                challenges={challenges}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-                language={language}
-              />
+              <ChallengeManagement onRefresh={() => fetchChallenges(true)} />
             )}
             {activeChallengeTab === 'create' && <CreateChallenge />}
             {activeChallengeTab === 'scraper' && (

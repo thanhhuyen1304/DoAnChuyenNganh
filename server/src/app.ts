@@ -32,6 +32,7 @@ import notificationRoutes from './routes/notification.routes';
 import commentRoutes from './routes/comment.routes';
 import adminCommentRoutes from './routes/adminComment.routes';
 import achievementRoutes from './routes/achievement.routes';
+import adminRoutes from './routes/admin.routes';
 
 // WebSocket Service
 import { WebSocketService } from './services/websocket.service';
@@ -111,6 +112,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/admin/comments', adminCommentRoutes);
 app.use('/api/achievements', achievementRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Catch-all redirect for legacy routes without /api prefix (helpful for debugging)
 app.get('/auth/:provider', (req: Request, res: Response) => {

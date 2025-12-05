@@ -1,14 +1,30 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useLanguage } from '@/components/contexts/LanguageContext';
-import { Search, Ban, Unlock, Shield, Trash2, Loader2 } from 'lucide-react';
-// import Header from '@/components/Header';
+import { 
+  Search, 
+  Ban, 
+  Unlock, 
+  Shield, 
+  Trash2, 
+  Loader2, 
+  Users as UsersIcon,
+  Filter,
+  X,
+  Grid3x3,
+  List,
+  Mail,
+  Calendar,
+  Award,
+  UserCheck,
+  UserX
+} from 'lucide-react';
 
-import { getApiBase } from '../../lib/apiBase'
+import { getApiBase } from '../../lib/apiBase';
 const API_BASE_URL = getApiBase();
 
 interface User {
@@ -22,6 +38,18 @@ interface User {
   loginMethod?: string;
   experience?: number;
   rank?: string;
+  lastLogin?: string;
+}
+
+interface Stats {
+  total: number;
+  active: number;
+  banned: number;
+  byRole?: {
+    admin?: number;
+    moderator?: number;
+    user?: number;
+  };
 }
 
 const UserManagement: React.FC = () => {
@@ -30,82 +58,61 @@ const UserManagement: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [search, setSearch] = useState('');
-  const [roleFilter, setRoleFilter] = useState('');
-  const [banFilter, setBanFilter] = useState('');
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [stats, setStats] = useState<any>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedRole, setSelectedRole] = useState<string>('all');
+  const [selectedStatus, setSelectedStatus] = useState<'all' | 'active' | 'banned'>('all');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [stats, setStats] = useState<Stats | null>(null);
 
-  // Fetch users when filters change (reset to page 1)
-  useEffect(() => {
-    setPage(1);
-  }, [roleFilter, banFilter, search]);
-
-  // Fetch users when page or filters change
-  useEffect(() => {
-    fetchUsers();
-    if (page === 1) {
-      fetchStats();
-    }
-  }, [page, roleFilter, banFilter, search]);
-
-  const fetchUsers = async () => {
+  // Fetch users
+  const fetchUsers = useCallback(async () => {
     try {
       setLoading(true);
       setError('');
       const token = localStorage.getItem('token');
       
       if (!token) {
-        setError(language === 'vi' ? 'Token không tồn tại' : 'No token found');
+        setError(language === 'vi' ? 'Không tìm thấy token xác thực' : 'No authentication token found');
+        setLoading(false);
         return;
       }
 
-      const params = new URLSearchParams({
-        page: page.toString(),
-        // Show 5 users per page
-        limit: '5',
-      });
-      if (search?.trim()) params.append('search', search.trim());
-      if (roleFilter) params.append('role', roleFilter);
-      if (banFilter) params.append('isBanned', banFilter);
-
-      console.log(`Fetching users with params: ${params.toString()}`);
-
-      const response = await fetch(`${API_BASE_URL}/admin/users?${params.toString()}`, {
+      const response = await fetch(`${API_BASE_URL}/admin/users?limit=100`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });
 
+      // Check if response is JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Server returned non-JSON response. Please check your API endpoint.');
+      }
+
       if (!response.ok) {
         const errorData = await response.json();
-        setError(errorData.message || `HTTP ${response.status}: Failed to fetch users`);
-        setUsers([]);
-        return;
+        throw new Error(errorData.message || `HTTP ${response.status}: Failed to fetch users`);
       }
 
       const data = await response.json();
       if (data.success) {
         setUsers(data.data.users || []);
-        setTotalPages(data.data.pagination?.pages || 1);
-        setError('');
       } else {
-        setError(data.message || 'Failed to load users');
-        setUsers([]);
+        throw new Error(data.message || 'Failed to load users');
       }
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Unknown error';
-      setError(`Connection error: ${errorMsg}`);
+      setError(`${language === 'vi' ? 'Lỗi kết nối' : 'Connection error'}: ${errorMsg}`);
       setUsers([]);
       console.error('Error fetching users:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [language]);
 
-  const fetchStats = async () => {
+  // Fetch stats
+  const fetchStats = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
@@ -117,20 +124,24 @@ const UserManagement: React.FC = () => {
         },
       });
 
-      if (!response.ok) {
-        console.error(`Failed to fetch stats: HTTP ${response.status}`);
-        return;
-      }
-
-      const data = await response.json();
-      if (data.success) {
-        setStats(data.data);
+      const contentType = response.headers.get('content-type');
+      if (response.ok && contentType && contentType.includes('application/json')) {
+        const data = await response.json();
+        if (data.success) {
+          setStats(data.data);
+        }
       }
     } catch (err) {
       console.error('Error fetching stats:', err);
     }
-  };
+  }, []);
 
+  useEffect(() => {
+    fetchUsers();
+    fetchStats();
+  }, [fetchUsers, fetchStats]);
+
+  // Update user role
   const updateUserRole = async (userId: string, newRole: string) => {
     try {
       const token = localStorage.getItem('token');
@@ -145,20 +156,22 @@ const UserManagement: React.FC = () => {
 
       const data = await response.json();
       if (data.success) {
-        setSuccess('Cập nhật role thành công');
+        setSuccess(language === 'vi' ? 'Cập nhật role thành công' : 'Role updated successfully');
         fetchUsers();
+        fetchStats();
         setTimeout(() => setSuccess(''), 3000);
       } else {
-        setError(data.message || 'Lỗi cập nhật role');
+        setError(data.message || (language === 'vi' ? 'Lỗi cập nhật role' : 'Failed to update role'));
       }
     } catch (err) {
-      setError('Lỗi kết nối server');
+      setError(language === 'vi' ? 'Lỗi kết nối server' : 'Server connection error');
     }
   };
 
+  // Toggle ban status
   const toggleBan = async (user: User) => {
     if (!confirm(language === 'vi' 
-      ? `Bạn có chắc muốn ${user.isBanned ? 'unban' : 'ban'} user này?`
+      ? `Bạn có chắc muốn ${user.isBanned ? 'mở khóa' : 'khóa'} người dùng này?`
       : `Are you sure you want to ${user.isBanned ? 'unban' : 'ban'} this user?`)) {
       return;
     }
@@ -179,21 +192,23 @@ const UserManagement: React.FC = () => {
 
       const data = await response.json();
       if (data.success) {
-        setSuccess(data.message);
+        setSuccess(data.message || (language === 'vi' ? 'Cập nhật thành công' : 'Updated successfully'));
         fetchUsers();
+        fetchStats();
         setTimeout(() => setSuccess(''), 3000);
       } else {
-        setError(data.message || 'Lỗi ban/unban user');
+        setError(data.message || (language === 'vi' ? 'Có lỗi xảy ra' : 'An error occurred'));
       }
     } catch (err) {
-      setError('Lỗi kết nối server');
+      setError(language === 'vi' ? 'Lỗi kết nối server' : 'Server connection error');
     }
   };
 
+  // Delete user
   const deleteUser = async (userId: string) => {
     if (!confirm(language === 'vi' 
-      ? 'Bạn có chắc muốn xóa user này?'
-      : 'Are you sure you want to delete this user?')) {
+      ? 'Bạn có chắc muốn xóa người dùng này? Hành động này không thể hoàn tác!'
+      : 'Are you sure you want to delete this user? This action cannot be undone!')) {
       return;
     }
 
@@ -208,80 +223,118 @@ const UserManagement: React.FC = () => {
 
       const data = await response.json();
       if (data.success) {
-        setSuccess('Xóa user thành công');
+        setSuccess(language === 'vi' ? 'Xóa người dùng thành công' : 'User deleted successfully');
         fetchUsers();
         fetchStats();
         setTimeout(() => setSuccess(''), 3000);
       } else {
-        setError(data.message || 'Lỗi xóa user');
+        setError(data.message || (language === 'vi' ? 'Lỗi xóa người dùng' : 'Failed to delete user'));
       }
     } catch (err) {
-      setError('Lỗi kết nối server');
+      setError(language === 'vi' ? 'Lỗi kết nối server' : 'Server connection error');
     }
   };
 
-  if (loading && users.length === 0) {
+  // Filter users
+  const filteredUsers = users.filter((user) => {
+    const matchesSearch = searchQuery === '' || 
+      user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesRole = selectedRole === 'all' || (user.role || 'user') === selectedRole;
+    
+    const matchesStatus = selectedStatus === 'all' || 
+      (selectedStatus === 'active' && !user.isBanned) ||
+      (selectedStatus === 'banned' && user.isBanned);
+    
+    return matchesSearch && matchesRole && matchesStatus;
+  });
+
+  // Clear filters
+  const clearFilters = () => {
+    setSearchQuery('');
+    setSelectedRole('all');
+    setSelectedStatus('all');
+  };
+
+  const hasActiveFilters = searchQuery !== '' || selectedRole !== 'all' || selectedStatus !== 'all';
+
+  // Get role color
+  const getRoleColor = (role?: string) => {
+    switch (role) {
+      case 'admin': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
+      case 'moderator': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400';
+      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400';
+    }
+  };
+
+  if (loading) {
     return (
-      <div className="flex items-center justify-center p-12">
-        <Loader2 className="w-8 h-8 animate-spin" />
+      <div className="min-h-[400px] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <>
-      <div className="min-h-screen flex items-center py-8 md:py-12 overflow-hidden relative bg-white/20 dark:bg-gray-800/20 backdrop-blur-sm">
-        {/* Background decorations */}
-        <div className="absolute top-20 right-0 w-60 h-60 bg-yellow-400/20 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-4 left-6 w-60 h-60 bg-primary-400/20 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute top-1/3 right-1/4 w-72 h-72 bg-blue-400/20 rounded-full blur-3xl animate-pulse"></div>
+    <div className="space-y-6">
+      {/* Alerts */}
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>❌ {error}</AlertDescription>
+        </Alert>
+      )}
 
-        <div className="container mx-auto px-4 relative z-20">
-          <div className="space-y-6">
-            {/* <div className="mb-6">
-              <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#FF007A] to-[#A259FF] mb-2 flex items-center gap-3">
-                <Shield size={24} className="text-primary-500" />
-                {language === 'vi' ? 'Quản lý người dùng' : 'User Management'}
-              </h2>
-            </div> */}
+      {success && (
+        <Alert>
+          <AlertDescription>✨ {success}</AlertDescription>
+        </Alert>
+      )}
 
-            {/* Stats */}
+      {/* Stats */}
       {stats && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-medium">
-                {language === 'vi' ? 'Tổng users' : 'Total Users'}
+          <Card className="bg-white/90 dark:bg-gray-900/80 border border-gray-200 dark:border-gray-800">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <UsersIcon className="w-4 h-4" />
+                {language === 'vi' ? 'Tổng người dùng' : 'Total Users'}
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.total}</div>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-medium">
-                {language === 'vi' ? 'Active' : 'Active'}
+          
+          <Card className="bg-white/90 dark:bg-gray-900/80 border border-gray-200 dark:border-gray-800">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <UserCheck className="w-4 h-4 text-green-600" />
+                {language === 'vi' ? 'Đang hoạt động' : 'Active'}
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600">{stats.active}</div>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-medium">
-                {language === 'vi' ? 'Banned' : 'Banned'}
+          
+          <Card className="bg-white/90 dark:bg-gray-900/80 border border-gray-200 dark:border-gray-800">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <UserX className="w-4 h-4 text-red-600" />
+                {language === 'vi' ? 'Bị khóa' : 'Banned'}
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-red-600">{stats.banned}</div>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-medium">
-                {language === 'vi' ? 'Admins' : 'Admins'}
+          
+          <Card className="bg-white/90 dark:bg-gray-900/80 border border-gray-200 dark:border-gray-800">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Shield className="w-4 h-4 text-blue-600" />
+                {language === 'vi' ? 'Quản trị viên' : 'Admins'}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -291,110 +344,220 @@ const UserManagement: React.FC = () => {
         </div>
       )}
 
-      {/* Filters */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-wrap gap-4">
-            <div className="flex-1 min-w-[200px]">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <Input
-                  placeholder={language === 'vi' ? 'Tìm kiếm...' : 'Search...'}
-                  value={search}
-                  onChange={(e) => {
-                    setSearch(e.target.value);
-                    setPage(1);
-                  }}
-                  className="pl-9"
-                />
+      {/* Search and Filter Bar */}
+      <div className="bg-white/90 dark:bg-gray-900/80 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 shadow-lg">
+        <div className="space-y-4">
+          {/* Search Bar */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Input
+              type="text"
+              placeholder={language === 'vi' ? 'Tìm kiếm theo tên hoặc email...' : 'Search by name or email...'}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 pr-10"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Filters */}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4 text-gray-500" />
+              <span className="text-sm text-gray-600 dark:text-gray-400">
+                {language === 'vi' ? 'Lọc:' : 'Filters:'}
+              </span>
+            </div>
+
+            {/* Role Filter */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500 dark:text-gray-400">
+                {language === 'vi' ? 'Vai trò:' : 'Role:'}
+              </span>
+              <div className="flex gap-1">
+                {['all', 'user', 'moderator', 'admin'].map((role) => (
+                  <Button
+                    key={role}
+                    variant={selectedRole === role ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setSelectedRole(role)}
+                    className="h-7 text-xs"
+                  >
+                    {role === 'all' 
+                      ? (language === 'vi' ? 'Tất cả' : 'All')
+                      : role.charAt(0).toUpperCase() + role.slice(1)}
+                  </Button>
+                ))}
               </div>
             </div>
-            <select
-              value={roleFilter}
-              onChange={(e) => {
-                setRoleFilter(e.target.value);
-                setPage(1);
-              }}
-              className="px-3 py-2 border rounded-md"
-            >
-              <option value="">{language === 'vi' ? 'Tất cả roles' : 'All Roles'}</option>
-              <option value="user">User</option>
-              <option value="moderator">Moderator</option>
-              <option value="admin">Admin</option>
-            </select>
-            <select
-              value={banFilter}
-              onChange={(e) => {
-                setBanFilter(e.target.value);
-                setPage(1);
-              }}
-              className="px-3 py-2 border rounded-md"
-            >
-              <option value="">{language === 'vi' ? 'Tất cả' : 'All'}</option>
-              <option value="false">{language === 'vi' ? 'Active' : 'Active'}</option>
-              <option value="true">{language === 'vi' ? 'Banned' : 'Banned'}</option>
-            </select>
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* Alerts */}
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-      {success && (
-        <Alert>
-          <AlertDescription>{success}</AlertDescription>
-        </Alert>
-      )}
-
-      {/* Users List */}
-      {users.length === 0 && !loading ? (
-        <Card>
-          <CardContent className="p-6 text-center">
-            <p className="text-gray-500 dark:text-gray-400">
-              {language === 'vi' ? 'Không tìm thấy user nào' : 'No users found'}
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-4">
-          {users.length > 0 && (
-            <div className="text-sm text-gray-500 dark:text-gray-400">
-              {language === 'vi' 
-                ? `Hiển thị ${users.length} user(s) - Trang ${page}/${totalPages}`
-                : `Showing ${users.length} user(s) - Page ${page}/${totalPages}`}
+            {/* Status Filter */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500 dark:text-gray-400">
+                {language === 'vi' ? 'Trạng thái:' : 'Status:'}
+              </span>
+              <div className="flex gap-1">
+                {['all', 'active', 'banned'].map((status) => (
+                  <Button
+                    key={status}
+                    variant={selectedStatus === status ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setSelectedStatus(status as 'all' | 'active' | 'banned')}
+                    className="h-7 text-xs"
+                  >
+                    {status === 'all' 
+                      ? (language === 'vi' ? 'Tất cả' : 'All')
+                      : status === 'active'
+                      ? (language === 'vi' ? 'Hoạt động' : 'Active')
+                      : (language === 'vi' ? 'Bị khóa' : 'Banned')}
+                  </Button>
+                ))}
+              </div>
             </div>
-          )}
-          {users.map((user) => (
-          <Card key={user._id}>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3">
-                    <h3 className="font-semibold">{user.username}</h3>
-                    <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
-                      {user.role || 'user'}
-                    </Badge>
-                    {user.isBanned && (
-                      <Badge variant="destructive">
-                        {language === 'vi' ? 'Banned' : 'Banned'}
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="text-sm text-gray-500">{user.email}</p>
-                  <div className="flex gap-2 mt-2">
-                    <Badge variant="outline">{user.loginMethod || 'local'}</Badge>
-                    {user.rank && <Badge variant="outline">{user.rank}</Badge>}
+
+            {/* View Mode Toggle */}
+            <div className="flex items-center gap-2 ml-auto">
+              <Button
+                variant={viewMode === 'grid' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('grid')}
+                className="h-7 w-7 p-0"
+              >
+                <Grid3x3 className="w-4 h-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'list' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('list')}
+                className="h-7 w-7 p-0"
+              >
+                <List className="w-4 h-4" />
+              </Button>
+            </div>
+
+            {/* Clear Filters */}
+            {hasActiveFilters && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearFilters}
+                className="h-7 text-xs"
+              >
+                <X className="w-3 h-3 mr-1" />
+                {language === 'vi' ? 'Xóa bộ lọc' : 'Clear filters'}
+              </Button>
+            )}
+          </div>
+
+          {/* Results count */}
+          <div className="text-sm text-gray-600 dark:text-gray-400">
+            {language === 'vi' 
+              ? `Hiển thị ${filteredUsers.length} / ${users.length} người dùng`
+              : `Showing ${filteredUsers.length} / ${users.length} users`}
+          </div>
+        </div>
+      </div>
+
+      {/* Users Display */}
+      {filteredUsers.length === 0 ? (
+        <div className="text-center py-12">
+          <div className="flex flex-col items-center gap-4 text-gray-500">
+            <UsersIcon className="w-12 h-12 text-primary-400" />
+            <p className="text-lg">
+              {language === 'vi'
+                ? 'Không tìm thấy người dùng nào phù hợp với bộ lọc.'
+                : 'No users found matching your filters.'}
+            </p>
+            {hasActiveFilters && (
+              <Button variant="outline" onClick={clearFilters}>
+                {language === 'vi' ? 'Xóa bộ lọc' : 'Clear filters'}
+              </Button>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className={
+          viewMode === 'grid'
+            ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'
+            : 'space-y-4'
+        }>
+          {filteredUsers.map((user) => (
+            <Card
+              key={user._id}
+              className={`bg-white/95 dark:bg-gray-900/80 border border-gray-200 dark:border-gray-800 transform transition-all duration-300 hover:shadow-xl ${
+                user.isBanned ? 'opacity-60 border-red-500/30' : ''
+              }`}
+            >
+              <CardHeader className="p-4 md:p-6">
+                <div className="flex justify-between items-start gap-3 mb-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <CardTitle className="text-lg md:text-xl line-clamp-1">
+                        {user.username}
+                      </CardTitle>
+                      {user.isBanned && (
+                        <Badge variant="destructive" className="flex items-center gap-1">
+                          <Ban className="w-3 h-3" />
+                          {language === 'vi' ? 'Bị khóa' : 'Banned'}
+                        </Badge>
+                      )}
+                    </div>
+                    <CardDescription className="text-sm line-clamp-1 flex items-center gap-1">
+                      <Mail className="w-3 h-3" />
+                      {user.email}
+                    </CardDescription>
                   </div>
                 </div>
-                <div className="flex gap-2">
+
+                {/* Tags and Info */}
+                <div className="flex flex-wrap gap-2 mt-3">
+                  <Badge className={getRoleColor(user.role)} variant="secondary">
+                    {(user.role || 'user').toUpperCase()}
+                  </Badge>
+                  <Badge variant="outline" className="text-xs">
+                    {user.loginMethod || 'local'}
+                  </Badge>
+                  {user.rank && (
+                    <Badge variant="outline" className="text-xs flex items-center gap-1">
+                      <Award className="w-3 h-3" />
+                      {user.rank}
+                    </Badge>
+                  )}
+                  {user.experience !== undefined && (
+                    <Badge variant="outline" className="text-xs">
+                      {user.experience} XP
+                    </Badge>
+                  )}
+                </div>
+
+                {/* Meta info */}
+                <div className="flex items-center gap-2 mt-3 text-xs text-gray-600 dark:text-gray-400">
+                  <Calendar className="w-3 h-3" />
+                  <span>
+                    {language === 'vi' ? 'Tạo: ' : 'Created: '}
+                    {new Date(user.createdAt).toLocaleDateString()}
+                  </span>
+                </div>
+
+                {user.banReason && (
+                  <div className="mt-2 p-2 bg-red-50 dark:bg-red-900/20 rounded text-xs text-red-600 dark:text-red-400">
+                    {language === 'vi' ? 'Lý do: ' : 'Reason: '}{user.banReason}
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="flex gap-2 mt-4">
                   <select
                     value={user.role || 'user'}
                     onChange={(e) => updateUserRole(user._id, e.target.value)}
-                    className="px-2 py-1 border rounded text-sm"
+                    className="flex-1 px-2 py-1 text-sm border rounded-md bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700"
                   >
                     <option value="user">User</option>
                     <option value="moderator">Moderator</option>
@@ -404,6 +567,7 @@ const UserManagement: React.FC = () => {
                     size="sm"
                     variant={user.isBanned ? 'default' : 'destructive'}
                     onClick={() => toggleBan(user)}
+                    title={user.isBanned ? (language === 'vi' ? 'Mở khóa' : 'Unban') : (language === 'vi' ? 'Khóa' : 'Ban')}
                   >
                     {user.isBanned ? <Unlock className="w-4 h-4" /> : <Ban className="w-4 h-4" />}
                   </Button>
@@ -411,45 +575,18 @@ const UserManagement: React.FC = () => {
                     size="sm"
                     variant="destructive"
                     onClick={() => deleteUser(user._id)}
+                    title={language === 'vi' ? 'Xóa' : 'Delete'}
                   >
                     <Trash2 className="w-4 h-4" />
                   </Button>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardHeader>
+            </Card>
           ))}
         </div>
       )}
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex justify-center gap-2">
-          <Button
-            variant="outline"
-            onClick={() => setPage(p => Math.max(1, p - 1))}
-            disabled={page === 1}
-          >
-            {language === 'vi' ? 'Trước' : 'Previous'}
-          </Button>
-          <span className="px-4 py-2">
-            {page} / {totalPages}
-          </span>
-          <Button
-            variant="outline"
-            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-            disabled={page === totalPages}
-          >
-            {language === 'vi' ? 'Sau' : 'Next'}
-          </Button>
-        </div>
-      )}
-          </div>
-        </div>
-      </div>
-    </>
+    </div>
   );
 };
 
 export default UserManagement;
-
