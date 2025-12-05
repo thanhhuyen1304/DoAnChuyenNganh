@@ -247,8 +247,8 @@ const NotificationBell: React.FC = () => {
         aria-label="Notifications"
       >
         <Bell size={20} />
-        {unreadCount > 0 && (
-          <span className="absolute top-0 right-0 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold animate-pulse">
+        {isOpen && unreadCount > 0 && (
+          <span className="absolute top-0 right-0 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
@@ -327,7 +327,7 @@ const NotificationBell: React.FC = () => {
                             </p>
                           </div>
                           {!notification.read && (
-                            <div className="w-2 h-2 bg-primary-500 rounded-full flex-shrink-0 mt-1 animate-pulse"></div>
+                            <div className="w-2 h-2 bg-primary-500 rounded-full flex-shrink-0 mt-1"></div>
                           )}
                         </div>
                       </div>

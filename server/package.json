@@ -18,7 +18,6 @@
     "test-email": "ts-node scripts/test-email.ts",
     "test-sms": "ts-node scripts/test-sms.ts",
     "seed-admin": "ts-node scripts/seed-admin-data.ts",
-    "seed-leaderboard": "ts-node scripts/seed-leaderboard-data.ts",
     "check-training-data": "ts-node scripts/check-training-data.ts",
     "check-chat-history": "ts-node scripts/check-chat-history.ts",
     "create-sample-chat-rating": "ts-node scripts/create-sample-chat-with-rating.ts",
@@ -27,7 +26,10 @@
     "extract-training-from-chat": "ts-node scripts/extract-training-from-chat.ts",
     "train-word2vec": "ts-node scripts/train-word2vec.ts",
     "test-chatbot-training": "ts-node scripts/test-chatbot-training.ts",
-    "sync-training-data": "ts-node scripts/sync-training-data.ts"
+    "sync-training-data": "ts-node scripts/sync-training-data.ts",
+    "kill-port-5000": "node scripts/kill-port-5000.js",
+    "kill-all-node": "node scripts/kill-all-node.js",
+    "kill-all-node-force": "node scripts/kill-all-node-force.js"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

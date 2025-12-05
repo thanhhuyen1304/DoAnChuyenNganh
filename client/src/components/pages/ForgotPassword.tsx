@@ -4,7 +4,7 @@ import { Card, CardContent } from '../ui/card';
 import { Bug, ArrowLeft } from 'lucide-react';
 
 // Sử dụng cùng ảnh nền như Login/Register
-const decoImg = new URL('../images/1.jpg', import.meta.url).href;
+const decoImg = '/logo.jpg';
 
 export default function ForgotPassword() {
   return (

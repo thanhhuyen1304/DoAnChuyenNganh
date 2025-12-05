@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Award, Star, Clock, Code, Edit2, Save, X, Trophy, Zap, Target } from 'lucide-react'
 import Header from '../Header'
+import { buildApi } from '@/lib/api'
 
 import { getApiBase } from '../../lib/apiBase'
 const API_BASE_URL = getApiBase()
@@ -10,6 +11,11 @@ interface ProgressData {
   total: number
   learningTimeMinutes: number
   rankingPercent: number
+}
+
+interface AchievementStats {
+  total: number
+  unlocked: number
 }
 
 const rankConfig: Record<string, { color: string; gradient: string; icon: string }> = {
@@ -34,6 +40,7 @@ const Profile: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState<string>('')
   const [avatarFileName, setAvatarFileName] = useState<string>('')
   const [phone, setPhone] = useState<string>('')
+  const [achievementStats, setAchievementStats] = useState<AchievementStats>({ total: 0, unlocked: 0 })
 
   useEffect(() => {
     const raw = localStorage.getItem('user')
@@ -73,9 +80,18 @@ const Profile: React.FC = () => {
         if (!res.ok) return
         const json = await res.json()
         if (json?.success && json.data?.user) {
-          setUser(json.data.user)
+          const updatedUser = json.data.user
+          setUser(updatedUser)
+          // Cập nhật tất cả các field từ server
+          setForm({
+            avatar: updatedUser.avatar || '',
+            favoriteLanguages: updatedUser.favoriteLanguages || []
+          })
+          setEmail(updatedUser.email || '')
+          setPhone(updatedUser.phone || '')
+          
           // update local storage so UI across app sees the change
-          localStorage.setItem('user', JSON.stringify(json.data.user))
+          localStorage.setItem('user', JSON.stringify(updatedUser))
         }
       } catch (e) {
         console.error('Error fetching current user', e)
@@ -137,6 +153,60 @@ const Profile: React.FC = () => {
     fetchProgress()
   }, [])
 
+  // Load achievement stats
+  useEffect(() => {
+    const loadAchievementStats = async () => {
+      try {
+        const token = localStorage.getItem('token')
+        if (!token) return
+
+        // Load submission stats
+        const response = await fetch(buildApi('/submissions/stats'), {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
+        const result = await response.json()
+
+        if (result.success) {
+          const stats = result.data
+          
+          // Load user info for experience
+          const userData = localStorage.getItem('user')
+          let userXP = 0
+          if (userData) {
+            const user = JSON.parse(userData)
+            userXP = user.experience || 0
+          }
+
+          const totalSubmissions = stats.total || 0
+          const acceptedSubmissions = stats.accepted || 0
+          const acceptanceRate = parseFloat(stats.acceptanceRate || '0')
+
+          // Calculate achievements (same logic as Achievements component)
+          const achievements = [
+            { unlocked: totalSubmissions >= 1 }, // first_submission
+            { unlocked: acceptedSubmissions >= 1 }, // first_accept
+            { unlocked: acceptedSubmissions >= 10 }, // 10_accepted
+            { unlocked: acceptedSubmissions >= 50 }, // 50_accepted
+            { unlocked: acceptedSubmissions >= 100 }, // 100_accepted
+            { unlocked: acceptanceRate >= 100 && acceptedSubmissions >= 5 }, // perfect_rate
+            { unlocked: userXP >= 100 }, // xp_100
+            { unlocked: userXP >= 500 }, // xp_500
+            { unlocked: userXP >= 1000 }, // xp_1000
+          ]
+
+          const unlockedCount = achievements.filter(a => a.unlocked).length
+          setAchievementStats({ total: achievements.length, unlocked: unlockedCount })
+        }
+      } catch (error) {
+        console.error('Error loading achievement stats:', error)
+      }
+    }
+
+    loadAchievementStats()
+  }, [])
+
   const getRankInfo = (rank: string) => rankConfig[rank] || rankConfig.Newbie
 
   const getXPForNextRank = (currentRank: string): number => {
@@ -192,21 +262,29 @@ const Profile: React.FC = () => {
       })
       const json = await res.json()
       if (json?.success) {
-        // Tạo object updated với dữ liệu mới từ server
+        // Lấy dữ liệu user đã cập nhật từ server response
+        const serverUser = json.data
+        
+        // Tạo object updated, ưu tiên dữ liệu từ form input vì đó là dữ liệu người dùng vừa nhập
         const updated = {
           ...user,
-          ...json.data,
-          favoriteLanguages: form.favoriteLanguages // Đảm bảo favoriteLanguages được cập nhật từ form
+          ...serverUser,
+          avatar: form.avatar || serverUser.avatar || user?.avatar,
+          favoriteLanguages: form.favoriteLanguages || serverUser.favoriteLanguages || [],
+          email: serverUser.email || email,
+          phone: serverUser.phone || phone  // Đảm bảo phone được lưu từ server response
         }
+        
+        console.log('Updated user data:', updated) // Debug log
         
         // Cập nhật state và localStorage
         setUser(updated)
-        setForm({ 
-          avatar: updated.avatar || '', 
-          favoriteLanguages: form.favoriteLanguages 
+        setForm({
+          avatar: updated.avatar || '',
+          favoriteLanguages: updated.favoriteLanguages || []
         })
         setEmail(updated.email || '')
-        setPhone(updated.phone || '')
+        setPhone(updated.phone || '')  // Cập nhật phone state từ updated object
         
         // Lưu vào localStorage và trigger event cho multi-tab sync
         localStorage.setItem('user', JSON.stringify(updated))
@@ -683,26 +761,66 @@ const Profile: React.FC = () => {
               )}
             </div>
 
-            {/* Badges */}
+            {/* Achievements/Badges */}
             <div className="bg-white/40 dark:bg-gray-900/40 backdrop-blur-md rounded-2xl p-6 shadow-lg border border-gray-100/20 dark:border-gray-700/50">
               <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
                 <Award size={20} />
-                Huy hiệu
+                Thành tựu
               </h2>
-              {user?.badges && user.badges.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {user.badges.map((badge: string, idx: number) => (
-                    <span
-                      key={idx}
-                      className="px-3 py-1.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 rounded-full text-sm font-medium"
-                    >
-                      🏅 {badge}
-                    </span>
-                  ))}
+              <div className="space-y-4">
+                {/* Achievement stats */}
+                <div className="flex items-center justify-between p-4 bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-lg">
+                      <Trophy size={20} className="text-white" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Đã đạt được</p>
+                      <p className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-600 to-orange-600 dark:from-yellow-400 dark:to-orange-400">
+                        {achievementStats.unlocked} / {achievementStats.total}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-3xl font-bold text-yellow-600 dark:text-yellow-400">
+                      {achievementStats.total > 0 ? Math.round((achievementStats.unlocked / achievementStats.total) * 100) : 0}%
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Hoàn thành</p>
+                  </div>
                 </div>
-              ) : (
-                <p className="text-sm text-gray-500 dark:text-gray-400">Chưa có huy hiệu nào</p>
-              )}
+
+                {/* Progress bar */}
+                <div>
+                  <div className="w-full bg-gray-200 dark:bg-gray-700 h-3 rounded-full overflow-hidden">
+                    <div
+                      className="h-3 bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 transition-all duration-500"
+                      style={{
+                        width: `${achievementStats.total > 0 ? (achievementStats.unlocked / achievementStats.total) * 100 : 0}%`
+                      }}
+                    ></div>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
+                    Tiếp tục làm bài để mở khóa thêm {achievementStats.total - achievementStats.unlocked} thành tựu!
+                  </p>
+                </div>
+
+                {/* Legacy badges if any */}
+                {user?.badges && user.badges.length > 0 && (
+                  <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Huy hiệu đặc biệt:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {user.badges.map((badge: string, idx: number) => (
+                        <span
+                          key={idx}
+                          className="px-3 py-1.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 rounded-full text-sm font-medium"
+                        >
+                          🏅 {badge}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>

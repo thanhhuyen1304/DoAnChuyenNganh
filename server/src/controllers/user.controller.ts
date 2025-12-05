@@ -218,9 +218,7 @@ export const getMyCompletedChallenges = async (req: Request, res: Response) => {
 
     return res.json({
       success: true,
-      data: {
-        challengeIds
-      }
+      completedChallenges: challengeIds
     })
   } catch (error: any) {
     console.error('Error getting completed challenges:', error)

@@ -1,20 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
-import { User, Trophy, Target, Clock, ArrowRight, Home as HomeIcon, List, Star, Code2 } from 'lucide-react';
+import { User, Trophy, Target, Clock, ArrowRight, Home as HomeIcon, List, Star, Code2, Award } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import ChallengeList from '@/components/challenges/ChallengeList';
+import { Achievements } from '@/components/practice/Achievements';
 import Header from '../Header';
 import { getApiBase } from '@/lib/apiBase';
 
 const Dashboard = () => {
   const [user, setUser] = useState<any>(null);
   const [isVisible, setIsVisible] = useState(false);
-  const [view, setView] = useState<'home' | 'library' | 'favorites'>('library');
+  const [view, setView] = useState<'home' | 'library' | 'achievements' | 'favorites'>('library');
   const [activityDays, setActivityDays] = useState<Record<string, { logins: number; submissions: number }>>({});
   const [currentDate, setCurrentDate] = useState(new Date());
   const [completedChallengeIds, setCompletedChallengeIds] = useState<string[]>([]);
-  const [progressData, setProgressData] = useState<any>(null);
   const { language } = useLanguage();
 
   // Function to get activity intensity (0-100)
@@ -127,13 +127,13 @@ const Dashboard = () => {
 
       // Listen to storage events for cross-component updates
       window.addEventListener('storage', handleFavoriteChange);
-      
-      // Also check periodically (fallback for same-window updates)
-      const interval = setInterval(handleFavoriteChange, 1000);
+
+      // Listen to custom event for same-window updates
+      window.addEventListener('favorites-changed', handleFavoriteChange);
 
       return () => {
         window.removeEventListener('storage', handleFavoriteChange);
-        clearInterval(interval);
+        window.removeEventListener('favorites-changed', handleFavoriteChange);
       };
     }, []);
 
@@ -150,8 +150,14 @@ const Dashboard = () => {
     }
 
     return (
-      <div className="p-6 bg-white/60 dark:bg-gray-900/70 rounded-2xl">
-        <ChallengeList favoriteIds={favIds} />
+      <div>
+        {favIds.length === 0 ? (
+          <div className="p-6 text-center">
+            {language === 'vi' ? 'Bạn chưa có bài yêu thích nào.' : 'You have no favorite challenges.'}
+          </div>
+        ) : (
+          <ChallengeList favoriteIds={favIds} />
+        )}
       </div>
     );
   };
@@ -185,52 +191,30 @@ const Dashboard = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Function to load progress data (includes completed challenges, learning time, etc.)
-  const loadProgressData = React.useCallback(async () => {
+  // Function to load completed challenges
+  const loadCompletedChallenges = React.useCallback(async () => {
     const token = localStorage.getItem('token');
     if (token) {
       try {
         const API_BASE = getApiBase();
-        
-        // Load progress stats
-        const progressResponse = await fetch(`${API_BASE}/users/me/progress`, {
+        const response = await fetch(`${API_BASE}/users/me/completed-challenges`, {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
         });
         
-        if (progressResponse.ok) {
-          const progressData = await progressResponse.json();
-          console.log('Progress data response:', progressData);
-          if (progressData.success) {
-            setProgressData(progressData.data);
-          }
-        }
-        
-        // Load completed challenge IDs
-        const completedResponse = await fetch(`${API_BASE}/users/me/completed-challenges`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-        
-        if (completedResponse.ok) {
-          const data = await completedResponse.json();
+        if (response.ok) {
+          const data = await response.json();
           console.log('Completed challenges response:', data);
-          if (data.success && data.data && Array.isArray(data.data.challengeIds)) {
-            setCompletedChallengeIds(data.data.challengeIds);
-            console.log('Loaded completed challenge IDs:', data.data.challengeIds);
-          } else {
-            console.warn('No completed challenges found or invalid response format');
-            setCompletedChallengeIds([]);
+          if (data.success && Array.isArray(data.completedChallenges)) {
+            setCompletedChallengeIds(data.completedChallenges);
+            console.log('Loaded completed challenge IDs:', data.completedChallenges);
           }
         } else {
-          console.error('Failed to load completed challenges:', completedResponse.status);
-          setCompletedChallengeIds([]);
+          console.error('Failed to load completed challenges:', response.status);
         }
       } catch (error) {
-        console.error('Error loading progress data:', error);
-        setCompletedChallengeIds([]);
+        console.error('Error loading completed challenges:', error);
       }
     }
   }, []);
@@ -241,8 +225,8 @@ const Dashboard = () => {
       setUser(JSON.parse(userData));
       setIsVisible(true);
 
-      // Load progress data on mount
-      loadProgressData();
+      // Load completed challenges on mount
+      loadCompletedChallenges();
 
       // Load existing activities
       const storedActivities = localStorage.getItem('activityDetails');
@@ -324,13 +308,13 @@ const Dashboard = () => {
     return () => {
       window.removeEventListener('challenge-submitted', handleSubmission);
     };
-  }, [loadProgressData]);
+  }, [loadCompletedChallenges]);
 
-  // Listen for challenge completion events to reload progress data
+  // Listen for challenge completion events to reload completed challenges
   useEffect(() => {
     const handleChallengeCompleted = () => {
-      console.log('Challenge completed event received, reloading progress data...');
-      loadProgressData();
+      console.log('Challenge completed event received, reloading completed challenges...');
+      loadCompletedChallenges();
     };
 
     // Listen to custom event for challenge completion
@@ -342,7 +326,7 @@ const Dashboard = () => {
       window.removeEventListener('challenge-completed', handleChallengeCompleted);
       window.removeEventListener('challenge-submitted', handleChallengeCompleted);
     };
-  }, [loadProgressData]);
+  }, [loadCompletedChallenges]);
 
   if (!user) {
     return <div className="min-h-screen bg-background flex items-center justify-center">Đang tải...</div>;
@@ -383,6 +367,18 @@ const Dashboard = () => {
                         className={`w-5 h-5 transition-all duration-200 ${view === 'library' ? 'scale-110 text-pink-400 dark:text-pink-200' : 'text-gray-500 dark:text-gray-400'}`}
                       />
                       {isVisible && <span className={`truncate ${view === 'library' ? 'text-pink-400 dark:text-pink-200 font-medium' : 'text-gray-600 dark:text-gray-300'}`}>{language === 'vi' ? 'Thư viện' : 'Library'}</span>}
+                    </button>
+
+                    <button
+                      onClick={() => setView('achievements')}
+                      className={`w-full flex items-center gap-3 p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 ${
+                        view === 'achievements' ? 'bg-primary-50 dark:bg-primary-900/30' : ''
+                      }`}
+                    >
+                      <Award
+                        className={`w-5 h-5 transition-all duration-200 ${view === 'achievements' ? 'scale-110 text-yellow-400 dark:text-yellow-200' : 'text-gray-500 dark:text-gray-400'}`}
+                      />
+                      {isVisible && <span className={`truncate ${view === 'achievements' ? 'text-yellow-400 dark:text-yellow-200 font-medium' : 'text-gray-600 dark:text-gray-300'}`}>{language === 'vi' ? 'Thành tựu' : 'Achievements'}</span>}
                     </button>
 
                     <button
@@ -540,7 +536,7 @@ const Dashboard = () => {
 
                 {/* Stats cards grid */}
                 <div className="mb-8 w-full">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-14 pr-20">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8 pr-0 lg:pr-80">
                     {/* Experience Card */}
                     <Card className="!bg-white dark:!bg-gray-900 border border-gray-100/20 dark:border-gray-700/50 hover:shadow-[0_0_25px_rgba(162,89,255,0.15)] transition-all duration-300 hover:scale-[1.02]">
                       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -565,10 +561,12 @@ const Dashboard = () => {
                       </CardHeader>
                       <CardContent>
                         <div className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#FF007A] to-[#A259FF]">
-                          {progressData?.completed || 0}
+                          {completedChallengeIds.length}
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          {progressData?.total ? `${language === 'vi' ? 'Trên tổng' : 'Out of'} ${progressData.total}` : (language === 'vi' ? 'Chưa có bài tập nào' : 'No challenges yet')}
+                          {completedChallengeIds.length === 0
+                            ? (language === 'vi' ? 'Chưa có bài tập nào' : 'No challenges yet')
+                            : (language === 'vi' ? 'Bài tập đã hoàn thành' : 'Challenges completed')}
                         </p>
                       </CardContent>
                     </Card>
@@ -596,9 +594,7 @@ const Dashboard = () => {
                         <Clock className="h-4 w-4 text-blue-500" />
                       </CardHeader>
                       <CardContent>
-                        <div className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#FF007A] to-[#A259FF]">
-                          {progressData?.learningTimeMinutes ? `${Math.floor(progressData.learningTimeMinutes / 60)}h ${progressData.learningTimeMinutes % 60}m` : '0h'}
-                        </div>
+                        <div className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#FF007A] to-[#A259FF]">0h</div>
                         <p className="text-xs text-muted-foreground">
                           {language === 'vi' ? 'Tổng thời gian luyện tập' : 'Total practice time'}
                         </p>
@@ -613,24 +609,29 @@ const Dashboard = () => {
                   </div>
                 )}
                 {view === 'library' && (
-                  <div className="w-full">
+                  <div className="w-full pr-0 lg:pr-80">
                     <h2 className="text-xl font-bold mb-4">{language === 'vi' ? 'Bài tập đã hoàn thành' : 'Completed Challenges'}</h2>
-                    <div className="w-full pr-20">
-                      <div className="p-6 bg-white/60 dark:bg-gray-900/70 rounded-2xl">
-                        {completedChallengeIds.length === 0 ? (
-                          <div className="text-center">
-                            {language === 'vi' ? 'Bạn chưa hoàn thành bài tập nào.' : 'You have not completed any challenges yet.'}
-                          </div>
-                        ) : (
-                          <ChallengeList favoriteIds={completedChallengeIds} />
-                        )}
-                      </div>
+                    <div className="w-full">
+                      {completedChallengeIds.length === 0 ? (
+                        <div className="p-6 bg-white/60 dark:bg-gray-900/70 rounded-2xl text-center">
+                          {language === 'vi' ? 'Bạn chưa hoàn thành bài tập nào.' : 'You have not completed any challenges yet.'}
+                        </div>
+                      ) : (
+                        <ChallengeList completedIds={completedChallengeIds} />
+                      )}
                     </div>
                   </div>
                 )}
 
+                {view === 'achievements' && (
+                  <div className="pr-0 lg:pr-80">
+                    <h2 className="text-xl font-bold mb-4">{language === 'vi' ? 'Thành tựu' : 'Achievements'}</h2>
+                    <Achievements />
+                  </div>
+                )}
+
                 {view === 'favorites' && (
-                  <div>
+                  <div className="pr-0 lg:pr-80">
                     <h2 className="text-xl font-bold mb-4">{language === 'vi' ? 'Bài yêu thích' : 'My Favorites'}</h2>
                     <FavoritesView />
                   </div>

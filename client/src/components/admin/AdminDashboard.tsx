@@ -87,17 +87,9 @@ const OTHER_TABS = [
   // Admin Management Features
   { id: 'users', icon: Users, label: { vi: 'Quản lý người dùng', en: 'User Management' }, color: 'text-blue-500' },
   { id: 'reports', icon: Flag, label: { vi: 'Báo cáo vi phạm', en: 'Reports' }, color: 'text-red-500' },
-  { id: 'feedback', icon: MessageSquare, label: { vi: 'Phản hồi', en: 'Feedback' }, color: 'text-emerald-500' },
   { id: 'achievements', icon: Award, label: { vi: 'Thành tích', en: 'Achievements' }, color: 'text-amber-500' },
-  { id: 'training-data', icon: Brain, label: { vi: 'Training Data AI', en: 'Training Data AI' }, color: 'text-purple-500' },
-  { id: 'knowledge-graph', icon: Network, label: { vi: 'Knowledge Graph', en: 'Knowledge Graph' }, color: 'text-indigo-500' },
-  { id: 'settings', icon: Settings, label: { vi: 'Cài đặt hệ thống', en: 'System Settings' }, color: 'text-gray-500' },
-  
-  // Development Tools
-  // { id: 'debug', icon: KeyRound, label: { vi: 'Debug Token', en: 'Debug' }, color: 'text-amber-500' },
-  // { id: 'database', icon: Database, label: { vi: 'Database', en: 'Database' }, color: 'text-blue-500' },
-  // { id: 'api', icon: Webhook, label: { vi: 'API Test', en: 'API Test' }, color: 'text-purple-500' },
-  // { id: 'guide', icon: FileQuestion, label: { vi: 'Hướng dẫn', en: 'Guide' }, color: 'text-green-500' },
+  // { id: 'training-data', icon: Brain, label: { vi: 'Training Data AI', en: 'Training Data AI' }, color: 'text-purple-500' },
+  // { id: 'knowledge-graph', icon: Network, label: { vi: 'Knowledge Graph', en: 'Knowledge Graph' }, color: 'text-indigo-500' },
   { id: 'stats', icon: BarChart, label: { vi: 'Thống kê', en: 'Stats' }, color: 'text-orange-500' }
 ];
 
@@ -342,7 +334,7 @@ const AdminDashboard: React.FC = () => {
       {/* Background effects */}
       <div
         className="fixed inset-0 z-0 bg-cover bg-center opacity-40 dark:opacity-30 filter blur-sm"
-        style={{ backgroundImage: `url(${new URL('../images/1.jpg', import.meta.url).href})` }}
+        style={{ backgroundImage: `url('/logo.jpg')` }}
       />
       <div className="absolute inset-0 pointer-events-none bg-white/20 dark:bg-black/30 z-10" />
       <div className="absolute top-20 right-0 w-60 h-60 bg-yellow-400/5 rounded-full blur-3xl"></div>
@@ -523,17 +515,12 @@ const AdminDashboard: React.FC = () => {
                 <ReportManagement />
               </div>
             )}
-            {activeOtherTab === 'feedback' && (
-              <div className="space-y-6">
-                <FeedbackManagement />
-              </div>
-            )}
             {activeOtherTab === 'achievements' && (
               <div className="space-y-6">
                 <AchievementManagement />
               </div>
             )}
-            {activeOtherTab === 'training-data' && (
+            {/* {activeOtherTab === 'training-data' && (
               <div className="space-y-6">
                 <ErrorBoundary fallback={
                   <Card className="bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800">
@@ -568,12 +555,7 @@ const AdminDashboard: React.FC = () => {
                   <KnowledgeGraphCanvas />
                 </ErrorBoundary>
               </div>
-            )}
-            {activeOtherTab === 'settings' && (
-              <div className="space-y-6">
-                <SystemSettings />
-              </div>
-            )}
+            )} */}
 
             {/* Development Tools */}
             {activeOtherTab === 'debug' && <TokenDebugger />}

@@ -23,6 +23,7 @@ import Practice from "./components/pages/Practice";
 import AchievementsPage from "./components/pages/AchievementsPage";
 import Challenges from "./components/pages/Challenges";
 import { PvPPage as SimplePvPPage } from "./components/simplePvp/PvPPage";
+import AllChallengesPage from "./components/pages/AllChallengesPage";
 import { ToastProvider } from './components/ui/toast';
 import ChatBox from './components/ChatBox';
 import { BackgroundProvider } from './components/contexts/BackgroundContext';
@@ -54,6 +55,7 @@ const App = () => {
                     <Route path="/settings" element={<Settings />} />
                     <Route path="/practice" element={<Practice />} />
                     <Route path="/challenges" element={<Challenges />} />
+                    <Route path="/challenges/allchallengeslist" element={<AllChallengesPage />} />
                     <Route path="/pvp" element={<SimplePvPPage />} />
                     <Route path="/achievements" element={<AchievementsPage />} />
                     <Route path="/admin/dashboard" element={<AdminDashboard />} />

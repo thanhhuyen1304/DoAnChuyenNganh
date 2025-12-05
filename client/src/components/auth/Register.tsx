@@ -8,7 +8,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { Bug, Lock, Mail, User, Eye, EyeOff, ArrowLeft, Github } from 'lucide-react';
 import { useTheme } from 'next-themes';
 
-const decoImg = new URL('../images/1.jpg', import.meta.url).href;
+const decoImg = '/logo.jpg';
 
 import { getApiBase } from '../../lib/apiBase';
 const API_BASE_URL = getApiBase();

@@ -12,7 +12,7 @@ import { getApiBase } from '../../lib/apiBase';
 // import { Github } from 'lucide-react';
 
 // Sử dụng cùng ảnh nền như Register
-const decoImg = new URL('../images/1.jpg', import.meta.url).href;
+const decoImg = '/logo.jpg';
 
 // API Base URL
 const API_BASE_URL = getApiBase();
