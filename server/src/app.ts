@@ -28,6 +28,8 @@ import trainingDataRoutes from './routes/trainingData.routes';
 import knowledgeGraphRoutes from './routes/knowledgeGraph.routes';
 import chatRoutes from './routes/chat.routes';
 import notificationRoutes from './routes/notification.routes';
+import commentRoutes from './routes/comment.routes';
+import adminCommentRoutes from './routes/adminComment.routes';
 
 // WebSocket Service
 import { WebSocketService } from './services/websocket.service';
@@ -99,6 +101,8 @@ app.use('/api/training-data', trainingDataRoutes);
 app.use('/api/knowledge-graph', knowledgeGraphRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/comments', commentRoutes);
+app.use('/api/admin/comments', adminCommentRoutes);
 
 // Catch-all redirect for legacy routes without /api prefix (helpful for debugging)
 app.get('/auth/:provider', (req: Request, res: Response) => {

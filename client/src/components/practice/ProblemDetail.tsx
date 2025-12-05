@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { buildApi } from "@/lib/api"
 import { Skeleton } from "@/components/ui/skeleton"
+import { CommentSection } from "./CommentSection"
 // Date formatting helper - không dùng date-fns để tránh dependency
 const formatDate = (date: Date | string | null | undefined) => {
   if (!date) return 'Không xác định'
@@ -517,9 +518,7 @@ export function ProblemDetail({ problemId, onSubmissionSuccess }: ProblemDetailP
           )}
 
           {activeTab === "editorial" && (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">Nội dung bình luận sẽ có sau</p>
-            </div>
+            <CommentSection challengeId={problemId} />
           )}
 
           {activeTab === "solutions" && (
