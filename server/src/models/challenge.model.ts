@@ -9,10 +9,9 @@ export interface ITestCase {
 
 export interface ISolution {
   title: string;
-  content: string;
-  language: string;
   code: string;
   explanation: string;
+  language: string;
   tokenCost: number;
   order: number;
 }
@@ -32,8 +31,8 @@ export interface IChallenge extends Document {
   correctCode?: string;
   testCases: ITestCase[];
   solutions: ISolution[];
-  tokenReward: number;
   points: number;
+  tokenReward: number;
   timeLimit: number; // in seconds
   memoryLimit: number; // in MB
   isActive: boolean;
@@ -65,16 +64,6 @@ const solutionSchema = new Schema<ISolution>({
   title: {
     type: String,
     required: true,
-    trim: true,
-  },
-  content: {
-    type: String,
-    required: true,
-  },
-  language: {
-    type: String,
-    required: true,
-    enum: ['Python', 'JavaScript', 'Java', 'C++', 'C#', 'C'],
   },
   code: {
     type: String,
@@ -84,12 +73,14 @@ const solutionSchema = new Schema<ISolution>({
     type: String,
     required: true,
   },
+  language: {
+    type: String,
+    required: true,
+  },
   tokenCost: {
     type: Number,
     required: true,
-    min: [1, 'Chi phí token phải từ 1-5'],
-    max: [5, 'Chi phí token phải từ 1-5'],
-    default: 1,
+    default: 10,
   },
   order: {
     type: Number,
@@ -162,19 +153,16 @@ const challengeSchema = new Schema<IChallenge>(
       type: [solutionSchema],
       default: [],
     },
-    tokenReward: {
-      type: Number,
-      default: function(this: IChallenge) {
-        return this.difficulty === 'Hard' ? 2 : 1;
-      },
-      min: [1, 'Token thưởng phải từ 1-3'],
-      max: [3, 'Token thưởng phải từ 1-3'],
-    },
     points: {
       type: Number,
       required: [true, 'Điểm số là bắt buộc'],
       min: [1, 'Điểm số phải lớn hơn 0'],
       max: [1000, 'Điểm số không được vượt quá 1000'],
+    },
+    tokenReward: {
+      type: Number,
+      default: 1,
+      min: [0, 'Token reward không được âm'],
     },
     timeLimit: {
       type: Number,

@@ -13,7 +13,7 @@ interface BackgroundContextType {
 
 export const defaultBackground = {
   id: 'default',
-  url: new URL('../images/1.jpg', import.meta.url).href,
+  url: '/logo.jpg',
   label: 'Mặc định'
 }
 

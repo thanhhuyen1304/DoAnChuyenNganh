@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Code, Bug, Play, ArrowRight, CheckCircle, Trophy } from 'lucide-react'
 import { useLanguage } from './contexts/LanguageContext'
 import { CombinedLeaderboardModal } from './CombinedLeaderboardModal'
@@ -63,10 +64,13 @@ const Hero: React.FC = () => {
             </p>
 
             <div className="flex flex-wrap gap-4 mb-8">
-              <button className="px-8 py-4 bg-gradient-to-r from-[#FF007A] via-[#C77DFF] to-[#A259FF] hover:from-primary-700 hover:to-primary-600 text-white font-medium rounded-xl flex items-center shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 group">
+              <Link
+                to="/challenges/allchallengeslist"
+                className="px-8 py-4 bg-gradient-to-r from-[#FF007A] via-[#C77DFF] to-[#A259FF] hover:from-primary-700 hover:to-primary-600 text-white font-medium rounded-xl flex items-center shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 group"
+              >
                 <Play size={18} className="mr-2 group-hover:animate-pulse" />
-                <span>{t('hero.cta')}</span>
-              </button>
+                <span>Bắt đầu ngay</span>
+              </Link>
               <button
                 onClick={() => setShowLeaderboard(true)}
                 className="px-8 py-4 border-2 border-gray-300 dark:border-gray-600 hover:border-primary-600 dark:hover:border-primary-400 text-gray-700 dark:text-gray-200 font-medium rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-300 group flex items-center gap-2"

@@ -102,14 +102,14 @@ const Practice = () => {
   return (
     <>
       <Header />
-      <section className="relative min-h-screen bg-slate-50 dark:bg-[#05060a] pt-24 pb-12 overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute -top-10 -right-10 w-64 h-64 bg-primary-500/10 rounded-full blur-3xl" />
-          <div className="absolute bottom-0 left-[-5%] w-80 h-80 bg-fuchsia-500/10 rounded-full blur-3xl" />
-        </div>
+      <section className="relative min-h-screen pt-24 pb-12 overflow-hidden">
+        {/* Background overlays - giống Hero */}
+        <div className="absolute inset-0 pointer-events-none bg-white/30 dark:bg-black/30 z-10" />
+        <div className="absolute top-20 right-0 w-60 h-60 bg-yellow-400/5 rounded-full blur-3xl" />
+        <div className="absolute bottom-4 left-6 w-60 h-60 bg-primary-400/5 rounded-full blur-3xl" />
 
-        <div className="container mx-auto px-4 relative z-10 space-y-8">
-          <div className="bg-gradient-to-r from-[#FF007A] via-[#C77DFF] to-[#A259FF] rounded-3xl text-white p-6 md:p-8 shadow-[0_10px_40px_rgba(162,89,255,0.35)]">
+        <div className="container mx-auto px-4 relative z-20 space-y-8 flex flex-col min-h-0">
+          <div className="bg-gradient-to-r from-[#FF007A] via-[#C77DFF] to-[#A259FF] rounded-3xl text-white p-6 md:p-8 shadow-[0_10px_40px_rgba(162,89,255,0.35)] flex-shrink-0">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div>
                 <p className="text-sm uppercase tracking-widest text-white/80 mb-2">
@@ -165,14 +165,16 @@ const Practice = () => {
             )}
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-6 items-start">
-            <ProblemsList
-              selectedId={selectedProblemId}
-              onSelect={handleProblemSelect}
-              refreshKey={refreshKey}
-            />
+          <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-6 flex-1 min-h-0 items-start">
+            <div className="lg:sticky lg:top-6 lg:h-[calc(100vh-12rem)] flex flex-col">
+              <ProblemsList
+                selectedId={selectedProblemId}
+                onSelect={handleProblemSelect}
+                refreshKey={refreshKey}
+              />
+            </div>
 
-            <div className="space-y-6">
+            <div className="space-y-6 min-h-0">
               {selectedProblemId ? (
                 <>
                   <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/95 dark:bg-gray-900/80 shadow-xl overflow-hidden">

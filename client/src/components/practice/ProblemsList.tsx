@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Search } from "lucide-react"
+import { useState, useEffect, useRef } from "react"
+import { Search, Loader2 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { buildApi } from "@/lib/api"
@@ -42,6 +42,9 @@ export function ProblemsList({ selectedId, onSelect, refreshKey }: ProblemsListP
   const [problems, setProblems] = useState<Problem[]>([])
   const [loading, setLoading] = useState(true)
   const [solvedIds, setSolvedIds] = useState<Set<string>>(new Set())
+  const [displayCount, setDisplayCount] = useState(10)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     loadProblems()
@@ -54,6 +57,14 @@ export function ProblemsList({ selectedId, onSelect, refreshKey }: ProblemsListP
       loadSolvedProblems()
     }
   }, [refreshKey])
+
+  // Reset display count when filter or search changes
+  useEffect(() => {
+    setDisplayCount(10)
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = 0
+    }
+  }, [filter, search])
 
   const loadProblems = async () => {
     try {
@@ -133,10 +144,33 @@ export function ProblemsList({ selectedId, onSelect, refreshKey }: ProblemsListP
     return matchesSearch && matchesFilter
   })
 
+  const displayedProblems = filtered.slice(0, displayCount)
+  const hasMore = displayCount < filtered.length
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const target = e.currentTarget
+    const scrollTop = target.scrollTop
+    const scrollHeight = target.scrollHeight
+    const clientHeight = target.clientHeight
+
+    // Check if user has scrolled near bottom (within 100px)
+    const isNearBottom = scrollHeight - scrollTop - clientHeight < 100
+
+    if (isNearBottom && !isLoadingMore && hasMore) {
+      setIsLoadingMore(true)
+      
+      // Simulate loading delay for smooth UX
+      setTimeout(() => {
+        setDisplayCount(prev => Math.min(prev + 10, filtered.length))
+        setIsLoadingMore(false)
+      }, 300)
+    }
+  }
+
   if (loading) {
     return (
-      <div className="w-72 bg-sidebar border-r border-sidebar-border flex flex-col">
-        <div className="p-4 border-b border-sidebar-border space-y-3">
+      <div className="w-full h-full bg-white/95 dark:bg-gray-900/80 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-xl flex flex-col">
+        <div className="p-4 border-b border-gray-200 dark:border-gray-800 space-y-3 flex-shrink-0">
           <Skeleton className="h-9 w-full" />
           <div className="flex gap-2">
             <Skeleton className="h-8 w-16" />
@@ -144,7 +178,7 @@ export function ProblemsList({ selectedId, onSelect, refreshKey }: ProblemsListP
             <Skeleton className="h-8 w-16" />
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto space-y-2 p-4">
+        <div className="flex-1 overflow-y-auto space-y-2 p-4 min-h-0">
           {[1, 2, 3, 4, 5].map((i) => (
             <Skeleton key={i} className="h-16 w-full" />
           ))}
@@ -154,8 +188,8 @@ export function ProblemsList({ selectedId, onSelect, refreshKey }: ProblemsListP
   }
 
   return (
-    <div className="w-72 bg-sidebar border-r border-sidebar-border flex flex-col">
-      <div className="p-4 border-b border-sidebar-border space-y-3">
+    <div className="w-full h-full bg-white/95 dark:bg-gray-900/80 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-xl flex flex-col max-h-full">
+      <div className="p-4 border-b border-gray-200 dark:border-gray-800 space-y-3 flex-shrink-0 bg-white/95 dark:bg-gray-900/80 z-10">
         <div className="relative">
           <Search className="absolute left-2 top-2.5 w-4 h-4 text-muted-foreground" />
           <Input
@@ -181,7 +215,12 @@ export function ProblemsList({ selectedId, onSelect, refreshKey }: ProblemsListP
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <div
+        ref={scrollContainerRef}
+        className="flex-1 overflow-y-auto overflow-x-hidden min-h-0 scroll-smooth"
+        onScroll={handleScroll}
+        style={{ maxHeight: 'calc(100vh - 20rem)' }}
+      >
         {filtered.length === 0 ? (
           <div className="p-4 text-center space-y-2">
             <div className="text-muted-foreground text-sm">
@@ -200,46 +239,78 @@ export function ProblemsList({ selectedId, onSelect, refreshKey }: ProblemsListP
             )}
           </div>
         ) : (
-          filtered.map((problem) => {
-            const isSolved = solvedIds.has(problem._id)
-            return (
-              <button
-                key={problem._id}
-                onClick={() => onSelect(problem._id)}
-                className={`w-full px-4 py-3 text-left border-b border-sidebar-border transition-colors ${
-                  selectedId === problem._id
-                    ? "bg-sidebar-accent/20 border-l-2 border-l-primary"
-                    : "hover:bg-sidebar-accent/10"
-                }`}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      {isSolved && (
-                        <div className="w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center">
-                          <span className="text-green-400 text-xs">✓</span>
-                        </div>
-                      )}
-                      <span className={`text-xs font-medium ${getDifficultyColor(problem.difficulty)}`}>
-                        {problem.difficulty}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {problem.points} XP
-                      </span>
-                    </div>
-                    <p className="text-sm font-medium truncate text-sidebar-foreground">
-                      {problem.title}
-                    </p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-xs text-muted-foreground">{problem.language}</span>
-                      <span className="text-xs text-muted-foreground">•</span>
-                      <span className="text-xs text-muted-foreground">{problem.category}</span>
+          <>
+            {displayedProblems.map((problem) => {
+              const isSolved = solvedIds.has(problem._id)
+              return (
+                <button
+                  key={problem._id}
+                  onClick={() => onSelect(problem._id)}
+                  className={`w-full px-4 py-3 text-left border-b border-gray-200 dark:border-gray-800 transition-colors ${
+                    selectedId === problem._id
+                      ? "bg-primary/10 dark:bg-primary/20 border-l-4 border-l-primary"
+                      : "hover:bg-gray-100/50 dark:hover:bg-gray-800/50"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        {isSolved && (
+                          <div className="w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center">
+                            <span className="text-green-400 text-xs">✓</span>
+                          </div>
+                        )}
+                        <span className={`text-xs font-medium ${getDifficultyColor(problem.difficulty)}`}>
+                          {problem.difficulty}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {problem.points} XP
+                        </span>
+                      </div>
+                      <p className="text-sm font-medium truncate text-sidebar-foreground">
+                        {problem.title}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs text-muted-foreground">{problem.language}</span>
+                        <span className="text-xs text-muted-foreground">•</span>
+                        <span className="text-xs text-muted-foreground">{problem.category}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </button>
-            )
-          })
+                </button>
+              )
+            })}
+
+            {/* Load more indicator */}
+            {hasMore && (
+              <div className="p-4 text-center border-b border-gray-200 dark:border-gray-800">
+                {isLoadingMore ? (
+                  <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span className="text-xs">Đang tải thêm...</span>
+                  </div>
+                ) : (
+                  <div className="text-xs text-muted-foreground">
+                    <p className="font-medium">
+                      Đang hiển thị {displayCount} / {filtered.length} bài tập
+                    </p>
+                    <p className="mt-1 opacity-70">
+                      Cuộn xuống để xem thêm
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* End of list indicator */}
+            {!hasMore && filtered.length > 10 && (
+              <div className="p-4 text-center">
+                <p className="text-xs text-muted-foreground font-medium">
+                  ✓ Đã hiển thị tất cả {filtered.length} bài tập
+                </p>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

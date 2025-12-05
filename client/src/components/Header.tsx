@@ -117,7 +117,7 @@ const Header: React.FC<HeaderProps> = () => {
             {t("nav.home")}
           </Link>
           <Link
-            to="/challenges"
+            to="/challenges/allchallengeslist"
             className="text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200 font-medium relative after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary-500 after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:duration-300"
           >
             {t("nav.challenges")}
@@ -131,12 +131,19 @@ const Header: React.FC<HeaderProps> = () => {
               {t("nav.pvp")}
             </div>
           </Link>
-          <button
+          {/* <button
             onClick={() => setShowLeaderboard(true)}
             className="text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200 font-medium relative after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary-500 after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:duration-300 flex items-center gap-2"
           >
             <Trophy className="w-4 h-4" />
             {t("nav.leaderboard")}
+          </button> */}
+          <button
+            onClick={() => setShowLeaderboard(true)}
+            className="text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-400 transition-colors duration-200 font-medium relative after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary-500 after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:duration-300 flex items-center gap-2"
+          >
+            <Trophy className="w-4 h-4" />
+            Xếp hạng
           </button>
         </nav>
 
@@ -299,7 +306,7 @@ const Header: React.FC<HeaderProps> = () => {
               {t("nav.courses")}
             </Link>
             <Link
-              to="/challenges"
+              to="/challenges/allchallengeslist"
               className="text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-400 font-medium py-2 border-b border-gray-100 dark:border-gray-800"
             >
               {t("nav.challenges")}
