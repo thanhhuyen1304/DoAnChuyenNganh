@@ -231,9 +231,12 @@ class Judge0Service {
           const inputVal = inputs[0];
           
           // Detect type: số, string, hoặc array
-          if (/^\d+$/.test(inputVal)) {
-            // Integer
+          if (/^-?\d+$/.test(inputVal)) {
+            // Integer (including negative numbers)
             wrapper += `    arg = int(input().strip())\n`;
+          } else if (/^-?\d+\.\d+$/.test(inputVal)) {
+            // Float (including negative numbers)
+            wrapper += `    arg = float(input().strip())\n`;
           } else if (/^\[.*\]$/.test(inputVal)) {
             // Array/List
             wrapper += `    arg = eval(input().strip())\n`;

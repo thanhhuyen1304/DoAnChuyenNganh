@@ -32,6 +32,12 @@ services:
       # Disable cgroup trên Windows để tránh lỗi
       - ENABLE_CGROUP=false
       - CGROUP_DISABLED=1
+      # Additional settings to bypass cgroup completely
+      - USE_CGROUP=0
+      - CGROUP_V2=0
+      # Increase timeout for slower systems
+      - MAX_CPU_TIME_LIMIT=15
+      - MAX_WALL_TIME_LIMIT=30
     depends_on:
       - redis
       - postgres
@@ -40,16 +46,17 @@ services:
     restart: unless-stopped
     # Privileged mode để có quyền tạo file và thư mục
     privileged: true
+    # Thêm security options để bypass cgroup
+    security_opt:
+      - apparmor=unconfined
+      - seccomp=unconfined
     # Tạo tmpfs cho /tmp
     tmpfs:
-      - /tmp
+      - /tmp:rw,noexec,nosuid,size=512m
     # Mount cgroup từ host (nếu có) hoặc tạo tmpfs
     # Trên Windows, cgroup có thể không có, nên dùng tmpfs
     volumes:
       - judge0-box:/box
-      # Thử mount cgroup từ host nếu có (Linux)
-      # Trên Windows Docker Desktop, có thể không có /sys/fs/cgroup
-      # - /sys/fs/cgroup:/sys/fs/cgroup:ro
 
   # PostgreSQL - Judge0 cần database
   postgres:
