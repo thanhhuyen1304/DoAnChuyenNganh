@@ -76,14 +76,40 @@ export const BackgroundProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
     const [background, setBackgroundState] = useState<Background>(getStoredBackground())
     const [isLoading, setIsLoading] = useState(true)
+    const [currentUserId, setCurrentUserId] = useState<string | null>(getCurrentUserId())
 
-    // Load background from backend when user is logged in
+    // Monitor user changes (login/logout/switch account)
+    useEffect(() => {
+      const checkUserChange = () => {
+        const newUserId = getCurrentUserId()
+        if (newUserId !== currentUserId) {
+          // User changed - reset to loading and reload background
+          setCurrentUserId(newUserId)
+          setIsLoading(true)
+        }
+      }
+
+      // Check for user changes on storage events (e.g., from other tabs or login/logout)
+      window.addEventListener('storage', checkUserChange)
+      
+      // Also check periodically in case storage event doesn't fire
+      const interval = setInterval(checkUserChange, 500)
+
+      return () => {
+        window.removeEventListener('storage', checkUserChange)
+        clearInterval(interval)
+      }
+    }, [currentUserId])
+
+    // Load background from backend when user is logged in or when user changes
     useEffect(() => {
       const loadBackgroundFromBackend = async () => {
         const userId = getCurrentUserId()
         const token = localStorage.getItem('token')
         
         if (!userId || !token) {
+          // Not logged in - ensure we use default background
+          setBackgroundState(defaultBackground)
           setIsLoading(false)
           return
         }
@@ -99,7 +125,7 @@ export const BackgroundProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
           if (response.ok) {
             const data = await response.json()
-            if (data.success && data.data?.background) {
+            if (data.success && data.data?.background && data.data.background.url) {
               const bg = data.data.background
               const newBackground: Background = {
                 id: bg.id,
@@ -110,17 +136,31 @@ export const BackgroundProvider: React.FC<{ children: React.ReactNode }> = ({ ch
               // Also update localStorage
               const key = storageKeyFor(userId)
               localStorage.setItem(key, JSON.stringify(newBackground))
+            } else {
+              // Backend returned no background or empty background - use default
+              setBackgroundState(defaultBackground)
+              const key = storageKeyFor(userId)
+              localStorage.setItem(key, JSON.stringify(defaultBackground))
             }
+          } else {
+            // Backend request failed - use default
+            setBackgroundState(defaultBackground)
+            const key = storageKeyFor(userId)
+            localStorage.setItem(key, JSON.stringify(defaultBackground))
           }
         } catch (error) {
           console.error('[BackgroundContext] Error loading background from backend:', error)
+          // Error occurred - use default
+          setBackgroundState(defaultBackground)
+          const key = storageKeyFor(userId)
+          localStorage.setItem(key, JSON.stringify(defaultBackground))
         } finally {
           setIsLoading(false)
         }
       }
 
       loadBackgroundFromBackend()
-    }, [])
+    }, [currentUserId]) // Re-run when user changes
 
     // Wrapper function to sync with backend when setting background
     const setBackground = async (newBackground: Background) => {
