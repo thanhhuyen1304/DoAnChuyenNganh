@@ -92,40 +92,118 @@ class AIAnalysisService {
     const passedCount = executionResults.filter(r => r.passed).length;
     const hasErrors = status !== 'Accepted' || passedCount < executionResults.length;
     
+    // Kiểm tra lỗi hệ thống TRƯỚC KHI phân tích errors
+    const isSystemError = !!(errorMessage && (
+      errorMessage.includes('Judge0 không thể') ||
+      errorMessage.includes('No such file or directory') ||
+      errorMessage.includes('Lỗi hệ thống')
+    ));
+    
     const errorAnalyses = hasErrors 
-      ? this.analyzeErrors(status, errorMessage, userCode, language, executionResults)
+      ? this.analyzeErrors(status, errorMessage, userCode, language, executionResults, isSystemError)
       : [];
 
     // Không so sánh với correctCode nữa - chỉ phân tích code user submit
     // AI sẽ phân tích code dựa trên execution results và error messages
     const codeSuggestions: CodeSuggestion[] = [];
     
-    // Kiểm tra lỗi hệ thống
-    const isSystemError = errorAnalyses.some(e => 
-      e.errorType === 'other' && 
-      (e.errorMessage.includes('Judge0 không thể') || 
-       e.errorMessage.includes('No such file or directory') ||
-       e.errorMessage.includes('Lỗi hệ thống'))
-    );
-    
-    // Nếu có lỗi và không phải lỗi hệ thống, phân tích code để tìm vấn đề
+    // Nếu có lỗi và không phải lỗi hệ thống, tạo code suggestions
     if (!isSystemError && status !== 'Accepted' && executionResults.some(r => !r.passed)) {
       // Phân tích code dựa trên test cases fail
       const failedTests = executionResults.filter(r => !r.passed);
+      
+      // Phân tích lỗi logic từ test cases
       for (const failedTest of failedTests) {
         if (failedTest.errorMessage) {
-          // Tìm vị trí lỗi trong code
+          // Có error message - phân tích lỗi runtime/syntax
           const errorLocation = this.findErrorLocation(userCode, failedTest.errorMessage);
-          if (errorLocation) {
+          const line = errorLocation?.line || 1;
+          const codeSnippet = errorLocation?.codeSnippet || userCode.split('\n')[0];
+          
+          // Tạo gợi ý dựa trên loại lỗi
+          let suggestedFix = '';
+          if (failedTest.errorMessage.includes('NameError')) {
+            suggestedFix = 'Kiểm tra tên biến/hàm có đúng không';
+          } else if (failedTest.errorMessage.includes('SyntaxError')) {
+            suggestedFix = 'Kiểm tra cú pháp: dấu ngoặc, dấu hai chấm, indentation';
+          } else if (failedTest.errorMessage.includes('TypeError')) {
+            suggestedFix = 'Kiểm tra kiểu dữ liệu của tham số';
+          } else if (failedTest.errorMessage.includes('IndexError')) {
+            suggestedFix = 'Kiểm tra chỉ số mảng có hợp lệ không';
+          }
+          
+          codeSuggestions.push({
+            line: line,
+            currentCode: codeSnippet,
+            suggestedCode: suggestedFix,
+            explanation: `Lỗi ở test case ${failedTest.testCaseIndex + 1}: ${failedTest.errorMessage}`,
+            confidence: errorLocation ? 0.8 : 0.5
+          });
+        } else {
+          // Không có error message - phân tích lỗi logic từ output với AI
+          // So sánh expected vs actual để tìm pattern
+          const suggestion = await this.analyzeLogicError(
+            userCode,
+            failedTest.input,
+            failedTest.expectedOutput,
+            failedTest.actualOutput,
+            language,
+            problemStatement
+          );
+          
+          if (suggestion) {
             codeSuggestions.push({
-              line: errorLocation.line,
-              currentCode: errorLocation.codeSnippet || '',
-              suggestedCode: '', // Không có correctCode để suggest
-              explanation: `Lỗi ở test case ${failedTest.testCaseIndex + 1}: ${failedTest.errorMessage}`,
-              confidence: 0.7
+              line: suggestion.line,
+              currentCode: suggestion.currentCode,
+              suggestedCode: suggestion.suggestedCode,
+              explanation: `Test case ${failedTest.testCaseIndex + 1} không pass. Expected: "${failedTest.expectedOutput}", Got: "${failedTest.actualOutput}". ${suggestion.explanation}`,
+              confidence: suggestion.confidence
             });
           }
         }
+      }
+      
+      // Nếu không có suggestions cụ thể, tạo suggestion chung
+      if (codeSuggestions.length === 0 && failedTests.length > 0) {
+        const firstFailed = failedTests[0];
+        
+        // Phân tích pattern từ test case đầu tiên
+        const inputs = firstFailed.input.split('\n').map(s => s.trim()).filter(s => s && s !== 'None');
+        const expected = firstFailed.expectedOutput.trim();
+        const actual = firstFailed.actualOutput.trim();
+        
+        let hint = '';
+        if (actual === 'None') {
+          hint = 'Hàm đang return None. Bạn có thể đã quên return giá trị hoặc dùng pass.';
+        } else if (inputs.length === 2 && /^\d+$/.test(inputs[0]) && /^\d+$/.test(inputs[1])) {
+          // 2 số input
+          const a = parseInt(inputs[0]);
+          const b = parseInt(inputs[1]);
+          const exp = parseInt(expected);
+          const act = parseInt(actual);
+          
+          if (act === a) {
+            hint = `Output bằng input đầu tiên (${a}). Có thể bạn chỉ return tham số đầu tiên?`;
+          } else if (act === b) {
+            hint = `Output bằng input thứ hai (${b}). Có thể bạn chỉ return tham số thứ hai?`;
+          } else if (act === a - b && exp === a + b) {
+            hint = `Output là ${a} - ${b} = ${act}, nhưng mong đợi ${a} + ${b} = ${exp}. Kiểm tra phép toán.`;
+          } else if (act === a * b && exp === a + b) {
+            hint = `Output là ${a} * ${b} = ${act}, nhưng mong đợi ${a} + ${b} = ${exp}. Kiểm tra phép toán.`;
+          } else {
+            hint = `Output không khớp. Kiểm tra logic tính toán.`;
+          }
+        } else {
+          hint = 'Kiểm tra logic của thuật toán.';
+        }
+        
+        codeSuggestions.push({
+          line: 1,
+          currentCode: userCode.split('\n').find(line => line.includes('return')) || userCode.split('\n')[0],
+          suggestedCode: hint,
+          explanation: `Test case ${firstFailed.testCaseIndex + 1} không pass. ${hint}`,
+          confidence: 0.6
+        });
       }
     }
 
@@ -228,18 +306,12 @@ class AIAnalysisService {
     errorMessage: string | undefined,
     userCode: string,
     language: string,
-    executionResults?: Array<{ passed: boolean; errorMessage?: string; status?: string }>
+    executionResults?: Array<{ passed: boolean; errorMessage?: string; status?: string }>,
+    isSystemError?: boolean
   ): ErrorAnalysis[] {
     const errors: ErrorAnalysis[] = [];
 
-    // Kiểm tra xem có phải lỗi từ Judge0 system không (không phải lỗi code)
-    const isSystemError = errorMessage && (
-      errorMessage.includes('Judge0 không thể') ||
-      errorMessage.includes('No such file or directory') ||
-      errorMessage.includes('Lỗi hệ thống')
-    );
-
-    // Nếu là lỗi hệ thống, chỉ báo lỗi hệ thống, không phân tích code
+    // Nếu là lỗi hệ thống (đã được xác định từ bên ngoài), chỉ báo lỗi hệ thống
     if (isSystemError) {
       errors.push({
         errorType: 'other',
@@ -326,6 +398,134 @@ class AIAnalysisService {
     }
 
     return errors;
+  }
+
+  /**
+   * Phân tích lỗi logic từ output với AI
+   */
+  private async analyzeLogicError(
+    userCode: string,
+    input: string,
+    expectedOutput: string,
+    actualOutput: string,
+    language: string,
+    problemStatement: string
+  ): Promise<{ line: number; currentCode: string; suggestedCode: string; explanation: string; confidence: number } | null> {
+    // Nếu không có Gemini API key, dùng rule-based analysis
+    if (!ENV.GEMINI_API_KEY) {
+      return null;
+    }
+
+    try {
+      // Import Google Generative AI
+      let GoogleGenerativeAI: any;
+      try {
+        const module = await import('@google/generative-ai');
+        GoogleGenerativeAI = module.GoogleGenerativeAI;
+      } catch (importError) {
+        console.warn('@google/generative-ai package chưa được cài đặt');
+        return null;
+      }
+      
+      const genAI = new GoogleGenerativeAI(ENV.GEMINI_API_KEY);
+      
+      // Thử các models
+      const modelNames = ['gemini-pro', 'gemini-1.5-flash', 'gemini-1.5-pro'];
+      
+      for (const modelName of modelNames) {
+        try {
+          const model = genAI.getGenerativeModel({ model: modelName });
+          
+          // Tạo prompt yêu cầu AI phân tích code sai
+          const prompt = `Bạn là một AI tutor chuyên phân tích code lập trình.
+
+Đề bài: ${problemStatement}
+
+Code của học sinh (${language}):
+\`\`\`${language}
+${userCode}
+\`\`\`
+
+Test case:
+- Input: ${input}
+- Expected Output: ${expectedOutput}
+- Actual Output: ${actualOutput}
+
+Hãy phân tích lỗi trong code và đưa ra gợi ý sửa cụ thể. Trả về JSON với format:
+{
+  "line": <số dòng có lỗi, bắt đầu từ 1>,
+  "currentCode": "<dòng code hiện tại có lỗi>",
+  "suggestedCode": "<code sửa gợi ý>",
+  "explanation": "<giải thích ngắn gọn lỗi và cách sửa>",
+  "confidence": <độ tin cậy 0-1>
+}
+
+Lưu ý:
+- Chỉ trả về JSON, không có text thêm
+- explanation phải ngắn gọn (1-2 câu)
+- suggestedCode phải là code cụ thể, không phải gợi ý chung chung
+- Nếu không tìm được lỗi cụ thể, trả về null
+
+Ví dụ:
+Nếu code là:
+\`\`\`python
+def sum(a, b):
+    return a
+\`\`\`
+Input: 5, 3
+Expected: 8
+Actual: 5
+
+Trả về:
+{
+  "line": 2,
+  "currentCode": "return a",
+  "suggestedCode": "return a + b",
+  "explanation": "Bạn chỉ return tham số a, nhưng cần return tổng a + b",
+  "confidence": 0.9
+}`;
+
+          const result = await model.generateContent(prompt);
+          const response = await result.response;
+          const text = response.text();
+          
+          // Parse JSON response
+          try {
+            // Remove markdown code blocks nếu có
+            const jsonText = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+            const suggestion = JSON.parse(jsonText);
+            
+            // Validate response
+            if (suggestion && suggestion.line && suggestion.explanation) {
+              console.log(`✅ AI logic analysis successful with ${modelName}`);
+              return {
+                line: suggestion.line || 1,
+                currentCode: suggestion.currentCode || '',
+                suggestedCode: suggestion.suggestedCode || '',
+                explanation: suggestion.explanation || '',
+                confidence: suggestion.confidence || 0.7
+              };
+            } else {
+              console.warn(`⚠️ AI response invalid format from ${modelName}`);
+              return null;
+            }
+          } catch (parseError) {
+            console.warn(`⚠️ Failed to parse AI response from ${modelName}, trying next model...`);
+            continue;
+          }
+        } catch (error: any) {
+          console.warn(`⚠️ AI model ${modelName} failed: ${error.message}, trying next model...`);
+          continue;
+        }
+      }
+      
+      // Tất cả models fail
+      console.warn('⚠️ All AI models failed for logic error analysis');
+      return null;
+    } catch (error: any) {
+      console.error('❌ AI logic analysis error:', error.message);
+      return null;
+    }
   }
 
   /**
@@ -417,29 +617,51 @@ class AIAnalysisService {
     errorAnalyses.forEach(error => {
       if (error.errorType === 'syntax') {
         recommendations.push('Kiểm tra cú pháp: dấu ngoặc, dấu chấm phẩy, và các từ khóa');
+        recommendations.push('Đọc kỹ error message để xác định vị trí lỗi cú pháp');
       } else if (error.errorType === 'logic') {
         recommendations.push('Xem lại logic của thuật toán, đặc biệt là các điều kiện và vòng lặp');
+        recommendations.push('Thử debug với các test case đơn giản để hiểu flow của code');
       } else if (error.errorType === 'runtime') {
         recommendations.push('Kiểm tra null pointer, array bounds, và division by zero');
+        recommendations.push('Thêm error handling để xử lý các trường hợp đặc biệt');
       } else if (error.errorType === 'timeout') {
         recommendations.push('Tối ưu hóa thuật toán để giảm thời gian chạy');
+        recommendations.push('Kiểm tra xem có vòng lặp vô hạn không');
       } else if (error.errorType === 'memory') {
         recommendations.push('Tối ưu hóa việc sử dụng bộ nhớ, tránh tạo mảng quá lớn');
+        recommendations.push('Xem xét sử dụng cấu trúc dữ liệu hiệu quả hơn');
       }
     });
 
     // Từ code suggestions (chỉ khi không phải lỗi hệ thống)
     if (codeSuggestions.length > 0) {
-      recommendations.push(`Có ${codeSuggestions.length} vị trí trong code cần được sửa`);
+      recommendations.push(`Có ${codeSuggestions.length} vị trí trong code cần được kiểm tra`);
+      // Thêm explanation từ suggestion đầu tiên
+      if (codeSuggestions[0].explanation) {
+        recommendations.push(codeSuggestions[0].explanation);
+      }
     }
 
     // Từ test case analyses (chỉ khi không phải lỗi hệ thống)
     const failedTests = testCaseAnalyses.filter(tc => !tc.passed);
     if (failedTests.length > 0) {
+      recommendations.push(`Có ${failedTests.length} test case chưa pass`);
+      
       const firstFailed = failedTests[0];
       if (firstFailed.hints && firstFailed.hints.length > 0) {
         recommendations.push(...firstFailed.hints);
       }
+      
+      // Thêm gợi ý về output mismatch
+      if (!firstFailed.errorMessage && firstFailed.actualOutput !== firstFailed.expectedOutput) {
+        recommendations.push('So sánh kỹ output thực tế với output mong đợi để tìm điểm khác biệt');
+      }
+    }
+    
+    // Nếu không có recommendations nào, thêm gợi ý chung
+    if (recommendations.length === 0 && errorAnalyses.length > 0) {
+      recommendations.push('Đọc kỹ đề bài và kiểm tra lại logic của code');
+      recommendations.push('Thử chạy code với các test case mẫu để debug');
     }
 
     // Remove duplicates

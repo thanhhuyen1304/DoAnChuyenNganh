@@ -21,16 +21,14 @@ const NotificationBell: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Load notifications and unread count
-  const loadNotifications = async () => {
+  // Load unread count only
+  const loadUnreadCount = async () => {
     const token = localStorage.getItem('token');
     if (!token) return;
 
     try {
-      setLoading(true);
       const API_BASE = getApiBase();
 
-      // Load unread count
       const countResponse = await fetch(`${API_BASE}/notifications/unread-count`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -43,21 +41,31 @@ const NotificationBell: React.FC = () => {
           setUnreadCount(countData.data.unreadCount || 0);
         }
       }
+    } catch (error) {
+      console.error('Error loading unread count:', error);
+    }
+  };
 
-      // Load notifications (only when dropdown is open)
-      if (isOpen) {
-        const notifResponse = await fetch(`${API_BASE}/notifications?limit=20`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
+  // Load full notifications list
+  const loadNotifications = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
 
-        if (notifResponse.ok) {
-          const notifData = await notifResponse.json();
-          if (notifData.success) {
-            setNotifications(notifData.data.notifications || []);
-            setUnreadCount(notifData.data.unreadCount || 0);
-          }
+    try {
+      setLoading(true);
+      const API_BASE = getApiBase();
+
+      const notifResponse = await fetch(`${API_BASE}/notifications?limit=20`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (notifResponse.ok) {
+        const notifData = await notifResponse.json();
+        if (notifData.success) {
+          setNotifications(notifData.data.notifications || []);
+          setUnreadCount(notifData.data.unreadCount || 0);
         }
       }
     } catch (error) {
@@ -74,12 +82,18 @@ const NotificationBell: React.FC = () => {
     }
   }, [isOpen]);
 
-  // Load unread count on mount and periodically
+  // Load unread count on mount and periodically (every 2 minutes)
   useEffect(() => {
-    loadNotifications();
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    // Load initial count
+    loadUnreadCount();
+
+    // Poll every 2 minutes (120 seconds) - reduced frequency to save server load
     const interval = setInterval(() => {
-      loadNotifications();
-    }, 30000); // Check every 30 seconds
+      loadUnreadCount();
+    }, 120000);
 
     return () => clearInterval(interval);
   }, []);

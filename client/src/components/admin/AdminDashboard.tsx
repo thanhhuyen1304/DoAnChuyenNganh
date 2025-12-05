@@ -29,6 +29,8 @@ import AchievementManagement from './AchievementManagement';
 import SystemSettings from './SystemSettings';
 import TrainingDataManagement from './TrainingDataManagement';
 import KnowledgeGraphCanvas from './KnowledgeGraphCanvas';
+import CommentReportManagement from './CommentReportManagement';
+import AllCommentsManagement from './AllCommentsManagement';
 import Header from '../Header';
 import ErrorBoundary from '../ui/ErrorBoundary';
 
@@ -86,6 +88,16 @@ import {
 const OTHER_TABS = [
   // Admin Management Features
   { id: 'users', icon: Users, label: { vi: 'Quản lý người dùng', en: 'User Management' }, color: 'text-blue-500' },
+  { id: 'comment-reports', icon: MessageSquare, label: { vi: 'Báo cáo vi phạm', en: 'Violation Reports' }, color: 'text-orange-500' },
+  { id: 'all-comments', icon: MessageSquare, label: { vi: 'Tất cả bình luận', en: 'All Comments' }, color: 'text-cyan-500' },
+  { id: 'feedback', icon: MessageSquare, label: { vi: 'Phản hồi', en: 'Feedback' }, color: 'text-emerald-500' },
+  { id: 'achievements', icon: Award, label: { vi: 'Thành tích', en: 'Achievements' }, color: 'text-amber-500' },
+  
+  // Development Tools
+  // { id: 'debug', icon: KeyRound, label: { vi: 'Debug Token', en: 'Debug' }, color: 'text-amber-500' },
+  // { id: 'database', icon: Database, label: { vi: 'Database', en: 'Database' }, color: 'text-blue-500' },
+  // { id: 'api', icon: Webhook, label: { vi: 'API Test', en: 'API Test' }, color: 'text-purple-500' },
+  // { id: 'guide', icon: FileQuestion, label: { vi: 'Hướng dẫn', en: 'Guide' }, color: 'text-green-500' },
   { id: 'reports', icon: Flag, label: { vi: 'Báo cáo vi phạm', en: 'Reports' }, color: 'text-red-500' },
   { id: 'achievements', icon: Award, label: { vi: 'Thành tích', en: 'Achievements' }, color: 'text-amber-500' },
   // { id: 'training-data', icon: Brain, label: { vi: 'Training Data AI', en: 'Training Data AI' }, color: 'text-purple-500' },
@@ -510,9 +522,14 @@ const AdminDashboard: React.FC = () => {
                 <UserManagement />
               </div>
             )}
-            {activeOtherTab === 'reports' && (
+            {activeOtherTab === 'comment-reports' && (
               <div className="space-y-6">
-                <ReportManagement />
+                <CommentReportManagement />
+              </div>
+            )}
+            {activeOtherTab === 'all-comments' && (
+              <div className="space-y-6">
+                <AllCommentsManagement />
               </div>
             )}
             {activeOtherTab === 'achievements' && (

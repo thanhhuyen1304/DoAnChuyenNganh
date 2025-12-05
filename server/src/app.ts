@@ -29,6 +29,8 @@ import knowledgeGraphRoutes from './routes/knowledgeGraph.routes';
 import chatRoutes from './routes/chat.routes';
 import aiChatRoutes from './routes/aiChatRoutes';
 import notificationRoutes from './routes/notification.routes';
+import commentRoutes from './routes/comment.routes';
+import adminCommentRoutes from './routes/adminComment.routes';
 import achievementRoutes from './routes/achievement.routes';
 
 // WebSocket Service
@@ -106,6 +108,8 @@ app.use('/api/knowledge-graph', knowledgeGraphRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/ai-chat', aiChatRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/comments', commentRoutes);
+app.use('/api/admin/comments', adminCommentRoutes);
 app.use('/api/achievements', achievementRoutes);
 
 // Catch-all redirect for legacy routes without /api prefix (helpful for debugging)
