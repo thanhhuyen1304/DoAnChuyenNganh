@@ -23,7 +23,7 @@ const Settings: React.FC = () => {
 
   // Predefined background images with translated labels
   const BACKGROUND_OPTIONS = [
-    { id: 'default', url: new URL('../images/1.jpg', import.meta.url).href, labelKey: 'settings.background.options.default' },
+    { id: 'default', url: '/logo.jpg', labelKey: 'settings.background.options.default' },
     { id: 'code', url: 'https://images.unsplash.com/photo-1542831371-29b0f74f9713?q=80', labelKey: 'settings.background.options.code' },
     { id: 'geometric', url: 'https://images.unsplash.com/photo-1557683316-973673baf926?q=80', labelKey: 'settings.background.options.geometric' },
     { id: 'custom', url: '', labelKey: 'settings.background.options.custom' },

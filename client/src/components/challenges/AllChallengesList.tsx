@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { getApiBase } from '../../lib/apiBase';
+import { buildApi } from '../../lib/api';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -38,44 +39,24 @@ interface Challenge {
   successfulAttempts: number;
 }
 
-interface ChallengesListProps {
-  challenges?: Challenge[];
-  loading?: boolean;
-  error?: string;
+interface AllChallengesListProps {
   className?: string;
-  showFilters?: boolean;
-  initialViewMode?: 'grid' | 'list';
-  onChallengeClick?: (challengeId: string) => void;
-  selectedLanguage?: string;
-  completedIds?: string[];
-  favoriteIds?: string[];
 }
 
-const ChallengeList: React.FC<ChallengesListProps> = ({
-  challenges: propChallenges,
-  loading: propLoading = false,
-  error: propError = '',
-  className = '',
-  showFilters = true,
-  initialViewMode = 'grid',
-  onChallengeClick,
-  selectedLanguage: propSelectedLanguage,
-  completedIds: propCompletedIds,
-  favoriteIds: propFavoriteIds
-}) => {
-  const [challenges, setChallenges] = useState<Challenge[]>(propChallenges || []);
-  const [loading, setLoading] = useState(propLoading);
-  const [error, setError] = useState(propError);
+const AllChallengesList: React.FC<AllChallengesListProps> = ({ className = '' }) => {
+  const [challenges, setChallenges] = useState<Challenge[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const { language } = useLanguage();
   const navigate = useNavigate();
   
   // View mode: 'grid' or 'list'
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>(initialViewMode);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   
   // Search and filters
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>('all');
-  const [selectedLanguage, setSelectedLanguage] = useState<string>(propSelectedLanguage || 'all');
+  const [selectedLanguage, setSelectedLanguage] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<'all' | 'completed' | 'incomplete'>('all');
   
   // Completed challenges
@@ -84,133 +65,6 @@ const ChallengeList: React.FC<ChallengesListProps> = ({
   
   // Favorites
   const [myFavIds, setMyFavIds] = useState<string[]>([]);
-
-  // Fetch challenges từ API hoặc filter từ completedIds/favoriteIds
-  const fetchChallenges = useCallback(async () => {
-    // Nếu có propChallenges, ưu tiên sử dụng
-    if (propChallenges && propChallenges.length > 0) {
-      setChallenges(propChallenges);
-      setLoading(false);
-      return;
-    }
-
-    // Nếu có completedIds hoặc favoriteIds, fetch challenges và filter
-    if ((propCompletedIds && propCompletedIds.length > 0) || (propFavoriteIds && propFavoriteIds.length > 0)) {
-      try {
-        setLoading(true);
-        setError('');
-        const API_BASE = getApiBase();
-        
-        // Fetch all challenges first
-        const params = new URLSearchParams();
-        params.append('page', '1');
-        params.append('limit', '500'); // Increase limit to get all challenges
-        
-        const url = `${API_BASE}/challenges?${params.toString()}`;
-        console.log('[ChallengeList] Fetching challenges for filtering:', url);
-        
-        const response = await fetch(url);
-        
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        
-        const data = await response.json();
-        
-        if (data.success) {
-          let fetchedChallenges = data.data.challenges as Challenge[];
-          
-          // Filter by completedIds if provided
-          if (propCompletedIds && propCompletedIds.length > 0) {
-            const completedSet = new Set(propCompletedIds);
-            fetchedChallenges = fetchedChallenges.filter(c => completedSet.has(c._id));
-            console.log('[ChallengeList] Filtered to', fetchedChallenges.length, 'completed challenges out of', propCompletedIds.length, 'completed IDs');
-          }
-          // Filter by favoriteIds if provided (and no completedIds)
-          else if (propFavoriteIds && propFavoriteIds.length > 0) {
-            const favoriteSet = new Set(propFavoriteIds);
-            fetchedChallenges = fetchedChallenges.filter(c => favoriteSet.has(c._id));
-            console.log('[ChallengeList] Filtered to', fetchedChallenges.length, 'favorite challenges out of', propFavoriteIds.length, 'favorite IDs');
-          }
-          
-          setChallenges(fetchedChallenges);
-        } else {
-          setError(data.message || 'Failed to fetch challenges');
-        }
-      } catch (err: any) {
-        console.error('[ChallengeList] Error fetching challenges:', err);
-        setError(err.message || 'Error connecting to server');
-      } finally {
-        setLoading(false);
-      }
-      return;
-    }
-
-    // Default: fetch all challenges
-    try {
-      setLoading(true);
-      setError('');
-      const API_BASE = getApiBase();
-      
-      // Build query params
-      const params = new URLSearchParams();
-      params.append('page', '1');
-      params.append('limit', '100');
-      
-      // Thêm language filter nếu có
-      if (selectedLanguage && selectedLanguage !== 'all') {
-        params.append('language', selectedLanguage);
-        console.log('[ChallengeList] Fetching with language filter:', selectedLanguage);
-      }
-      
-      const url = `${API_BASE}/challenges?${params.toString()}`;
-      console.log('[ChallengeList] Fetching from:', url);
-      
-      const response = await fetch(url);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        const fetchedChallenges = data.data.challenges as Challenge[];
-        console.log('[ChallengeList] Fetched', fetchedChallenges.length, 'challenges');
-        setChallenges(fetchedChallenges);
-      } else {
-        setError(data.message || 'Failed to fetch challenges');
-      }
-    } catch (err: any) {
-      console.error('[ChallengeList] Error fetching challenges:', err);
-      setError(err.message || 'Error connecting to server');
-    } finally {
-      setLoading(false);
-    }
-  }, [selectedLanguage, propChallenges, propCompletedIds, propFavoriteIds]);
-
-  // Update challenges when props change
-  useEffect(() => {
-    if (propChallenges && propChallenges.length > 0) {
-      setChallenges(propChallenges);
-      setLoading(false);
-    } else {
-      // Fetch từ API nếu không có propChallenges
-      fetchChallenges();
-    }
-  }, [propChallenges, fetchChallenges]);
-
-  useEffect(() => {
-    setError(propError);
-  }, [propError]);
-
-  // Update selectedLanguage và fetch lại data khi propSelectedLanguage thay đổi
-  useEffect(() => {
-    if (propSelectedLanguage && propSelectedLanguage !== selectedLanguage) {
-      console.log('[ChallengeList] propSelectedLanguage changed to:', propSelectedLanguage);
-      setSelectedLanguage(propSelectedLanguage);
-    }
-  }, [propSelectedLanguage, selectedLanguage]);
 
   // Load completed challenges
   const loadCompletedChallenges = useCallback(async () => {
@@ -288,10 +142,64 @@ const ChallengeList: React.FC<ChallengesListProps> = ({
     }
   }, []);
 
+  // Fetch all challenges
+  const fetchChallenges = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError('');
+      const API_BASE = getApiBase();
+      const base = API_BASE.replace(/\/$/, '');
+      
+      let allChallenges: Challenge[] = [];
+      let page = 1;
+      const limit = 100;
+      let hasMore = true;
+      
+      while (hasMore) {
+        const url = `${base}/challenges?page=${page}&limit=${limit}`;
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+
+        if (data.success) {
+          const fetchedChallenges = data.data.challenges as Challenge[];
+          
+          if (fetchedChallenges.length > 0) {
+            allChallenges = [...allChallenges, ...fetchedChallenges];
+            
+            const pagination = data.data.pagination;
+            if (pagination && page < pagination.pages) {
+              page++;
+            } else {
+              hasMore = false;
+            }
+          } else {
+            hasMore = false;
+          }
+        } else {
+          setError(data.message || 'Failed to fetch challenges');
+          hasMore = false;
+        }
+      }
+      
+      setChallenges(allChallenges);
+    } catch (err: any) {
+      console.error('Error fetching challenges:', err);
+      setError(err.message || 'Error connecting to server');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
+    fetchChallenges();
     loadCompletedChallenges();
     loadFavorites();
-  }, [loadCompletedChallenges, loadFavorites]);
+  }, [fetchChallenges, loadCompletedChallenges, loadFavorites]);
 
   // Toggle favorite
   const toggleFavorite = async (id: string) => {
@@ -299,13 +207,10 @@ const ChallengeList: React.FC<ChallengesListProps> = ({
     const newFavIds = isCurrentlyFavorite
       ? myFavIds.filter(favId => favId !== id)
       : [...myFavIds, id];
-
+    
     setMyFavIds(newFavIds);
     localStorage.setItem('favoriteChallenges', JSON.stringify(newFavIds));
-
-    // Dispatch custom event to notify other components
-    window.dispatchEvent(new CustomEvent('favorites-changed'));
-
+    
     const token = localStorage.getItem('token');
     if (token) {
       try {
@@ -322,9 +227,6 @@ const ChallengeList: React.FC<ChallengesListProps> = ({
         console.error('Error toggling favorite:', error);
         // Revert on error
         setMyFavIds(isCurrentlyFavorite ? [...myFavIds, id] : myFavIds.filter(favId => favId !== id));
-        // Also revert localStorage and dispatch event
-        localStorage.setItem('favoriteChallenges', JSON.stringify(myFavIds));
-        window.dispatchEvent(new CustomEvent('favorites-changed'));
       }
     }
   };
@@ -380,11 +282,7 @@ const ChallengeList: React.FC<ChallengesListProps> = ({
 
   // Handle challenge click
   const handleChallengeClick = (challengeId: string) => {
-    if (onChallengeClick) {
-      onChallengeClick(challengeId);
-    } else {
-      navigate(`/practice?challengeId=${challengeId}`);
-    }
+    navigate(`/practice?challengeId=${challengeId}`);
   };
 
   // Clear all filters
@@ -417,140 +315,138 @@ const ChallengeList: React.FC<ChallengesListProps> = ({
   return (
     <div className={`space-y-6 ${className}`}>
       {/* Search and Filter Bar */}
-      {showFilters && (
-        <div className="bg-white/90 dark:bg-gray-900/80 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 shadow-lg">
-          <div className="space-y-4">
-            {/* Search Bar */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <Input
-                type="text"
-                placeholder={language === 'vi' ? 'Tìm kiếm bài tập...' : 'Search challenges...'}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 pr-10"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
+      <div className="bg-white/90 dark:bg-gray-900/80 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 shadow-lg">
+        <div className="space-y-4">
+          {/* Search Bar */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Input
+              type="text"
+              placeholder={language === 'vi' ? 'Tìm kiếm bài tập...' : 'Search challenges...'}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 pr-10"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Filters */}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4 text-gray-500" />
+              <span className="text-sm text-gray-600 dark:text-gray-400">
+                {language === 'vi' ? 'Lọc:' : 'Filters:'}
+              </span>
             </div>
 
-            {/* Filters */}
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="flex items-center gap-2">
-                <Filter className="w-4 h-4 text-gray-500" />
-                <span className="text-sm text-gray-600 dark:text-gray-400">
-                  {language === 'vi' ? 'Lọc:' : 'Filters:'}
-                </span>
+            {/* Difficulty Filter */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500 dark:text-gray-400">
+                {language === 'vi' ? 'Độ khó:' : 'Difficulty:'}
+              </span>
+              <div className="flex gap-1">
+                {['all', 'Easy', 'Medium', 'Hard'].map((diff) => (
+                  <Button
+                    key={diff}
+                    variant={selectedDifficulty === diff ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setSelectedDifficulty(diff)}
+                    className="h-7 text-xs"
+                  >
+                    {diff === 'all' ? (language === 'vi' ? 'Tất cả' : 'All') : diff}
+                  </Button>
+                ))}
               </div>
-
-              {/* Difficulty Filter */}
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-500 dark:text-gray-400">
-                  {language === 'vi' ? 'Độ khó:' : 'Difficulty:'}
-                </span>
-                <div className="flex gap-1">
-                  {['all', 'Easy', 'Medium', 'Hard'].map((diff) => (
-                    <Button
-                      key={diff}
-                      variant={selectedDifficulty === diff ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setSelectedDifficulty(diff)}
-                      className="h-7 text-xs"
-                    >
-                      {diff === 'all' ? (language === 'vi' ? 'Tất cả' : 'All') : diff}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Language Filter */}
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-500 dark:text-gray-400">
-                  {language === 'vi' ? 'Ngôn ngữ:' : 'Language:'}
-                </span>
-                <select
-                  value={selectedLanguage}
-                  onChange={(e) => setSelectedLanguage(e.target.value)}
-                  className="h-7 px-2 text-xs rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800"
-                >
-                  <option value="all">{language === 'vi' ? 'Tất cả' : 'All'}</option>
-                  {availableLanguages.map((lang) => (
-                    <option key={lang} value={lang}>{lang}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Status Filter */}
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-500 dark:text-gray-400">
-                  {language === 'vi' ? 'Trạng thái:' : 'Status:'}
-                </span>
-                <div className="flex gap-1">
-                  {['all', 'completed', 'incomplete'].map((status) => (
-                    <Button
-                      key={status}
-                      variant={selectedStatus === status ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setSelectedStatus(status as 'all' | 'completed' | 'incomplete')}
-                      className="h-7 text-xs"
-                    >
-                      {status === 'all' ? (language === 'vi' ? 'Tất cả' : 'All') :
-                       status === 'completed' ? (language === 'vi' ? 'Đã làm' : 'Completed') :
-                       (language === 'vi' ? 'Chưa làm' : 'Incomplete')}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-
-              {/* View Mode Toggle */}
-              <div className="flex items-center gap-2 ml-auto">
-                <Button
-                  variant={viewMode === 'grid' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setViewMode('grid')}
-                  className="h-7 w-7 p-0"
-                >
-                  <Grid3x3 className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant={viewMode === 'list' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setViewMode('list')}
-                  className="h-7 w-7 p-0"
-                >
-                  <List className="w-4 h-4" />
-                </Button>
-              </div>
-
-              {/* Clear Filters */}
-              {hasActiveFilters && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={clearFilters}
-                  className="h-7 text-xs"
-                >
-                  <X className="w-3 h-3 mr-1" />
-                  {language === 'vi' ? 'Xóa bộ lọc' : 'Clear filters'}
-                </Button>
-              )}
             </div>
 
-            {/* Results count */}
-            <div className="text-sm text-gray-600 dark:text-gray-400">
-              {language === 'vi' 
-                ? `Hiển thị ${filteredChallenges.length} / ${challenges.length} bài tập`
-                : `Showing ${filteredChallenges.length} / ${challenges.length} challenges`}
+            {/* Language Filter */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500 dark:text-gray-400">
+                {language === 'vi' ? 'Ngôn ngữ:' : 'Language:'}
+              </span>
+              <select
+                value={selectedLanguage}
+                onChange={(e) => setSelectedLanguage(e.target.value)}
+                className="h-7 px-2 text-xs rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800"
+              >
+                <option value="all">{language === 'vi' ? 'Tất cả' : 'All'}</option>
+                {availableLanguages.map((lang) => (
+                  <option key={lang} value={lang}>{lang}</option>
+                ))}
+              </select>
             </div>
+
+            {/* Status Filter */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500 dark:text-gray-400">
+                {language === 'vi' ? 'Trạng thái:' : 'Status:'}
+              </span>
+              <div className="flex gap-1">
+                {['all', 'completed', 'incomplete'].map((status) => (
+                  <Button
+                    key={status}
+                    variant={selectedStatus === status ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setSelectedStatus(status as 'all' | 'completed' | 'incomplete')}
+                    className="h-7 text-xs"
+                  >
+                    {status === 'all' ? (language === 'vi' ? 'Tất cả' : 'All') :
+                     status === 'completed' ? (language === 'vi' ? 'Đã làm' : 'Completed') :
+                     (language === 'vi' ? 'Chưa làm' : 'Incomplete')}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            {/* View Mode Toggle */}
+            <div className="flex items-center gap-2 ml-auto">
+              <Button
+                variant={viewMode === 'grid' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('grid')}
+                className="h-7 w-7 p-0"
+              >
+                <Grid3x3 className="w-4 h-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'list' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('list')}
+                className="h-7 w-7 p-0"
+              >
+                <List className="w-4 h-4" />
+              </Button>
+            </div>
+
+            {/* Clear Filters */}
+            {hasActiveFilters && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearFilters}
+                className="h-7 text-xs"
+              >
+                <X className="w-3 h-3 mr-1" />
+                {language === 'vi' ? 'Xóa bộ lọc' : 'Clear filters'}
+              </Button>
+            )}
+          </div>
+
+          {/* Results count */}
+          <div className="text-sm text-gray-600 dark:text-gray-400">
+            {language === 'vi' 
+              ? `Hiển thị ${filteredChallenges.length} / ${challenges.length} bài tập`
+              : `Showing ${filteredChallenges.length} / ${challenges.length} challenges`}
           </div>
         </div>
-      )}
+      </div>
 
       {/* Challenges Display */}
       {filteredChallenges.length === 0 ? (
@@ -692,4 +588,5 @@ const ChallengeList: React.FC<ChallengesListProps> = ({
   );
 };
 
-export default ChallengeList;
+export default AllChallengesList;
+

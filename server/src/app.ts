@@ -27,9 +27,11 @@ import friendRoutes from './routes/friend.routes';
 import trainingDataRoutes from './routes/trainingData.routes';
 import knowledgeGraphRoutes from './routes/knowledgeGraph.routes';
 import chatRoutes from './routes/chat.routes';
+import aiChatRoutes from './routes/aiChatRoutes';
 import notificationRoutes from './routes/notification.routes';
 import commentRoutes from './routes/comment.routes';
 import adminCommentRoutes from './routes/adminComment.routes';
+import achievementRoutes from './routes/achievement.routes';
 
 // WebSocket Service
 import { WebSocketService } from './services/websocket.service';
@@ -62,15 +64,19 @@ const wsService = new WebSocketService(server);
 // Middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-// Enable CORS for development
+// Enable CORS for development - Allow all origins for OAuth to work
 app.use(cors({
-  origin: [
-    "http://localhost:5173",
-    "http://localhost:3000",
-    "http://127.0.0.1:5173",
-    "http://127.0.0.1:3000"
-  ],
-  credentials: true
+  origin: process.env.NODE_ENV === 'production'
+    ? [
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:3000"
+      ]
+    : true, // Allow all origins in development for OAuth
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(morgan('dev'));
 app.use(helmet());
@@ -100,9 +106,11 @@ app.use('/api/friends', friendRoutes);
 app.use('/api/training-data', trainingDataRoutes);
 app.use('/api/knowledge-graph', knowledgeGraphRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/ai-chat', aiChatRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/admin/comments', adminCommentRoutes);
+app.use('/api/achievements', achievementRoutes);
 
 // Catch-all redirect for legacy routes without /api prefix (helpful for debugging)
 app.get('/auth/:provider', (req: Request, res: Response) => {
@@ -135,6 +143,18 @@ mongoose.connect(ENV.MONGODB_URI)
             console.log(`Server đang chạy tại http://localhost:${PORT}`);
             console.log(`Environment: ${ENV.NODE_ENV}`);
             console.log('WebSocket service initialized');
+        }).on('error', (err: any) => {
+            if (err.code === 'EADDRINUSE') {
+                console.error(`\n❌ Lỗi: Port ${PORT} đang được sử dụng bởi process khác!`);
+                console.error(`\n💡 Giải pháp:`);
+                console.error(`   1. Chạy lệnh: npm run kill-port-5000`);
+                console.error(`   2. Hoặc kill tất cả Node.js: npm run kill-all-node-force`);
+                console.error(`   3. Hoặc đổi PORT trong file .env\n`);
+                process.exit(1);
+            } else {
+                console.error('Lỗi khi khởi động server:', err);
+                process.exit(1);
+            }
         });
     })
     .catch(err => {

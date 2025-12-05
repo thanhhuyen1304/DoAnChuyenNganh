@@ -277,7 +277,7 @@ export class SimplePvPController {
               expectedOutput: tc.expectedOutput,
               isHidden: tc.isHidden
             })) || []
-          }),
+          },
           timestamp: new Date().toISOString()
         });
       }

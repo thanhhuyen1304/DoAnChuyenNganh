@@ -98,6 +98,10 @@ const OTHER_TABS = [
   // { id: 'database', icon: Database, label: { vi: 'Database', en: 'Database' }, color: 'text-blue-500' },
   // { id: 'api', icon: Webhook, label: { vi: 'API Test', en: 'API Test' }, color: 'text-purple-500' },
   // { id: 'guide', icon: FileQuestion, label: { vi: 'Hướng dẫn', en: 'Guide' }, color: 'text-green-500' },
+  { id: 'reports', icon: Flag, label: { vi: 'Báo cáo vi phạm', en: 'Reports' }, color: 'text-red-500' },
+  { id: 'achievements', icon: Award, label: { vi: 'Thành tích', en: 'Achievements' }, color: 'text-amber-500' },
+  // { id: 'training-data', icon: Brain, label: { vi: 'Training Data AI', en: 'Training Data AI' }, color: 'text-purple-500' },
+  // { id: 'knowledge-graph', icon: Network, label: { vi: 'Knowledge Graph', en: 'Knowledge Graph' }, color: 'text-indigo-500' },
   { id: 'stats', icon: BarChart, label: { vi: 'Thống kê', en: 'Stats' }, color: 'text-orange-500' }
 ];
 
@@ -342,7 +346,7 @@ const AdminDashboard: React.FC = () => {
       {/* Background effects */}
       <div
         className="fixed inset-0 z-0 bg-cover bg-center opacity-40 dark:opacity-30 filter blur-sm"
-        style={{ backgroundImage: `url(${new URL('../images/1.jpg', import.meta.url).href})` }}
+        style={{ backgroundImage: `url('/logo.jpg')` }}
       />
       <div className="absolute inset-0 pointer-events-none bg-white/20 dark:bg-black/30 z-10" />
       <div className="absolute top-20 right-0 w-60 h-60 bg-yellow-400/5 rounded-full blur-3xl"></div>
@@ -528,16 +532,47 @@ const AdminDashboard: React.FC = () => {
                 <AllCommentsManagement />
               </div>
             )}
-            {activeOtherTab === 'feedback' && (
-              <div className="space-y-6">
-                <FeedbackManagement />
-              </div>
-            )}
             {activeOtherTab === 'achievements' && (
               <div className="space-y-6">
                 <AchievementManagement />
               </div>
             )}
+            {/* {activeOtherTab === 'training-data' && (
+              <div className="space-y-6">
+                <ErrorBoundary fallback={
+                  <Card className="bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800">
+                    <CardContent className="p-4">
+                      <h3 className="text-red-600 dark:text-red-400 font-semibold mb-2">
+                        {language === 'vi' ? 'Lỗi khi tải Training Data AI' : 'Error loading Training Data AI'}
+                      </h3>
+                      <p className="text-red-600 dark:text-red-400 text-sm">
+                        {language === 'vi' ? 'Vui lòng kiểm tra console để xem chi tiết lỗi và refresh trang.' : 'Please check console for error details and refresh the page.'}
+                      </p>
+                    </CardContent>
+                  </Card>
+                }>
+                  <TrainingDataManagement />
+                </ErrorBoundary>
+              </div>
+            )}
+            {activeOtherTab === 'knowledge-graph' && (
+              <div className="space-y-6">
+                <ErrorBoundary fallback={
+                  <Card className="bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800">
+                    <CardContent className="p-4">
+                      <h3 className="text-red-600 dark:text-red-400 font-semibold mb-2">
+                        {language === 'vi' ? 'Lỗi khi tải Knowledge Graph' : 'Error loading Knowledge Graph'}
+                      </h3>
+                      <p className="text-red-600 dark:text-red-400 text-sm">
+                        {language === 'vi' ? 'Vui lòng kiểm tra console để xem chi tiết lỗi và refresh trang.' : 'Please check console for error details and refresh the page.'}
+                      </p>
+                    </CardContent>
+                  </Card>
+                }>
+                  <KnowledgeGraphCanvas />
+                </ErrorBoundary>
+              </div>
+            )} */}
 
             {/* Development Tools */}
             {activeOtherTab === 'debug' && <TokenDebugger />}

@@ -462,7 +462,7 @@ export const getSolutionsStatus = async (req: AuthenticatedRequest, res: Respons
     }
 
     // Map solutions với trạng thái unlock
-    const solutionsStatus = challenge.solutions.map((solution, index) => {
+    const solutionsStatus = challenge.solutions.map((solution: any, index: number) => {
       const isUnlocked = user.unlockedSolutions.some(
         (u: any) => u.challengeId.equals(id) && u.solutionIndex === index
       );
@@ -478,7 +478,7 @@ export const getSolutionsStatus = async (req: AuthenticatedRequest, res: Respons
     });
 
     // Sắp xếp theo order
-    solutionsStatus.sort((a, b) => a.order - b.order);
+    solutionsStatus.sort((a: any, b: any) => a.order - b.order);
 
     res.json({
       success: true,
@@ -486,7 +486,7 @@ export const getSolutionsStatus = async (req: AuthenticatedRequest, res: Respons
         solutions: solutionsStatus,
         userTokens: user.tokens || 0,
         totalSolutions: solutionsStatus.length,
-        unlockedCount: solutionsStatus.filter(s => s.isUnlocked).length
+        unlockedCount: solutionsStatus.filter((s: any) => s.isUnlocked).length
       }
     });
   } catch (error) {
