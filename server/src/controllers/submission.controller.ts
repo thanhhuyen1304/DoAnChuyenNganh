@@ -355,37 +355,57 @@ export const submitSolution = async (req: AuthenticatedRequest, res: Response, n
       submittedAt: new Date() // Đảm bảo submittedAt được set đúng
     });
 
+    // Phân tích với AI đồng bộ để trả về kèm response
+    // Tự động dùng Gemini Pro nếu có API key, fallback về rule-based
+    console.log('🤖 Starting AI analysis...');
+    console.log('📊 Analysis input:', {
+      status,
+      language,
+      errorMessage: errorMessage || 'none',
+      executionResultsCount: executionResults.length,
+      passedCount: executionResults.filter(r => r.passed).length
+    });
+    
+    try {
+      const aiAnalysis = await aiAnalysisService.analyzeWithAI({
+        userCode: code,
+        correctCode: undefined,
+        buggyCode: undefined,
+        language,
+        problemStatement: challenge.problemStatement,
+        executionResults: executionResults.map(r => ({
+          testCaseIndex: r.testCaseIndex,
+          input: r.input,
+          expectedOutput: r.expectedOutput,
+          actualOutput: r.actualOutput,
+          passed: r.passed,
+          errorMessage: r.errorMessage
+        })),
+        errorMessage,
+        status
+      });
+      
+      if (aiAnalysis) {
+        submission.aiAnalysis = aiAnalysis;
+        console.log('✅ AI analysis completed:', {
+          overallStatus: aiAnalysis.overallStatus,
+          score: aiAnalysis.score,
+          totalPoints: aiAnalysis.totalPoints,
+          hasErrorAnalyses: aiAnalysis.errorAnalyses?.length > 0,
+          hasRecommendations: aiAnalysis.recommendations?.length > 0
+        });
+      } else {
+        console.warn('⚠️ AI analysis returned null/undefined');
+      }
+    } catch (error: any) {
+      console.error('❌ AI Analysis failed:', error.message);
+      console.error('Error stack:', error.stack);
+      // Không có aiAnalysis cũng không sao, vẫn trả về submission
+    }
+
     console.log('💾 Saving submission to database...');
     await submission.save();
     console.log('✅ Submission saved:', submission._id);
-
-    // Phân tích với AI không đồng bộ (fire-and-forget) để không làm chậm response
-    // Tự động dùng Gemini Pro nếu có API key, fallback về rule-based
-    console.log('🤖 Starting AI analysis (async)...');
-    aiAnalysisService.analyzeWithAI({
-      userCode: code,
-      correctCode: undefined,
-      buggyCode: undefined,
-      language,
-      problemStatement: challenge.problemStatement,
-      executionResults: executionResults.map(r => ({
-        testCaseIndex: r.testCaseIndex,
-        input: r.input,
-        expectedOutput: r.expectedOutput,
-        actualOutput: r.actualOutput,
-        passed: r.passed,
-        errorMessage: r.errorMessage
-      })),
-      errorMessage,
-      status
-    }).then(async (aiAnalysis) => {
-      // Cập nhật submission với AI analysis sau khi có kết quả
-      submission.aiAnalysis = aiAnalysis;
-      await submission.save();
-      console.log('✅ AI analysis completed and saved');
-    }).catch((error: any) => {
-      console.error('❌ AI Analysis failed:', error.message);
-    });
 
     // Cập nhật XP nếu đạt điểm
     // CHỈ tính XP nếu:
@@ -413,8 +433,26 @@ export const submitSolution = async (req: AuthenticatedRequest, res: Response, n
           const oldRank = user.rank || 'Newbie';
           user.experience = (user.experience || 0) + xpEarned;
           
-          // Logic trao token: CHỈ khi hoàn thành bài lần đầu tiên (đạt điểm tối đa)
-          const isFirstCompletion = status === 'Accepted' && score === challenge.points && !hasReachedMaxBefore;
+          // Logic trao token: CHỈ khi hoàn thành 100% test cases lần đầu tiên
+          // Điều kiện:
+          // 1. status === 'Accepted' (không có lỗi)
+          // 2. score === challenge.points (đạt 100% điểm)
+          // 3. Tất cả test cases đều pass
+          // 4. Chưa từng hoàn thành trước đó
+          const allTestCasesPassed = executionResults.every(r => r.passed);
+          const isFirstCompletion = status === 'Accepted' && 
+                                   score === challenge.points && 
+                                   allTestCasesPassed &&
+                                   !hasReachedMaxBefore;
+          
+          console.log('🎁 Token award check:', {
+            status,
+            score,
+            challengePoints: challenge.points,
+            allTestCasesPassed,
+            hasReachedMaxBefore,
+            isFirstCompletion
+          });
           
           if (isFirstCompletion) {
             // Kiểm tra xem đã từng nhận token cho bài này chưa

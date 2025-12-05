@@ -254,7 +254,8 @@ export function PvPPage({ currentUser: currentUserProp }: PvPPageProps) {
       if (roomCode) {
         result = await simplePvpApi.joinRoom(roomCode);
       } else if (roomId) {
-        result = await simplePvpApi.joinRoomById(roomId);
+        // When joining by roomId, still pass roomCode if available for private room check
+        result = await simplePvpApi.joinRoomById(roomId, roomCode);
       } else {
         throw new Error('Room ID or Room Code is required');
       }

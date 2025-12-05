@@ -151,6 +151,12 @@ export function CodeEditor({ problemId, challenge, onSubmissionSuccess }: CodeEd
 
       const result = await response.json()
       console.log('✅ Submission result:', result)
+      console.log('📊 Submission data:', {
+        hasSubmission: !!result.data?.submission,
+        hasAiAnalysis: !!result.data?.submission?.aiAnalysis,
+        status: result.data?.submission?.status,
+        aiAnalysisKeys: result.data?.submission?.aiAnalysis ? Object.keys(result.data.submission.aiAnalysis) : 'none'
+      })
 
       if (result.success) {
         const submission = result.data.submission
@@ -173,15 +179,24 @@ export function CodeEditor({ problemId, challenge, onSubmissionSuccess }: CodeEd
         })
 
         // Lưu AI analysis nếu có
+        console.log('🤖 Checking AI analysis:', {
+          hasAiAnalysis: !!submission.aiAnalysis,
+          aiAnalysis: submission.aiAnalysis
+        })
+        
         if (submission.aiAnalysis) {
+          console.log('✅ Setting AI analysis:', submission.aiAnalysis)
           setAiAnalysis(submission.aiAnalysis)
           // Tự động chuyển sang tab analysis nếu có lỗi
           if (submission.aiAnalysis.overallStatus !== 'correct') {
+            console.log('🔄 Switching to analysis tab (has errors)')
             setConsoleTab("analysis")
           } else {
+            console.log('✅ Keeping result tab (all correct)')
             setConsoleTab("result")
           }
         } else {
+          console.warn('⚠️ No AI analysis in submission')
           setConsoleTab("result")
         }
 

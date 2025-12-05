@@ -116,7 +116,11 @@ export class SimplePvPController {
     try {
       const userId = req.user?.id;
       const username = req.user?.username;
-      const { roomCode, roomId } = req.params;
+      const { roomCode: roomCodeParam, roomId } = req.params;
+      const { roomCode: roomCodeBody } = req.body;
+      
+      // roomCode có thể từ params (khi join bằng code) hoặc từ body (khi join by ID nhưng có code)
+      const roomCode = roomCodeParam || roomCodeBody;
 
       if (!userId || !username) {
         res.status(401).json({
@@ -127,7 +131,7 @@ export class SimplePvPController {
       }
 
       const room = await PVPRoom.findOne(
-        roomCode ? { roomCode } : { _id: roomId }
+        roomCodeParam ? { roomCode: roomCodeParam } : { _id: roomId }
       );
 
       if (!room) {

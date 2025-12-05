@@ -79,7 +79,7 @@ const NotificationBell: React.FC = () => {
     loadNotifications();
     const interval = setInterval(() => {
       loadNotifications();
-    }, 30000); // Check every 30 seconds
+    }, 60000); // Check every 60 seconds (reduced from 30s to save server load)
 
     return () => clearInterval(interval);
   }, []);

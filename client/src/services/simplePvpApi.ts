@@ -137,12 +137,12 @@ class SimplePvPApi {
   }
 
   async joinRoom(roomCode: string): Promise<{ data: Room; success: boolean }> {
-    const response = await api.post(`/rooms/${roomCode}/join`);
+    const response = await api.post(`/rooms/${roomCode}/join`, { roomCode });
     return response.data;
   }
 
-  async joinRoomById(roomId: string): Promise<{ data: Room; success: boolean }> {
-    const response = await api.post(`/rooms/${roomId}/join`);
+  async joinRoomById(roomId: string, roomCode?: string): Promise<{ data: Room; success: boolean }> {
+    const response = await api.post(`/rooms/${roomId}/join`, { roomCode });
     return response.data;
   }
 

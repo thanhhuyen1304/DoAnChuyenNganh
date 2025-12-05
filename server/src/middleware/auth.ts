@@ -31,13 +31,9 @@ export const authenticateToken = async (
         
         // 1. Từ header Authorization
         const authHeader = req.header('Authorization');
-        console.log('Auth middleware - Request URL:', req.url);
-        console.log('Auth middleware - Auth header:', authHeader);
-        console.log('Auth middleware - All headers:', req.headers);
         
         if (authHeader && authHeader.startsWith('Bearer ')) {
             token = authHeader.replace('Bearer ', '');
-            console.log('Auth middleware - Token extracted from header:', token.substring(0, 20) + '...');
         }
         
         // 2. Từ query parameter (cho WebSocket connections)
@@ -51,14 +47,11 @@ export const authenticateToken = async (
         }
 
         if (!token) {
-            console.log('No token found in request - Auth header:', authHeader, 'Query:', req.query.token, 'Body:', req.body.token);
             return res.status(401).json({ 
                 success: false,
                 message: 'Không có token xác thực' 
             });
         }
-
-        console.log('Token found, verifying...');
         
         // Verify token
         const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
@@ -66,14 +59,11 @@ export const authenticateToken = async (
         // Tìm user từ token
         const user = await User.findById(decoded.userId);
         if (!user) {
-            console.log('User not found for token:', decoded.userId);
             return res.status(401).json({ 
                 success: false,
                 message: 'Token không hợp lệ - User không tồn tại' 
             });
         }
-
-        console.log('User authenticated:', user.username);
 
         // Thêm user vào request
         req.user = {

@@ -83,9 +83,12 @@ const Practice = () => {
   };
 
   const handleSubmissionSuccess = () => {
-    if (selectedProblemId) {
-      loadChallenge();
-    }
+    // KHÔNG reload challenge để tránh mất state trong CodeEditor
+    // Challenge data không thay đổi sau khi submit
+    // if (selectedProblemId) {
+    //   loadChallenge();
+    // }
+    
     // Trigger refresh của ProblemsList để cập nhật trạng thái solved
     setRefreshKey(prev => prev + 1);
     window.dispatchEvent(new Event('xpUpdated'));
