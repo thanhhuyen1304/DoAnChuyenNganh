@@ -517,7 +517,7 @@ export function ProblemDetail({ problemId, onSubmissionSuccess }: ProblemDetailP
             </>
           )}
 
-          {activeTab === "editorial" && (
+          {activeTab === "editorial" && problemId &&(
             <CommentSection challengeId={problemId} />
           )}
 
