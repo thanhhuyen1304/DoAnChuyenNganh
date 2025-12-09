@@ -3,7 +3,7 @@ import ForceGraph2D from 'react-force-graph-2d';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
-import { AlertCircle, TrendingUp, BookOpen, X, Minimize2, Maximize2 } from 'lucide-react';
+import { AlertCircle, TrendingUp, BookOpen, X, Minimize2, Maximize2, ExternalLink } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { getApiBase } from '@/lib/apiBase';
 
@@ -46,6 +46,8 @@ const KnowledgeGraphWidget: React.FC<KnowledgeGraphWidgetProps> = ({
   const [error, setError] = useState<string>('');
   const [errorSummary, setErrorSummary] = useState<any>(null);
   const [recommendations, setRecommendations] = useState<any>(null);
+  const [learningResources, setLearningResources] = useState<any[]>([]);
+  const [knowledgeGaps, setKnowledgeGaps] = useState<string[]>([]);
   const [isMinimized, setIsMinimized] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -84,6 +86,8 @@ const KnowledgeGraphWidget: React.FC<KnowledgeGraphWidgetProps> = ({
       });
       setErrorSummary(result.data.errorSummary || null);
       setRecommendations(result.data.recommendations || null);
+      setLearningResources(result.data.learningResources || []);
+      setKnowledgeGaps(result.data.knowledgeGaps || []);
     } catch (err: any) {
       setError(err.message || 'Error loading graph');
       console.error('Fetch graph error:', err);
@@ -268,6 +272,21 @@ const KnowledgeGraphWidget: React.FC<KnowledgeGraphWidgetProps> = ({
             {/* Recommendations */}
             {recommendations && (
               <div className="space-y-2">
+                {knowledgeGaps.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold mb-1">
+                      {language === 'vi' ? 'Lỗ hổng kiến thức:' : 'Knowledge gaps:'}
+                    </p>
+                    <div className="flex flex-wrap gap-1">
+                      {knowledgeGaps.map((gap, idx) => (
+                        <Badge key={idx} variant="secondary" className="text-[11px]">
+                          {gap}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {recommendations.trainingData && recommendations.trainingData.length > 0 && (
                   <div>
                     <p className="text-xs font-semibold mb-1 flex items-center gap-1">
@@ -307,6 +326,46 @@ const KnowledgeGraphWidget: React.FC<KnowledgeGraphWidgetProps> = ({
                             {ch.difficulty}
                           </Badge>
                         </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {learningResources.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold mb-1 flex items-center gap-1">
+                      <ExternalLink className="w-3 h-3" />
+                      {language === 'vi' ? 'Link học nhanh:' : 'Quick learning links:'}
+                    </p>
+                    <div className="space-y-1 max-h-32 overflow-y-auto">
+                      {learningResources.slice(0, 4).map((res) => (
+                        <a
+                          key={res.url}
+                          href={res.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block text-xs p-2 bg-background border rounded hover:bg-accent"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium truncate">{res.title}</span>
+                            <Badge variant="outline" className="text-[10px]">
+                              {Array.isArray(res.errorTypes) ? res.errorTypes.join('/') : res.errorType || 'error'}
+                              {res.language ? ` • ${res.language}` : ''}
+                            </Badge>
+                          </div>
+                          <div className="flex gap-2 mt-1">
+                            {res.type && (
+                              <Badge variant="secondary" className="text-[10px]">
+                                {res.type}
+                              </Badge>
+                            )}
+                            {res.difficulty && (
+                              <Badge variant="secondary" className="text-[10px]">
+                                {res.difficulty}
+                              </Badge>
+                            )}
+                          </div>
+                        </a>
                       ))}
                     </div>
                   </div>
