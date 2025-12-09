@@ -42,6 +42,7 @@ export function ProblemsList({ selectedId, onSelect, refreshKey }: ProblemsListP
   const [problems, setProblems] = useState<Problem[]>([])
   const [loading, setLoading] = useState(true)
   const [solvedIds, setSolvedIds] = useState<Set<string>>(new Set())
+  const [submittedIds, setSubmittedIds] = useState<Map<string, boolean>>(new Map())
   const [displayCount, setDisplayCount] = useState(10)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
@@ -116,8 +117,8 @@ export function ProblemsList({ selectedId, onSelect, refreshKey }: ProblemsListP
       const result = await response.json()
 
       if (result.success) {
-        // Lấy danh sách challenges đã giải
-        const submissionsResponse = await fetch(buildApi('/submissions/user/all?status=Accepted&limit=1000'), {
+        // Lấy tất cả submissions (cả Accepted lẫn Rejected)
+        const submissionsResponse = await fetch(buildApi('/submissions/user/all?limit=1000'), {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -125,10 +126,25 @@ export function ProblemsList({ selectedId, onSelect, refreshKey }: ProblemsListP
         const submissionsResult = await submissionsResponse.json()
 
         if (submissionsResult.success) {
+          const solvedMap = new Map<string, boolean>()
+          
+          submissionsResult.data.submissions.forEach((s: any) => {
+            const challengeId = s.challenge?._id || s.challenge
+            if (challengeId && typeof challengeId === 'string') {
+              const isAccepted = s.status === 'Accepted'
+              // Chỉ cập nhật nếu chưa có hoặc nếu bài này Accepted (ưu tiên trạng thái Accepted)
+              if (!solvedMap.has(challengeId) || isAccepted) {
+                solvedMap.set(challengeId, isAccepted)
+              }
+            }
+          })
+          
+          setSubmittedIds(solvedMap)
+          // Giữ lại solvedIds cho backward compatibility
           const solved = new Set<string>(
-            submissionsResult.data.submissions
-              .map((s: any) => s.challenge?._id || s.challenge)
-              .filter((id: any) => id && typeof id === 'string')
+            Array.from(solvedMap.entries())
+              .filter(([_, isAccepted]) => isAccepted)
+              .map(([id, _]) => id)
           )
           setSolvedIds(solved)
         }
@@ -255,9 +271,19 @@ export function ProblemsList({ selectedId, onSelect, refreshKey }: ProblemsListP
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        {isSolved && (
-                          <div className="w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center">
-                            <span className="text-green-400 text-xs">✓</span>
+                        {submittedIds.has(problem._id) && (
+                          <div className={`w-5 h-5 rounded-full flex items-center justify-center ${
+                            submittedIds.get(problem._id)
+                              ? "bg-green-500/20" 
+                              : "bg-red-500/20"
+                          }`}>
+                            <span className={`text-xs ${
+                              submittedIds.get(problem._id)
+                                ? "text-green-400"
+                                : "text-red-400"
+                            }`}>
+                              {submittedIds.get(problem._id) ? "✓" : "✕"}
+                            </span>
                           </div>
                         )}
                         <span className={`text-xs font-medium ${getDifficultyColor(problem.difficulty)}`}>

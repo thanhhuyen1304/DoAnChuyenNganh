@@ -3,6 +3,8 @@ import Challenge from '../models/challenge.model'; // Import Challenge model
 import Submission from '../models/submission.model'; // Import Submission model
 import { word2vecService } from './word2vecService';
 import mongoose from 'mongoose';
+import { learningResourceService } from './learningResourceService';
+import { ILearningResource } from '../models/learningResource.model';
 
 export interface GraphNode {
   id: string;
@@ -349,6 +351,8 @@ export class KnowledgeGraphService {
       trainingData: any[];
       challenges: any[];
     };
+    learningResources: ILearningResource[];
+    knowledgeGaps: string[];
   }> {
     const fullGraph = await this.buildGraph();
     
@@ -369,7 +373,9 @@ export class KnowledgeGraphService {
     const errorMessages: string[] = [];
     const relatedCategories: Set<string> = new Set();
     const relatedTags: Set<string> = new Set();
+    const relatedLanguages: Set<string> = new Set();
     const challengeIds: Set<string> = new Set();
+    let totalAccepted = 0;
 
     recentSubmissions.forEach(sub => {
       if (sub.status !== 'Accepted' && sub.aiAnalysis?.errorAnalyses) {
@@ -382,10 +388,15 @@ export class KnowledgeGraphService {
       }
 
       // Thu thập categories và tags từ challenge đang làm
+      if (sub.status === 'Accepted') {
+        totalAccepted += 1;
+      }
+
       if (sub.challenge && typeof sub.challenge === 'object') {
         const ch = sub.challenge as any;
         if (ch.category) relatedCategories.add(ch.category);
         if (ch.tags) ch.tags.forEach((tag: string) => relatedTags.add(tag));
+        if (ch.language) relatedLanguages.add((ch.language as string).toLowerCase());
         challengeIds.add(ch._id.toString());
       }
     });
@@ -473,14 +484,14 @@ export class KnowledgeGraphService {
       .lean();
 
     // Tìm challenge recommendations
-    const recommendedChallenges = await Challenge.find({
+    const relatedChallenges = await Challenge.find({
       isActive: true,
       $or: [
         ...Array.from(relatedCategories).map(cat => ({ category: cat })),
         ...Array.from(relatedTags).map(tag => ({ tags: tag })),
       ],
     })
-      .limit(5)
+      .limit(10)
       .lean();
 
     // Cập nhật nodes với recommendations
@@ -493,6 +504,50 @@ export class KnowledgeGraphService {
       }
       return node;
     });
+
+    const experienceLevel =
+      totalAccepted < 5 ? 'beginner' : totalAccepted < 15 ? 'intermediate' : 'advanced';
+
+    const learningResources = await learningResourceService.suggestForErrors({
+      errorTypes: Object.keys(errorTypes),
+      languages: Array.from(relatedLanguages),
+      tags: Array.from(relatedTags),
+      level: experienceLevel,
+      limit: 8,
+    });
+
+    const targetDifficulties =
+      experienceLevel === 'beginner'
+        ? ['Easy']
+        : experienceLevel === 'intermediate'
+        ? ['Easy', 'Medium']
+        : ['Medium', 'Hard'];
+
+    const knowledgeGaps: string[] = [];
+    Object.entries(errorTypes)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .forEach(([type, count]) => knowledgeGaps.push(`Thiếu kiến thức về lỗi ${type} (gặp ${count} lần)`));
+
+    Array.from(relatedCategories)
+      .slice(0, 2)
+      .forEach(cat => knowledgeGaps.push(`Cần ôn thêm chủ đề ${cat}`));
+
+    Array.from(relatedTags)
+      .slice(0, 3)
+      .forEach(tag => knowledgeGaps.push(`Rèn luyện thêm tag ${tag}`));
+
+    // Tìm challenge recommendations phù hợp lỗi + độ khó
+    const recommendedChallenges = await Challenge.find({
+      isActive: true,
+      difficulty: { $in: targetDifficulties },
+      $or: [
+        ...Array.from(relatedCategories).map(cat => ({ category: cat })),
+        ...Array.from(relatedTags).map(tag => ({ tags: tag })),
+      ],
+    })
+      .limit(5)
+      .lean();
 
     return {
       nodes: [...updatedNodes, ...errorNodes],
@@ -515,6 +570,8 @@ export class KnowledgeGraphService {
         trainingData: recommendedTrainingData,
         challenges: recommendedChallenges,
       },
+      learningResources,
+      knowledgeGaps,
     };
   }
 

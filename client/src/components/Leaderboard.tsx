@@ -93,7 +93,7 @@ const Leaderboard: React.FC = () => {
           <CardContent className="space-y-4 p-8 pt-0">
             {learners.map((learner, index) => (
               <div
-                key={learner.rank}
+                key={`${learner.rank}-${learner.username}`}
                 className={`flex items-center gap-6 p-6 rounded-2xl bg-white/80 dark:bg-gray-900/70 backdrop-blur-xl border border-transparent hover:border-[#A259FF]/30 hover:shadow-[0_0_25px_rgba(162,89,255,0.2)] transition-all duration-500 transform hover:-translate-y-1 relative overflow-hidden group`}
                 style={{ animationDelay: `${index * 0.1}s` }}
               >
