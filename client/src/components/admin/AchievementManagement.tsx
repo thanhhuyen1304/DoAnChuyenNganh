@@ -15,7 +15,7 @@ import { useToast } from '@/components/hooks/use-toast';
 import {
   Loader2, Plus, Trash2, Award, Edit, Eye, Search, Filter,
   ChevronLeft, ChevronRight, RotateCcw, CheckCircle, XCircle,
-  TrendingUp, Users, Activity
+  TrendingUp, Users, Activity, UserPlus
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 
@@ -87,7 +87,14 @@ const AchievementManagement: React.FC = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showAwardModal, setShowAwardModal] = useState(false);
   const [selectedAchievement, setSelectedAchievement] = useState<Achievement | null>(null);
+  
+  // Award achievement state
+  const [userSearchTerm, setUserSearchTerm] = useState('');
+  const [searchedUsers, setSearchedUsers] = useState<any[]>([]);
+  const [searchingUsers, setSearchingUsers] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<string>('');
   
   // Form data
   const [formData, setFormData] = useState<{
@@ -369,6 +376,78 @@ const AchievementManagement: React.FC = () => {
     }
   };
 
+  const searchUsers = async (searchQuery: string) => {
+    if (!searchQuery || searchQuery.length < 2) {
+      setSearchedUsers([]);
+      return;
+    }
+
+    try {
+      setSearchingUsers(true);
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/users/search?q=${encodeURIComponent(searchQuery)}`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setSearchedUsers(data.data.users || []);
+      }
+    } catch (err) {
+      console.error('Error searching users:', err);
+    } finally {
+      setSearchingUsers(false);
+    }
+  };
+
+  const awardAchievementToUser = async () => {
+    if (!selectedAchievement || !selectedUserId) {
+      toast({
+        title: language === 'vi' ? 'Lỗi' : 'Error',
+        description: language === 'vi' ? 'Vui lòng chọn người dùng' : 'Please select a user',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/achievements/award`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: selectedUserId,
+          achievementId: selectedAchievement._id,
+        }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        toast({
+          title: language === 'vi' ? 'Thành công' : 'Success',
+          description: language === 'vi' ? 'Đã trao thành tích cho người dùng' : 'Achievement awarded to user successfully',
+        });
+        setShowAwardModal(false);
+        setSelectedUserId('');
+        setUserSearchTerm('');
+        setSearchedUsers([]);
+        fetchAchievements();
+        fetchStats();
+      } else {
+        throw new Error(data.message);
+      }
+    } catch (err: any) {
+      toast({
+        title: language === 'vi' ? 'Lỗi' : 'Error',
+        description: err.message || (language === 'vi' ? 'Không thể trao thành tích' : 'Failed to award achievement'),
+        variant: 'destructive',
+      });
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       name: '',
@@ -410,6 +489,11 @@ const AchievementManagement: React.FC = () => {
   const openDetailModal = (achievement: Achievement) => {
     setSelectedAchievement(achievement);
     setShowDetailModal(true);
+  };
+
+  const openAwardModal = (achievement: Achievement) => {
+    setSelectedAchievement(achievement);
+    setShowAwardModal(true);
   };
 
   if (loading && achievements.length === 0) {
@@ -609,7 +693,17 @@ const AchievementManagement: React.FC = () => {
                               <Button
                                 size="sm"
                                 variant="ghost"
+                                onClick={() => openAwardModal(achievement)}
+                                title={language === 'vi' ? 'Trao thành tích' : 'Award achievement'}
+                                className="text-amber-600 hover:text-amber-700"
+                              >
+                                <UserPlus className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
                                 onClick={() => openEditModal(achievement)}
+                                title={language === 'vi' ? 'Chỉnh sửa' : 'Edit'}
                               >
                                 <Edit className="w-4 h-4" />
                               </Button>
@@ -617,6 +711,7 @@ const AchievementManagement: React.FC = () => {
                                 size="sm"
                                 variant="ghost"
                                 onClick={() => openDeleteModal(achievement)}
+                                title={language === 'vi' ? 'Xóa' : 'Delete'}
                               >
                                 <Trash2 className="w-4 h-4 text-destructive" />
                               </Button>
@@ -934,6 +1029,116 @@ const AchievementManagement: React.FC = () => {
             </Button>
             <Button variant="destructive" onClick={() => deleteAchievement(false)}>
               {language === 'vi' ? 'Xóa (Soft Delete)' : 'Delete (Soft)'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Award Achievement Modal */}
+      <Dialog open={showAwardModal} onOpenChange={setShowAwardModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {language === 'vi' ? 'Trao thành tích cho người dùng' : 'Award Achievement to User'}
+            </DialogTitle>
+            <DialogDescription>
+              {language === 'vi'
+                ? 'Tìm kiếm và chọn người dùng để trao thành tích này'
+                : 'Search and select a user to award this achievement'}
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedAchievement && (
+            <div className="space-y-4">
+              {/* Achievement Info */}
+              <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                <span className="text-3xl">{selectedAchievement.icon}</span>
+                <div>
+                  <p className="font-semibold">{selectedAchievement.name}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedAchievement.points} {language === 'vi' ? 'điểm' : 'points'}
+                  </p>
+                </div>
+              </div>
+
+              {/* User Search */}
+              <div className="space-y-2">
+                <Label>{language === 'vi' ? 'Tìm kiếm người dùng' : 'Search User'}</Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                  <Input
+                    placeholder={language === 'vi' ? 'Nhập tên hoặc email...' : 'Enter name or email...'}
+                    value={userSearchTerm}
+                    onChange={(e) => {
+                      setUserSearchTerm(e.target.value);
+                      searchUsers(e.target.value);
+                    }}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+
+              {/* Search Results */}
+              {searchingUsers && (
+                <div className="flex justify-center py-4">
+                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                </div>
+              )}
+
+              {!searchingUsers && searchedUsers.length > 0 && (
+                <ScrollArea className="h-48 rounded-md border">
+                  <div className="p-2 space-y-1">
+                    {searchedUsers.map((user) => (
+                      <button
+                        key={user._id}
+                        onClick={() => setSelectedUserId(user._id)}
+                        className={`w-full p-3 rounded-md text-left transition-colors ${
+                          selectedUserId === user._id
+                            ? 'bg-primary text-primary-foreground'
+                            : 'hover:bg-muted'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1">
+                            <p className="font-medium">{user.username}</p>
+                            <p className="text-sm opacity-80">{user.email}</p>
+                          </div>
+                          <Badge variant="outline">
+                            {user.experience || 0} XP
+                          </Badge>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </ScrollArea>
+              )}
+
+              {!searchingUsers && userSearchTerm && searchedUsers.length === 0 && (
+                <div className="text-center py-4 text-muted-foreground">
+                  {language === 'vi' ? 'Không tìm thấy người dùng' : 'No users found'}
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowAwardModal(false);
+                setSelectedUserId('');
+                setUserSearchTerm('');
+                setSearchedUsers([]);
+              }}
+            >
+              {language === 'vi' ? 'Hủy' : 'Cancel'}
+            </Button>
+            <Button
+              onClick={awardAchievementToUser}
+              disabled={!selectedUserId}
+            >
+              <Award className="w-4 h-4 mr-2" />
+              {language === 'vi' ? 'Trao thành tích' : 'Award'}
             </Button>
           </DialogFooter>
         </DialogContent>

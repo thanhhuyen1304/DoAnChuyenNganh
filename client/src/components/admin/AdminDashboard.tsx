@@ -32,6 +32,7 @@ import KnowledgeGraphCanvas from './KnowledgeGraphCanvas';
 import CommentReportManagement from './CommentReportManagement';
 import AllCommentsManagement from './AllCommentsManagement';
 import ChallengeManagement from './ChallengeManagement';
+import AdminStats from './AdminStats';
 import Header from '../Header';
 import ErrorBoundary from '../ui/ErrorBoundary';
 
@@ -465,7 +466,7 @@ const AdminDashboard: React.FC = () => {
             {activeOtherTab === 'database' && <DatabaseDebugger />}
             {activeOtherTab === 'api' && <APITester />}
             {activeOtherTab === 'guide' && <ScraperGuide />}
-            {activeOtherTab === 'stats' && <ChallengeStats challenges={challenges} />}
+            {activeOtherTab === 'stats' && <AdminStats />}
           </>
         )}
       </main>

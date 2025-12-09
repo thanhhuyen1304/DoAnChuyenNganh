@@ -1,19 +1,23 @@
 import express, { Request, Response } from 'express'
-import { 
-  getMyProgress, 
+import {
+  getMyProgress,
   getTodayStats,
-  getProgressByUsername, 
+  getProgressByUsername,
   updateMe,
   getMyPreferences,
   updateMyPreferences,
-  getMyCompletedChallenges
+  getMyCompletedChallenges,
+  searchUsers
 } from '../controllers/user.controller'
-import { authenticateToken } from '../middleware/auth'
+import { authenticateToken, isAdmin } from '../middleware/auth'
 import { uploadRateLimit } from '../middleware/rateLimit'
 import { uploadAvatar, getFileUrl } from '../middleware/upload'
 import User from '../models/user.model'
 
 const router = express.Router()
+
+// Admin: search users
+router.get('/search', authenticateToken, isAdmin, searchUsers)
 
 // Protected: get current user's progress
 router.get('/me/progress', authenticateToken, getMyProgress)
