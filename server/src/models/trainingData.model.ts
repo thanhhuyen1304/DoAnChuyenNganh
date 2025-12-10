@@ -5,6 +5,8 @@ export interface ITrainingData extends Document {
   answer: string; // Câu trả lời
   category?: string; // Danh mục (ví dụ: 'programming', 'debugging', 'general')
   tags?: string[]; // Tags để tìm kiếm
+  isPractice?: boolean; // Đánh dấu đây là bài luyện thực hành, không phải hội thoại chatbot
+  hasCodeExample?: boolean; // Có ví dụ code
   priority?: number; // Độ ưu tiên (cao hơn = ưu tiên hơn)
   usageCount?: number; // Số lần được sử dụng
   rating?: number; // Đánh giá chất lượng (1-5)
@@ -43,6 +45,15 @@ const trainingDataSchema = new Schema<ITrainingData>(
       default: 1,
       min: 0,
       max: 10,
+    },
+    isPractice: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    hasCodeExample: {
+      type: Boolean,
+      default: false,
     },
     usageCount: {
       type: Number,
