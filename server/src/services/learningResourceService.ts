@@ -21,18 +21,15 @@ class LearningResourceService {
       limit = 6,
     } = options;
 
-    if (!errorTypes || errorTypes.length === 0) {
-      return [];
-    }
-
-    const normalizedErrors = errorTypes.map(e => e.toLowerCase());
+    const normalizedErrors = (errorTypes || []).map(e => e.toLowerCase());
     const normalizedLangs = languages.map(l => l.toLowerCase());
     const normalizedTags = tags.map(t => t.toLowerCase());
 
-    const resources = await LearningResource.find({
-      isActive: true,
-      errorTypes: { $in: normalizedErrors },
-    }).lean();
+    const query: any = { isActive: true };
+    if (normalizedErrors.length > 0) {
+      query.errorTypes = { $in: normalizedErrors };
+    }
+    const resources = await LearningResource.find(query).lean();
 
     const levelOrder: LearningDifficulty[] = ['beginner', 'intermediate', 'advanced'];
     const levelRank = (d?: LearningDifficulty) => {
@@ -45,8 +42,10 @@ class LearningResourceService {
     const scored = resources.map((r) => {
       let score = r.qualityScore || 1;
 
-      // Match error types (primary)
-      const errorMatch = r.errorTypes.filter(e => normalizedErrors.includes(e)).length;
+      // Match error types (primary if có)
+      const errorMatch = normalizedErrors.length > 0
+        ? r.errorTypes.filter(e => normalizedErrors.includes(e)).length
+        : 0;
       score += errorMatch * 4;
 
       // Match language
@@ -66,10 +65,25 @@ class LearningResourceService {
       return { resource: r, score };
     });
 
-    return scored
+    const ranked = scored
       .sort((a, b) => b.score - a.score)
       .slice(0, limit)
       .map(item => item.resource);
+
+    // Nếu không có error types và thiếu kết quả, fallback lấy top chất lượng theo lang/tag
+    if (ranked.length === 0 && normalizedErrors.length === 0) {
+      const fallback = await LearningResource.find({
+        isActive: true,
+        ...(normalizedLangs.length ? { language: { $in: normalizedLangs } } : {}),
+        ...(normalizedTags.length ? { tags: { $in: normalizedTags } } : {}),
+      })
+        .sort({ qualityScore: -1 })
+        .limit(limit)
+        .lean();
+      return fallback;
+    }
+
+    return ranked;
   }
 }
 
