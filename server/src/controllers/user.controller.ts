@@ -626,4 +626,52 @@ export const updateMyPreferences = async (req: Request, res: Response) => {
   }
 }
 
-export default { getMyProgress, getTodayStats, getProgressByUsername, updateMe, getMyPreferences, updateMyPreferences }
+// GET /api/users/search?q=query (admin search users)
+export const searchUsers = async (req: Request, res: Response) => {
+  try {
+    const { q } = req.query
+    
+    if (!q || typeof q !== 'string' || q.trim().length < 2) {
+      return res.status(400).json({
+        success: false,
+        message: 'Query phải có ít nhất 2 ký tự'
+      })
+    }
+
+    const searchQuery = q.trim()
+    const regex = new RegExp(searchQuery, 'i')
+
+    // Search by username or email
+    const users = await User.find({
+      $or: [
+        { username: regex },
+        { email: regex }
+      ]
+    })
+      .select('username email avatar experience rank badges createdAt')
+      .limit(20)
+      .lean()
+
+    return res.json({
+      success: true,
+      data: {
+        users,
+        count: users.length
+      }
+    })
+  } catch (err) {
+    console.error('searchUsers error', err)
+    return res.status(500).json({ success: false, message: 'Lỗi máy chủ' })
+  }
+}
+
+export default {
+  getMyProgress,
+  getTodayStats,
+  getProgressByUsername,
+  updateMe,
+  getMyPreferences,
+  updateMyPreferences,
+  searchUsers,
+  getMyCompletedChallenges
+}

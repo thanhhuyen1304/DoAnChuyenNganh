@@ -36,6 +36,13 @@ export const ENV = {
   AI_PROVIDER: process.env.AI_PROVIDER || 'gemini', // 'gemini' | 'openai'
   GEMINI_API_KEY: process.env.GEMINI_API_KEY || '',
   OPENAI_API_KEY: process.env.OPENAI_API_KEY || '',
+
+  // External Knowledge APIs
+  GOOGLE_CSE_ID: process.env.GOOGLE_CSE_ID || '',
+  GOOGLE_API_KEY: process.env.GOOGLE_API_KEY || '',
+  YOUTUBE_API_KEY: process.env.YOUTUBE_API_KEY || '',
+  EXTERNAL_RESOURCE_CACHE_TTL: Number(process.env.EXTERNAL_RESOURCE_CACHE_TTL || 900), // seconds
+  EXTERNAL_RESOURCE_LIMIT: Number(process.env.EXTERNAL_RESOURCE_LIMIT || 8),
   
   // Admin Configuration
   ADMIN_EMAIL: process.env.ADMIN_EMAIL || 'admin@bughunter.com',

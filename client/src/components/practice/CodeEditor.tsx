@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Play, RotateCcw, Send, Settings2, Copy, Maximize2, Minimize2, Eye, EyeOff, Brain } from "lucide-react"
+import { useState, useEffect, useRef } from "react"
+import { Play, RotateCcw, Send, Settings2, Copy, Maximize2, Minimize2, Eye, EyeOff, Brain, GripVertical } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { buildApi } from "@/lib/api"
 import { useToast } from "@/components/hooks/use-toast"
@@ -34,6 +34,10 @@ export function CodeEditor({ problemId, challenge, onSubmissionSuccess }: CodeEd
   const [showConsole, setShowConsole] = useState(true)
   const [selectedTestCase, setSelectedTestCase] = useState(0)
   const [lastProblemId, setLastProblemId] = useState<string | null>(null)
+  const [editorHeight, setEditorHeight] = useState(400) // Chiều cao mặc định cho editor
+  const [isResizing, setIsResizing] = useState(false)
+  const resizeRef = useRef<HTMLDivElement>(null)
+  const editorContainerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     // Chỉ reset code khi chuyển sang bài khác (problemId thay đổi), không reset khi submit
@@ -286,11 +290,49 @@ export function CodeEditor({ problemId, challenge, onSubmissionSuccess }: CodeEd
     })
   }
 
+  // Handle resize - chỉ thay đổi kích thước editor, console giữ nguyên
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing || !editorContainerRef.current) return
+      
+      const editorContainer = editorContainerRef.current
+      const containerRect = editorContainer.getBoundingClientRect()
+      
+      // Tính chiều cao mới của editor từ top của container đến vị trí chuột
+      const newEditorHeight = e.clientY - containerRect.top
+      
+      // Min height cho editor: 200px, Max height: không giới hạn (sẽ tự động fit)
+      const minHeight = 200
+      
+      if (newEditorHeight >= minHeight) {
+        setEditorHeight(newEditorHeight)
+      }
+    }
+
+    const handleMouseUp = () => {
+      setIsResizing(false)
+    }
+
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove)
+      document.addEventListener('mouseup', handleMouseUp)
+      document.body.style.cursor = 'ns-resize'
+      document.body.style.userSelect = 'none'
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+  }, [isResizing])
+
   const selectedTestCaseData = testResults?.cases?.[selectedTestCase]
   const currentTestCase = challenge?.testCases?.[selectedTestCase]
 
   return (
-    <div className={`flex-1 flex flex-col bg-background overflow-hidden ${isFullScreen ? "fixed inset-0 z-50" : ""}`}>
+    <div className={`flex-1 flex flex-col bg-background overflow-hidden ${isFullScreen ? "fixed inset-0 z-[100] pt-16" : ""}`} ref={resizeRef}>
       {/* Editor Header with Panel Controls */}
       <div className="flex items-center justify-between h-12 px-4 bg-card border-b border-border">
         <div className="flex items-center gap-2">
@@ -339,9 +381,12 @@ export function CodeEditor({ problemId, challenge, onSubmissionSuccess }: CodeEd
       </div>
 
       {/* Code Editor Area */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Editor */}
-        <div className="flex-1 bg-[#1a1d23] font-mono text-sm overflow-hidden flex flex-col">
+      <div className="flex-1 flex flex-col overflow-hidden" ref={editorContainerRef}>
+        {/* Editor với chiều cao có thể điều chỉnh */}
+        <div
+          className="bg-[#1a1d23] font-mono text-sm overflow-hidden flex flex-col"
+          style={{ height: `${editorHeight}px`, minHeight: '200px' }}
+        >
           <div className="flex-1 overflow-y-auto">
             <textarea
               value={code}
@@ -354,9 +399,21 @@ export function CodeEditor({ problemId, challenge, onSubmissionSuccess }: CodeEd
           </div>
         </div>
 
-        {/* Console Output */}
+        {/* Resize Handle */}
         {showConsole && (
-          <div className="h-48 bg-[#0f1419] border-t border-border flex flex-col">
+          <div
+            className="h-1 bg-border hover:bg-primary cursor-ns-resize flex items-center justify-center group relative"
+            onMouseDown={() => setIsResizing(true)}
+          >
+            <div className="absolute inset-x-0 h-3 flex items-center justify-center">
+              <GripVertical className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+            </div>
+          </div>
+        )}
+
+        {/* Console Output - chiều cao cố định */}
+        {showConsole && (
+          <div className="h-48 bg-[#0f1419] border-t border-border flex flex-col flex-shrink-0">
             <div className="flex items-center justify-between h-10 px-4 bg-card border-b border-border">
               <div className="flex gap-4">
                 <button

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useBackground } from '../contexts/BackgroundContext';
 import { getApiBase } from '../../lib/apiBase';
 import { buildApi } from '../../lib/api';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -49,6 +50,7 @@ const AllChallengesList: React.FC<AllChallengesListProps> = ({ className = '' })
   const [error, setError] = useState('');
   const { language } = useLanguage();
   const navigate = useNavigate();
+  const { background } = useBackground();
   
   // View mode: 'grid' or 'list'
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -61,6 +63,7 @@ const AllChallengesList: React.FC<AllChallengesListProps> = ({ className = '' })
   
   // Completed challenges
   const [completedChallengeIds, setCompletedChallengeIds] = useState<Set<string>>(new Set());
+  const [submittedChallenges, setSubmittedChallenges] = useState<Map<string, boolean>>(new Map());
   const [loadingCompleted, setLoadingCompleted] = useState(true);
   
   // Favorites
@@ -87,6 +90,31 @@ const AllChallengesList: React.FC<AllChallengesListProps> = ({ className = '' })
         if (data.success && Array.isArray(data.completedChallenges)) {
           setCompletedChallengeIds(new Set(data.completedChallenges));
         }
+      }
+
+      // Load all submissions để track đúng/sai
+      const submissionsResponse = await fetch(buildApi('/submissions/user/all?limit=1000'), {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const submissionsResult = await submissionsResponse.json();
+
+      if (submissionsResult.success) {
+        const submissionMap = new Map<string, boolean>();
+        
+        submissionsResult.data.submissions.forEach((s: any) => {
+          const challengeId = s.challenge?._id || s.challenge;
+          if (challengeId && typeof challengeId === 'string') {
+            const isAccepted = s.status === 'Accepted';
+            // Chỉ cập nhật nếu chưa có hoặc nếu bài này Accepted (ưu tiên trạng thái Accepted)
+            if (!submissionMap.has(challengeId) || isAccepted) {
+              submissionMap.set(challengeId, isAccepted);
+            }
+          }
+        });
+        
+        setSubmittedChallenges(submissionMap);
       }
     } catch (error) {
       console.error('Error loading completed challenges:', error);
@@ -313,7 +341,32 @@ const AllChallengesList: React.FC<AllChallengesListProps> = ({ className = '' })
   }
 
   return (
-    <div className={`space-y-6 ${className}`}>
+    <>
+      {/* full-viewport fixed background (covers entire page, including header)
+          Prefer the global CSS variable `--background-image` set by `BackgroundContext`.
+          If the background id is 'gradient', apply a CSS gradient instead. */}
+      {background && (
+        <div
+          className={`fixed inset-0 -z-10 bg-center bg-cover bg-no-repeat ${background.id === 'gradient' ? 'bg-gradient-to-br from-slate-900 via-indigo-900 to-violet-800' : ''}`}
+          style={
+            background.id === 'gradient'
+              ? undefined
+              : {
+                  // Use the CSS variable if available, otherwise fallback to the provided URL
+                  backgroundImage: `var(--background-image, url(${background.url}))`,
+                  backgroundAttachment: 'fixed',
+                }
+          }
+        />
+      )}
+
+      {/* overlay to keep content readable */}
+      {background && background.url && (
+        <div className="fixed inset-0 z-0 bg-black/40 dark:bg-black/60 pointer-events-none" />
+      )}
+
+      <section className={`w-full min-h-screen py-6 px-4 relative z-10 ${className}`}>
+        <div className="relative z-20 space-y-6">
       {/* Search and Filter Bar */}
       <div className="bg-white/90 dark:bg-gray-900/80 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 shadow-lg">
         <div className="space-y-4">
@@ -493,8 +546,20 @@ const AllChallengesList: React.FC<AllChallengesListProps> = ({ className = '' })
                   <div className="flex justify-between items-start gap-3 mb-2">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        {isCompleted && (
-                          <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+                        {submittedChallenges.has(challenge._id) && (
+                          <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${
+                            submittedChallenges.get(challenge._id)
+                              ? "bg-green-500/20" 
+                              : "bg-red-500/20"
+                          }`}>
+                            <span className={`text-xs ${
+                              submittedChallenges.get(challenge._id)
+                                ? "text-green-400"
+                                : "text-red-400"
+                            }`}>
+                              {submittedChallenges.get(challenge._id) ? "✓" : "✕"}
+                            </span>
+                          </div>
                         )}
                         <CardTitle className="text-lg md:text-xl line-clamp-2">
                           {language === 'vi'
@@ -584,7 +649,9 @@ const AllChallengesList: React.FC<AllChallengesListProps> = ({ className = '' })
           })}
         </div>
       )}
-    </div>
+      </div>
+    </section>
+    </>
   );
 };
 

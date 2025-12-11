@@ -4,11 +4,13 @@ import { ProblemsList } from '../practice/ProblemsList';
 import { ProblemDetail } from '../practice/ProblemDetail';
 import { CodeEditor } from '../practice/CodeEditor';
 import KnowledgeGraphWidget from '../practice/KnowledgeGraphWidget';
+import RelatedExercises from '../practice/RelatedExercises';
 import { buildApi } from '@/lib/api';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '../ui/button';
 import { BookOpen, Loader2, ListChecks } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+import SmartResourcePanel from '../practice/SmartResourcePanel';
 
 const Practice = () => {
   const { language } = useLanguage();
@@ -195,6 +197,11 @@ const Practice = () => {
                     )}
                   </div>
 
+                  <RelatedExercises
+                    challengeId={selectedProblemId}
+                    onNavigateChallenge={(id) => handleProblemSelect(id)}
+                  />
+
                   <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/95 dark:bg-gray-900/80 shadow-xl p-4">
                     <div className="flex items-center gap-2 mb-4">
                       <ListChecks className="w-5 h-5 text-primary-500" />
@@ -202,8 +209,16 @@ const Practice = () => {
                         {language === 'vi' ? 'Liên kết kiến thức' : 'Knowledge graph'}
                       </h3>
                     </div>
-                    <KnowledgeGraphWidget challengeId={selectedProblemId} compact />
+                    <KnowledgeGraphWidget challengeId={selectedProblemId} compact={false} />
                   </div>
+
+                  {challenge && (
+                    <SmartResourcePanel
+                      contextText={`${challenge.title || ''}. ${challenge.description || ''}`}
+                      language={challenge.language}
+                      difficulty={challenge.difficulty}
+                    />
+                  )}
                 </>
               ) : (
                 <div className="rounded-2xl border border-dashed border-primary-300 dark:border-primary-800 bg-white/90 dark:bg-gray-900/60 shadow-lg text-center px-10 py-16">

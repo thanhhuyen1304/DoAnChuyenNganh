@@ -44,29 +44,15 @@ const ChatBox: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   
   // Resize state
-  const defaultWidth = 380;
-  const defaultHeight = 600;
-  const minWidth = 320;
-  const minHeight = 400;
+  const defaultWidth = 380; // Tăng chiều rộng mặc định
+  const defaultHeight = 580; // Tăng chiều cao mặc định
+  const minWidth = 280; // Kích thước tối thiểu nhỏ hơn
+  const minHeight = 400; // Kích thước tối thiểu nhỏ
   const maxWidth = 1200;
-  const maxHeight = 900;
+  const maxHeight = 800;
   
-  const [chatboxSize, setChatboxSize] = useState(() => {
-    // Load from localStorage
-    const saved = localStorage.getItem('chatbox-size');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        return {
-          width: Math.max(minWidth, Math.min(maxWidth, parsed.width || defaultWidth)),
-          height: Math.max(minHeight, Math.min(maxHeight, parsed.height || defaultHeight)),
-        };
-      } catch {
-        return { width: defaultWidth, height: defaultHeight };
-      }
-    }
-    return { width: defaultWidth, height: defaultHeight };
-  });
+  // Always start with default size, don't load from localStorage
+  const [chatboxSize, setChatboxSize] = useState({ width: defaultWidth, height: defaultHeight });
   
   const [isResizing, setIsResizing] = useState(false);
   const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 });
@@ -102,12 +88,12 @@ const ChatBox: React.FC = () => {
     }
   }, [isOpen]);
 
-  // Save size to localStorage when changed
-  useEffect(() => {
-    if (isOpen) {
-      localStorage.setItem('chatbox-size', JSON.stringify(chatboxSize));
-    }
-  }, [chatboxSize, isOpen]);
+  // Don't save size to localStorage anymore - always use default on open
+  // useEffect(() => {
+  //   if (isOpen) {
+  //     localStorage.setItem('chatbox-size', JSON.stringify(chatboxSize));
+  //   }
+  // }, [chatboxSize, isOpen]);
 
   // Handle resize
   const handleMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
@@ -172,6 +158,7 @@ const ChatBox: React.FC = () => {
   // Reset size to default
   const resetSize = () => {
     setChatboxSize({ width: defaultWidth, height: defaultHeight });
+    setIsMaximized(false);
   };
 
   // Toggle maximize/minimize
@@ -181,11 +168,12 @@ const ChatBox: React.FC = () => {
       setChatboxSize(previousSize);
       setIsMaximized(false);
     } else {
-      // Save current size and maximize
+      // Save current size and maximize to specific size
       setPreviousSize(chatboxSize);
-      setChatboxSize({ 
-        width: Math.min(window.innerWidth - 48, maxWidth), 
-        height: Math.min(window.innerHeight - 120, maxHeight) 
+      // Maximize: mở rộng cả chiều ngang và chiều cao
+      setChatboxSize({
+        width: 1000, // Tăng width lên 1000px
+        height: 650
       });
       setIsMaximized(true);
     }
@@ -545,24 +533,34 @@ const ChatBox: React.FC = () => {
         {isOpen ? <X size={24} /> : <MessageCircle size={24} />}
       </button>
 
-      {/* Chat Window - hiển thị cao hơn header, phủ lên vùng trên */}
+      {/* Chat Window - positioned near chat button */}
       {isOpen && (
         <div
           ref={containerRef}
-          className="fixed inset-0 z-[9998] flex items-start justify-end pointer-events-none"
+          className="fixed bottom-0 right-0 z-[9998] pointer-events-none"
+          style={{
+            maxHeight: 'calc(100vh - 80px)', // Đảm bảo không vượt quá viewport trừ header
+          }}
         >
-          {/* Wrapper để đặt chatbox ở gần header (góc phải trên) */}
-          <div className="mt-20 mr-6 pointer-events-auto">
-            <div 
+          {/* Wrapper để đặt chatbox cao lên trên icon chatbot */}
+          <div
+            className="pointer-events-auto"
+            style={{
+              marginBottom: isMaximized ? '90px' : '90px', // Giảm khoảng cách từ 110px xuống 90px khi ở kích thước mặc định
+              marginRight: '24px',
+              maxHeight: 'calc(100vh - 170px)', // Giới hạn chiều cao tối đa
+            }}
+          >
+            <div
           ref={chatboxRef}
           className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200 dark:border-gray-700"
           style={{
             width: `${chatboxSize.width}px`,
-            height: `${chatboxSize.height}px`,
+            height: `${Math.min(chatboxSize.height, window.innerHeight - 170)}px`, // Giới hạn height dựa trên viewport
             minWidth: `${minWidth}px`,
             minHeight: `${minHeight}px`,
             maxWidth: `${maxWidth}px`,
-            maxHeight: `${maxHeight}px`,
+            maxHeight: `calc(100vh - 170px)`, // Đảm bảo không bị che bởi header
           }}
         >
           {/* Header */}
@@ -605,7 +603,7 @@ const ChatBox: React.FC = () => {
               {/* <button
                 onClick={resetSize}
                 className="hover:bg-white/20 p-2 rounded-lg transition-colors"
-                title={language === 'vi' ? 'Kích thước mặc định' : 'Default size'}
+                title={language === 'vi' ? 'Đặt lại kích thước mặc định' : 'Reset to default size'}
               >
                 <Square size={16} />
               </button> */}

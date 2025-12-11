@@ -5,6 +5,8 @@ import TrainingData, { ITrainingData } from '../models/trainingData.model';
 import { knowledgeGraphService, KnowledgeGraph, GraphNode } from './knowledgeGraphService';
 import { LanguagePreference } from '../models/languagePreference.model';
 import User from '../models/user.model';
+import { learningResourceService } from './learningResourceService';
+import { ILearningResource } from '../models/learningResource.model';
 
 const CATEGORY_ORDER = ['Syntax', 'Logic', 'Performance', 'Security'];
 const DIFFICULTY_ORDER: Array<'Easy' | 'Medium' | 'Hard'> = ['Easy', 'Medium', 'Hard'];
@@ -65,6 +67,7 @@ interface PersonalizedPlan {
   recommendations: {
     challenges: Recommendation<IChallenge>[];
     trainingData: Recommendation<ITrainingData>[];
+    learningResources: ILearningResource[];
   };
   learningPath: LearningPathStep[];
   graph: KnowledgeGraph;
@@ -74,13 +77,20 @@ class PersonalizedPlanService {
   async buildPlan(userId: string): Promise<PersonalizedPlan> {
     const profile = await this.buildUserProfile(userId);
 
-    const [challengeRecs, trainingDataRecs, baseGraph] = await Promise.all([
+    const [challengeRecs, trainingDataRecs, baseGraph, resourceRecs] = await Promise.all([
       this.recommendChallenges(profile, 5),
       this.recommendTrainingData(profile, 5),
       knowledgeGraphService.buildGraph(),
+      learningResourceService.suggestForErrors({
+        errorTypes: Object.keys(profile.errorTypeStats || {}),
+        languages: profile.combinedLanguages,
+        tags: profile.focusTags,
+        level: profile.experienceLevel,
+        limit: 8,
+      }),
     ]);
 
-    const learningPath = this.buildLearningPath(profile, challengeRecs, trainingDataRecs);
+    const learningPath = this.buildLearningPath(profile, challengeRecs, trainingDataRecs, resourceRecs);
     const graph = this.applyRecommendationsToGraph(baseGraph, profile, trainingDataRecs);
 
     return {
@@ -88,6 +98,7 @@ class PersonalizedPlanService {
       recommendations: {
         challenges: challengeRecs,
         trainingData: trainingDataRecs,
+        learningResources: resourceRecs,
       },
       learningPath,
       graph,
@@ -577,7 +588,8 @@ class PersonalizedPlanService {
   private buildLearningPath(
     profile: UserProfile,
     challengeRecs: Recommendation<IChallenge>[],
-    trainingDataRecs: Recommendation<ITrainingData>[]
+    trainingDataRecs: Recommendation<ITrainingData>[],
+    resourceRecs: ILearningResource[]
   ): LearningPathStep[] {
     const steps: LearningPathStep[] = [];
     let step = 1;
@@ -630,6 +642,19 @@ class PersonalizedPlanService {
           resources: group.challenge.reasons,
         });
       }
+    });
+
+    // Thêm bước tài nguyên ngoài hệ thống (article/video/exercise) dựa trên lỗi
+    resourceRecs.slice(0, 3).forEach((res) => {
+      steps.push({
+        step: step++,
+        type: 'training',
+        title: res.title,
+        category: res.category || 'general',
+        tags: res.tags,
+        description: `Tài nguyên ${res.type} - phù hợp lỗi ${res.errorTypes.join(', ')}`,
+        resources: [res.url],
+      });
     });
 
     return steps;

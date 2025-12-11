@@ -24,15 +24,18 @@ import pvpRoutes from './routes/simplePvp.routes';
 import leaderboardRoutes from './routes/leaderboard.routes';
 import importExportRoutes from './routes/import-export.routes';
 import friendRoutes from './routes/friend.routes';
+import favoriteRoutes from './routes/favorite.routes';
 import trainingDataRoutes from './routes/trainingData.routes';
 import knowledgeGraphRoutes from './routes/knowledgeGraph.routes';
 import chatRoutes from './routes/chat.routes';
 import aiChatRoutes from './routes/aiChatRoutes';
 import notificationRoutes from './routes/notification.routes';
+import recommendationRoutes from './routes/recommendation.routes';
 import commentRoutes from './routes/comment.routes';
 import adminCommentRoutes from './routes/adminComment.routes';
 import achievementRoutes from './routes/achievement.routes';
 import adminRoutes from './routes/admin.routes';
+import externalResourceRoutes from './routes/externalResource.routes';
 
 // WebSocket Service
 import { WebSocketService } from './services/websocket.service';
@@ -104,14 +107,17 @@ app.use('/api/pvp', pvpRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/import-export', importExportRoutes);
 app.use('/api/friends', friendRoutes);
+app.use('/api/favorites', favoriteRoutes);
 app.use('/api/training-data', trainingDataRoutes);
 app.use('/api/knowledge-graph', knowledgeGraphRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/ai-chat', aiChatRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/recommendations', recommendationRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/admin/comments', adminCommentRoutes);
 app.use('/api/achievements', achievementRoutes);
+app.use('/api/external-resources', externalResourceRoutes);
 app.use('/api/admin', adminRoutes);
 
 // Catch-all redirect for legacy routes without /api prefix (helpful for debugging)
