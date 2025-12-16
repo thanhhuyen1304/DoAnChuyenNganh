@@ -148,5 +148,43 @@ export const notificationController = {
       res.status(500).json({ success: false, message: 'Error deleting notification' });
     }
   },
+
+  // POST /api/notifications - Create a new notification
+  async createNotification(req: Request, res: Response): Promise<Response | void> {
+    try {
+      const userId = req.user?._id || (req.user as any)?.id;
+      if (!userId) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+      }
+
+      const { title, message, type = 'info', link } = req.body;
+
+      if (!title || !message) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Title and message are required' 
+        });
+      }
+
+      const notification = new Notification({
+        user_id: userId,
+        title,
+        message,
+        type: type || 'info',
+        read: false,
+        link: link || undefined,
+      });
+
+      await notification.save();
+
+      res.json({
+        success: true,
+        data: notification,
+      });
+    } catch (error) {
+      console.error('Error creating notification:', error);
+      res.status(500).json({ success: false, message: 'Error creating notification' });
+    }
+  },
 };
 

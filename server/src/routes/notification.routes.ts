@@ -22,5 +22,8 @@ router.patch('/read-all', notificationController.markAllAsRead);
 // Delete notification
 router.delete('/:id', notificationController.deleteNotification);
 
+// Create notification (for client-side deadline warnings)
+router.post('/', notificationController.createNotification);
+
 export default router;
 

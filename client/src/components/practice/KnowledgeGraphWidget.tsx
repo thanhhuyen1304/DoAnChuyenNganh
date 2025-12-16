@@ -287,29 +287,6 @@ const KnowledgeGraphWidget: React.FC<KnowledgeGraphWidgetProps> = ({
                   </div>
                 )}
 
-                {recommendations.trainingData && recommendations.trainingData.length > 0 && (
-                  <div>
-                    <p className="text-xs font-semibold mb-1 flex items-center gap-1">
-                      <BookOpen className="w-3 h-3" />
-                      {language === 'vi' ? 'Tài liệu gợi ý:' : 'Recommended resources:'}
-                    </p>
-                    <div className="space-y-1 max-h-32 overflow-y-auto">
-                      {recommendations.trainingData.slice(0, 3).map((td: any) => (
-                        <div
-                          key={td._id}
-                          className="text-xs p-2 bg-background border rounded cursor-pointer hover:bg-accent"
-                          onClick={() => {
-                            // Có thể mở modal hoặc navigate
-                            console.log('Open training data:', td._id);
-                          }}
-                        >
-                          <p className="font-medium truncate">{td.question}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
                 {recommendations.challenges && recommendations.challenges.length > 0 && (
                   <div>
                     <p className="text-xs font-semibold mb-1">

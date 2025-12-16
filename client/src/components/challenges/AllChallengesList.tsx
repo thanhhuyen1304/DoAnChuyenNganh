@@ -275,11 +275,11 @@ const AllChallengesList: React.FC<AllChallengesListProps> = ({ className = '' })
     // Language filter
     const matchesLanguage = selectedLanguage === 'all' || challenge.language === selectedLanguage;
     
-    // Status filter
-    const isCompleted = completedChallengeIds.has(challenge._id);
+    // Status filter: chỉ coi là "đã làm" khi Accepted
+    const isAccepted = submittedChallenges.get(challenge._id) === true;
     const matchesStatus = selectedStatus === 'all' || 
-      (selectedStatus === 'completed' && isCompleted) ||
-      (selectedStatus === 'incomplete' && !isCompleted);
+      (selectedStatus === 'completed' && isAccepted) ||
+      (selectedStatus === 'incomplete' && !isAccepted);
     
     return matchesSearch && matchesDifficulty && matchesLanguage && matchesStatus;
   });
@@ -525,14 +525,14 @@ const AllChallengesList: React.FC<AllChallengesListProps> = ({ className = '' })
             : 'space-y-4'
         }>
           {filteredChallenges.map((challenge) => {
-            const isCompleted = completedChallengeIds.has(challenge._id);
+            const isAccepted = submittedChallenges.get(challenge._id) === true;
             const isFavorite = myFavIds.includes(challenge._id);
             
             return (
               <Card
                 key={challenge._id}
                 className={`bg-white/95 dark:bg-gray-900/80 border border-gray-200 dark:border-gray-800 transform transition-all duration-300 cursor-pointer hover:scale-105 hover:-translate-y-1 hover:shadow-xl will-change-transform relative ${
-                  isCompleted ? 'ring-2 ring-green-500/20' : ''
+                  isAccepted ? 'ring-2 ring-green-500/20' : ''
                 }`}
                 onClick={(e) => {
                   const target = e.target as HTMLElement;
@@ -636,7 +636,7 @@ const AllChallengesList: React.FC<AllChallengesListProps> = ({ className = '' })
                       <Star className="w-4 h-4" />
                       <span>{challenge.favorites}</span>
                     </div>
-                    {isCompleted && (
+                    {isAccepted && (
                       <div className="flex items-center gap-1 text-green-600 dark:text-green-400">
                         <CheckCircle2 className="w-4 h-4" />
                         <span>{language === 'vi' ? 'Đã hoàn thành' : 'Completed'}</span>

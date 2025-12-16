@@ -26,13 +26,14 @@ const ProblemScraper = () => {
 
   const refreshToken = async () => {
     try {
+      // Backend /auth/login yêu cầu field "identifier" (email hoặc username), không phải "email"
       const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          email: 'admin@bughunter.com',
+          identifier: 'admin@bughunter.com',
           password: 'admin123'
         }),
       });
@@ -94,6 +95,7 @@ const ProblemScraper = () => {
       }
 
       setResult(data);
+
     } catch (err) {
       console.error('❌ Scrape error:', err);
       setError(err instanceof Error ? err.message : 'Lỗi không xác định');

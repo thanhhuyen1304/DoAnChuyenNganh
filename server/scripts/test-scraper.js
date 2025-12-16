@@ -6,8 +6,9 @@ async function testScraper() {
     
     // Step 1: Login
     console.log('1️⃣ Logging in...');
+    // Backend /auth/login yêu cầu field "identifier" (email hoặc username)
     const loginResponse = await axios.post('http://localhost:5000/api/auth/login', {
-      email: 'admin@bughunter.com',
+      identifier: 'admin@bughunter.com',
       password: 'admin123'
     });
     

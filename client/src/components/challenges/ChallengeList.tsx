@@ -513,28 +513,6 @@ const ChallengeList: React.FC<ChallengesListProps> = ({
                 </select>
               </div>
 
-              {/* Status Filter */}
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-500 dark:text-gray-400">
-                  {language === 'vi' ? 'Trạng thái:' : 'Status:'}
-                </span>
-                <div className="flex gap-1">
-                  {['all', 'completed', 'incomplete'].map((status) => (
-                    <Button
-                      key={status}
-                      variant={selectedStatus === status ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setSelectedStatus(status as 'all' | 'completed' | 'incomplete')}
-                      className="h-7 text-xs"
-                    >
-                      {status === 'all' ? (language === 'vi' ? 'Tất cả' : 'All') :
-                       status === 'completed' ? (language === 'vi' ? 'Đã làm' : 'Completed') :
-                       (language === 'vi' ? 'Chưa làm' : 'Incomplete')}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-
               {/* View Mode Toggle */}
               <div className="flex items-center gap-2 ml-auto">
                 <Button

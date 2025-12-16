@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
-import { User, Trophy, Target, Clock, ArrowRight, Home as HomeIcon, List, Star, Code2, Award } from 'lucide-react';
+import { User, Trophy, Target, Clock, ArrowRight, Home as HomeIcon, List, Star, Code2, Award, Flag } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import ChallengeList from '@/components/challenges/ChallengeList';
 import { Achievements } from '@/components/practice/Achievements';
+import PersonalPage from '@/components/pages/personal';
 import Header from '../Header';
 import { getApiBase } from '@/lib/apiBase';
 
 const Dashboard = () => {
   const [user, setUser] = useState<any>(null);
   const [isVisible, setIsVisible] = useState(false);
-  const [view, setView] = useState<'home' | 'library' | 'achievements' | 'favorites'>('library');
+  const [view, setView] = useState<'home' | 'library' | 'achievements' | 'favorites' | 'timeline'>('library');
   const [activityDays, setActivityDays] = useState<Record<string, { logins: number; submissions: number }>>({});
   const [currentDate, setCurrentDate] = useState(new Date());
   const [completedChallengeIds, setCompletedChallengeIds] = useState<string[]>([]);
@@ -382,6 +383,18 @@ const Dashboard = () => {
                     </button>
 
                     <button
+                      onClick={() => setView('timeline')}
+                      className={`w-full flex items-center gap-3 p-2 rounded-md hover:bg-gray-100 dark:hoverbg-gray-800 transition-all duration-200 ${
+                        view === 'timeline' ? 'bg-primary-50 dark:bg-primary-900/30' : ''
+                      }`}
+                    >
+                      <Flag
+                        className={`w-5 h-5 transition-all duration-200 ${view === 'timeline' ? 'scale-110 text-indigo-500 dark:text-indigo-200' : 'text-gray-500 dark:text-gray-400'}`}
+                      />
+                      {isVisible && <span className={`truncate ${view === 'timeline' ? 'text-indigo-500 dark:text-indigo-200 font-medium' : 'text-gray-600 dark:text-gray-300'}`}>{language === 'vi' ? 'Lộ trình học tập' : 'Learning Path'}</span>}
+                    </button>
+
+                    <button
                       onClick={() => setView('favorites')}
                       className={`w-full flex items-center gap-3 p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 ${
                         view === 'favorites' ? 'bg-primary-50 dark:bg-primary-900/30' : ''
@@ -634,6 +647,13 @@ const Dashboard = () => {
                   <div className="pr-0 lg:pr-80">
                     <h2 className="text-xl font-bold mb-4">{language === 'vi' ? 'Bài yêu thích' : 'My Favorites'}</h2>
                     <FavoritesView />
+                  </div>
+                )}
+
+                {view === 'timeline' && (
+                  <div className="pr-0 lg:pr-80">
+                    <h2 className="text-xl font-bold mb-4">{language === 'vi' ? 'Lộ trình học tập' : 'Learning Path'}</h2>
+                    <PersonalPage user={user} />
                   </div>
                 )}
               </div>

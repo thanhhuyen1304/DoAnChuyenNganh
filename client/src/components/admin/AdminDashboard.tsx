@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   LayoutDashboard, 
   BarChart2 as BarChart, 
@@ -86,6 +86,7 @@ import {
   Brain,
   Network
 } from 'lucide-react';
+import PersonalPage from '../pages/personal';
 
 const OTHER_TABS = [
   // Admin Management Features
@@ -94,6 +95,7 @@ const OTHER_TABS = [
   { id: 'all-comments', icon: MessageSquare, label: { vi: 'Tất cả bình luận', en: 'All Comments' }, color: 'text-cyan-500' },
   { id: 'feedback', icon: MessageSquare, label: { vi: 'Phản hồi', en: 'Feedback' }, color: 'text-emerald-500' },
   { id: 'achievements', icon: Award, label: { vi: 'Thành tích', en: 'Achievements' }, color: 'text-amber-500' },
+  { id: 'timeline', icon: Flag, label: { vi: 'Lộ trình học tập', en: 'Learning Timeline' }, color: 'text-indigo-500' },
   
   // Development Tools
   // { id: 'debug', icon: KeyRound, label: { vi: 'Debug Token', en: 'Debug' }, color: 'text-amber-500' },
@@ -133,6 +135,8 @@ const AdminDashboard: React.FC = () => {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedChallengeId, setSelectedChallengeId] = useState<string | null>(null);
   const { language } = useLanguage();
+  // Giữ giá trị tổng số bài tập lần trước để tính số bài mới chính xác
+  const previousCountRef = useRef(0);
 
   // Effects
   useEffect(() => {
@@ -140,10 +144,10 @@ const AdminDashboard: React.FC = () => {
   }, []);
 
   // API calls
-  const fetchChallenges = async (showSuccessMessage = false) => {
+  const fetchChallenges = async (showSuccessMessage = false, addedCount?: number) => {
     try {
       setLoading(true);
-      const previousCount = challenges.length;
+      const previousCount = previousCountRef.current;
       
       const token = localStorage.getItem('token');
       const response = await fetch(`${API_BASE_URL}/challenges/admin/all`, {
@@ -156,21 +160,31 @@ const AdminDashboard: React.FC = () => {
       const data = await response.json();
       
       if (data.success) {
-        setChallenges(data.data.challenges);
+        const currentChallenges = data.data.challenges || [];
+        const currentCount = currentChallenges.length;
+
+        setChallenges(currentChallenges);
         setError('');
-        
-        if (showSuccessMessage && data.data.challenges.length > previousCount) {
-          const newCount = data.data.challenges.length - previousCount;
-          setNewChallengesCount(newCount);
+
+        const computedNew =
+          typeof addedCount === 'number' && addedCount > 0
+            ? addedCount
+            : Math.max(0, currentCount - previousCount);
+
+        if (showSuccessMessage && computedNew > 0) {
+          setNewChallengesCount(computedNew);
           setSuccess(language === 'vi' 
-            ? `🎉 Đã thêm ${newCount} bài tập mới vào danh sách!`
-            : `🎉 Added ${newCount} new challenges to the list!`);
+            ? `🎉 Đã thêm ${computedNew} bài tập mới vào danh sách!`
+            : `🎉 Added ${computedNew} new challenges to the list!`);
           
           setTimeout(() => {
             setSuccess('');
             setNewChallengesCount(0);
           }, 5000);
         }
+
+        // Cập nhật lại mốc đếm cho lần kế tiếp
+        previousCountRef.current = currentCount;
       } else {
         setError(language === 'vi'
           ? `Không thể tải danh sách bài tập: ${data.message}`
@@ -395,7 +409,7 @@ const AdminDashboard: React.FC = () => {
             )}
             {activeChallengeTab === 'create' && <CreateChallenge />}
             {activeChallengeTab === 'scraper' && (
-              <AdvancedScraper onScrapeSuccess={() => fetchChallenges(true)} />
+              <AdvancedScraper onScrapeSuccess={(added) => fetchChallenges(true, added)} />
             )}
           </div>
         )}
@@ -422,6 +436,11 @@ const AdminDashboard: React.FC = () => {
             {activeOtherTab === 'achievements' && (
               <div className="space-y-6">
                 <AchievementManagement />
+              </div>
+            )}
+            {activeOtherTab === 'timeline' && (
+              <div className="space-y-6">
+                <PersonalPage />
               </div>
             )}
             {/* {activeOtherTab === 'training-data' && (
