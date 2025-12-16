@@ -131,7 +131,7 @@ export class RealProblemScraper {
   }
 
   // Scrape từ CSES Problem Set
-  static async scrapeCSES(requestedLanguage?: string): Promise<ScrapedProblem[]> {
+  static async scrapeCSES(requestedLanguage?: string, startIndex: number = 0): Promise<ScrapedProblem[]> {
     try {
       console.log('🔍 Scraping CSES...');
       
@@ -147,8 +147,10 @@ export class RealProblemScraper {
 
       console.log(`🔍 Found ${$('.task').length} .task elements`);
 
+      let collected = 0;
       $('.task').each((index, element) => {
-        if (index >= 10) return; // Lấy 10 bài đầu
+        if (index < startIndex) return;
+        if (collected >= 10) return; // chỉ lấy 10 bài sau offset
 
         const titleElement = $(element).find('a');
         const title = titleElement.text().trim();
@@ -176,6 +178,7 @@ export class RealProblemScraper {
           };
 
           problems.push(problem);
+          collected++;
           console.log(`   ✅ Added: ${problem.title}`);
         } else {
           console.log(`   ❌ Skipped: Invalid title or link`);

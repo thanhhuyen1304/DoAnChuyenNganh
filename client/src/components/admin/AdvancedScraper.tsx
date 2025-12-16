@@ -31,7 +31,7 @@ interface ClassificationSettings {
 }
 
 interface AdvancedScraperProps {
-  onScrapeSuccess?: () => void;
+  onScrapeSuccess?: (addedCount?: number) => void;
 }
 
 const AdvancedScraper: React.FC<AdvancedScraperProps> = ({ onScrapeSuccess }) => {
@@ -48,13 +48,14 @@ const AdvancedScraper: React.FC<AdvancedScraperProps> = ({ onScrapeSuccess }) =>
 
   const refreshToken = async () => {
     try {
+      // Backend /auth/login yêu cầu field "identifier" (email hoặc username), không phải "email"
       const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          email: 'admin@bughunter.com',
+          identifier: 'admin@bughunter.com',
           password: 'admin123'
         }),
       });
@@ -92,6 +93,7 @@ const AdvancedScraper: React.FC<AdvancedScraperProps> = ({ onScrapeSuccess }) =>
       console.log('🔑 Token:', token.substring(0, 20) + '...');
       console.log('🌐 URL:', `${API_BASE_URL}/scraper/${source}`);
 
+      // Gửi thêm skip/offset ngẫu nhiên để backend lấy trang khác (tránh trùng)
       const response = await fetch(`${API_BASE_URL}/scraper/${source}`, {
         method: 'POST',
         headers: {
@@ -99,7 +101,10 @@ const AdvancedScraper: React.FC<AdvancedScraperProps> = ({ onScrapeSuccess }) =>
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          classification: classificationSettings
+          classification: classificationSettings,
+          // randomize để hạn chế trùng lặp khi scrape lặp lại
+          skip: Math.floor(Math.random() * 200),
+          offset: Math.floor(Math.random() * 50)
         }),
       });
 
@@ -120,9 +125,15 @@ const AdvancedScraper: React.FC<AdvancedScraperProps> = ({ onScrapeSuccess }) =>
 
       setResult(data);
       
-      // Gọi callback để refresh danh sách bài tập
-      if (onScrapeSuccess) {
-        onScrapeSuccess();
+      if (data.success && onScrapeSuccess) {
+        const added = typeof data.data?.newCount === 'number'
+          ? data.data.newCount
+          : typeof data.data?.savedCount === 'number'
+            ? data.data.savedCount
+            : typeof data.data?.count === 'number'
+              ? data.data.count
+              : undefined;
+        onScrapeSuccess(added);
       }
     } catch (err) {
       console.error('❌ Scrape error:', err);

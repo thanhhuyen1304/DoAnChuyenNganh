@@ -90,10 +90,10 @@ const NotificationBell: React.FC = () => {
     // Load initial count
     loadUnreadCount();
 
-    // Poll every 2 minutes (120 seconds) - reduced frequency to save server load
+    // Poll every 30 seconds for real-time updates
     const interval = setInterval(() => {
       loadUnreadCount();
-    }, 120000);
+    }, 30000);
 
     return () => clearInterval(interval);
   }, []);
@@ -261,7 +261,7 @@ const NotificationBell: React.FC = () => {
         aria-label="Notifications"
       >
         <Bell size={20} />
-        {isOpen && unreadCount > 0 && (
+        {unreadCount > 0 && (
           <span className="absolute top-0 right-0 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
